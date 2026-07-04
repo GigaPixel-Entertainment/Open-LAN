@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Fira+Code:wght@300..700&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="CSS/userIdent.css">
+        <link rel="icon" href="Media/LogoSquare.png">
+        <title>Open-LAN Login</title>
+
+    </head>
+    <body>
+        <a href="index.html"><img src="Media/Logo.png" id="smallTopLogo"></a>
+        <h1 class="title center text font">LOGIN</h1>
+
+        <form id="loginForm">
+            <input type="text" placeholder="username" class="font" id="username" required>
+            <div id="pwdWrapper">
+                <input type="password" placeholder="password" class="font" id="password" required>
+                <button id="showPwd" type="button" onclick="togglePwd()"><img src="Media/eyeOpen.png" id="showPwdImg"></button>
+            </div>
+            <a id="forgetPwd" class="font text" href="https://forms.gle/AoFebgPKb3v8n57Z9">Forget password?</a>
+            <div id="submitWrapper">
+                <input type="submit" value="login" class="font" id="submitBtn">
+            </div>
+        </form>
+
+        <div id="errorMsg">
+            <h2 class="font text">ERROR TITLE</h2>
+            <p class="font text">Error Content</p>
+        </div>
+
+        <div id="signUpWrapper">
+            <p class="font text" id="signUpLabel">If you don't have an account</p>
+            <a href="signup.html"><button class="font" id="signUp">sign up</button></a>
+        </div>
+
+        <div id="httpNotice">
+            <div id="noticeBox">
+                <h1 class="font text center">Notice</h1>
+                <p class="font text">You are currently using HTTP and not HTTPS! This is not recommended as using HTTP will not guarantee security! Please switch over to HTTPS if possible.</p>
+                <div>
+                    <button class="font text recommended" onclick="switchHTTPS()">Switch to HTTPS</button>
+                    <button class="font text notrecommended" onclick="document.getElementById('httpNotice').remove()">Continue using HTTP</button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Toggle password visibility
+            const pwdEntry = document.getElementById("password")
+            const showPwdBtn = document.getElementById("showPwd")
+            const showPwdImg = document.getElementById("showPwdImg")
+
+            function togglePwd() {
+                if (pwdEntry.type == "password") {
+                    pwdEntry.type = "text"
+                    showPwdImg.src = "Media/eyeClose.png"
+                } else {
+                    pwdEntry.type = "password"
+                    showPwdImg.src = "Media/eyeOpen.png"
+                    //showPwdBtn.textContent = "👁️"
+                }
+            }
+        </script>
+        <script src="https://cdn.jsdelivr.net/npm/jsencrypt/bin/jsencrypt.min.js"></script>
+        <script>
+            // Error Message
+            const errBox = document.getElementById("errorMsg")
+            const url = new URL(window.location.href)
+
+            function setError(title, content) {
+                errBox.querySelector(":scope > h2").textContent = title
+                errBox.querySelector(":scope > p").textContent = content
+
+                if (title == "" && content == "") {
+                    errBox.style.visibility = "hidden"
+                } else {
+                    errBox.style.visibility = "visible"
+                }
+
+            }
+
+            if (url.searchParams.get("errT") && url.searchParams.get("errC")) {
+                setError(url.searchParams.get("errT"), url.searchParams.get("errC"))
+            }
+        </script>
+
+        <script>
+            // Login
+            const protocol = window.location.protocol
+            const domainURL = window.location.host
+
+            if (protocol == "http:") {
+                document.getElementById("httpNotice").style.visibility = "visible"
+            }
+
+            function switchHTTPS() {
+                window.location.assign("https://" + domainURL + "/login.html")
+            }
+
+            const loginForm = document.getElementById("loginForm")
+            const submitBtn = document.getElementById("submitBtn")
+            const username = document.getElementById("username")
+            const password = document.getElementById("password")
+
+            loginForm.addEventListener("submit", (event) => {
+                event.preventDefault()
+                setError("", "")
+
+                submitBtn.value = "working"
+                submitBtn.disabled = true
+                
+                try {
+                    const resp = fetch(protocol + "//" + domainURL + "/api/login", {
+                        method: "POST",
+                        cache: 'no-store',
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            "username": username.value,
+                            "password": btoa(password.value)
+                        })
+                    }).then((r) => {
+                        window.location.assign(protocol + "//" + domainURL + "/app.html")
+                    }).catch((r) => {
+                        setError("Login Error", "Incorrect username or password. Please try again.")
+                        submitBtn.value = "login"
+                        submitBtn.disabled = false
+                    })
+                } catch (err) {
+                    console.log(err)
+                    setError("Login Error", "Unable to connect to the server. Please try again later.")
+                    submitBtn.value = "login"
+                    submitBtn.disabled = false
+                }
+            })
+        </script>
+    </body>
+    <footer>
+        Open-LAN is open-source under the <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU General Public License</a> and available on <a href="https://guthib.com">Github</a>
+    </footer>
+</html>

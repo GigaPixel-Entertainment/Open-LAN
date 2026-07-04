@@ -1,0 +1,245 @@
+:root {
+    --bg: #1a3053;
+    --acc: #113963;
+    --acc2: #145492;
+    --acc3: #3e84c5;
+    --acc4: #0c273f;
+    --text: #FFFFFF;
+    --text2: #cee1f3;
+    --placeholder: #BBBBBB;
+    --button: #a1c3c8;
+    --button-press: #90b2b7;
+}
+
+html, body {
+    height: 100vh;
+}
+
+body {
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    background: linear-gradient(105deg, var(--bg) 65%, var(--acc) 65.1%, var(--acc) 68%, var(--acc2) 68.1%, var(--acc2) 71%, var(--acc3) 71.1%, var(--acc3) 74%, var(--bg) 74.1%);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+
+footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    color: white;
+    font-family: "Fire Code", monospace;
+    font-size: small;
+}
+
+footer > a {
+    color: white;
+    text-decoration-color: white;
+}
+
+form {
+    position: absolute;
+    width: 40%;
+    padding: 1em;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+#smallTopLogo {
+    position: absolute;
+    max-width: 10%;
+    margin: 4px;
+}
+
+input[type="text"], input[type="password"] {
+    display: block;
+    width: 90%;
+    font-size: 2em;
+    background-color: var(--acc3);
+    color: var(--text);
+    border: none;
+    padding: .75em;
+}
+
+input[type="text"]::placeholder, input[type="password"]::placeholder {
+    color: var(--placeholder);
+}
+
+input[type="submit"] {
+    position: absolute;
+    background-color: var(--button);
+    width: 25%;
+    font-size: 2em;
+    border: none;
+    right: 0;
+    cursor: pointer;
+}
+
+input[type="submit"]:hover {
+    background-color: var(--button-press);
+}
+
+#pwdWrapper {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+
+#showPwd {
+    position: absolute;
+    top: 50%;
+    right: -1em;
+    transform: translate(-50%, -50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+#showPwd > img {
+    max-width: 5vw;
+    max-height: 5vh;
+    aspect-ratio: 1.2;
+    outline: none;
+}
+
+#username {
+    margin-top: 0;
+    margin-bottom: 1em;
+}
+
+#password {
+    margin-top: 0;
+    margin-bottom: 0;
+    width: calc(90% - 1.25em);
+    padding-right: 2em;
+}
+
+#forgetPwd {
+    width: 80%;
+    padding: 0 auto;
+    color: var(--text2);
+    font-size: 1.25em;
+}
+
+#submitWrapper {
+    position: absolute;
+    width: 90%;
+    margin: 0;
+}
+
+.font {
+    font-family: "Fira Code", monospace;
+}
+
+.title {
+    font-weight: bold;
+    font-style: normal;
+    font-size: 10em;
+
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.center {
+    text-align: center;
+}
+
+.text {
+    color: var(--text);
+}
+
+#signUpWrapper {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    text-align: right;
+}
+
+#signUpLabel {
+    font-style: italic;
+}
+
+#signUp {
+    width: 80%;
+    font-size: 2em;
+    background: none;
+    color: var(--text2);
+    border: 2px solid var(--text2);
+    border-radius: 0;
+    cursor: pointer;
+}
+
+#errorMsg {
+    position: absolute;
+    width: 40%;
+    background-color: rgba(255, 0, 0, .5);
+    border: 2px solid red;
+    border-radius: 1em;
+    padding: .5em;
+    margin: .5em;
+    left: 0;
+    bottom: 0;
+    visibility: hidden;
+}
+
+#httpNotice {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, .5);
+    top: 0;
+    left: 0;
+    visibility: hidden;
+}
+
+#noticeBox {
+    position: absolute;
+    width: 50%;
+    height: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--bg);
+    border: 2px solid var(--acc3);
+    border-radius: 1em;
+}
+
+#noticeBox > h1 {
+    font-size: 3em;
+}
+
+#noticeBox > p {
+    padding: 1em;
+}
+
+#noticeBox > div {
+    display: flex;
+    justify-content: space-around;
+}
+
+#noticeBox > div > button {
+    width: 40%;
+    font-size: 2em;
+    cursor: pointer;
+}
+
+.recommended {
+    background-color: var(--button);
+    border: none;
+}
+
+.recommended:hover {
+    background-color: var(--button-press);
+}
+
+.notrecommended {
+    background: none;
+    color: var(--button);
+    border: 2px solid var(--button);
+}
+
+.notrecommended:hover {
+    border-color: var(--button-press);
+    color: var(--button-press);
+}
