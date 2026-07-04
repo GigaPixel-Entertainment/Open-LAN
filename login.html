@@ -89,9 +89,28 @@
         </script>
 
         <script>
+            // No-cache
+            window.addEventListener('pageshow', function (event) {
+                if (event.persisted) {
+                    window.location.reload();
+                }
+            });
+        </script>
+
+        <script>
             // Login
+            const loginForm = document.getElementById("loginForm")
+            const submitBtn = document.getElementById("submitBtn")
+            const username = document.getElementById("username")
+            const password = document.getElementById("password")
+
             const protocol = window.location.protocol
             const domainURL = window.location.host
+            const WsProtocol = protocol == "http:" ? "ws:" : "wss:"
+
+            var wsPort = WsProtocol == "ws:" ? 33334 : 33335
+            var sharedSecretBytes = null
+            var encrypted = false
 
             if (protocol == "http:") {
                 document.getElementById("httpNotice").style.visibility = "visible"
@@ -101,46 +120,167 @@
                 window.location.assign("https://" + domainURL + "/login.html")
             }
 
-            const loginForm = document.getElementById("loginForm")
-            const submitBtn = document.getElementById("submitBtn")
-            const username = document.getElementById("username")
-            const password = document.getElementById("password")
-
-            loginForm.addEventListener("submit", (event) => {
-                event.preventDefault()
-                setError("", "")
-
-                submitBtn.value = "working"
-                submitBtn.disabled = true
-                
-                try {
-                    const resp = fetch(protocol + "//" + domainURL + "/api/login", {
-                        method: "POST",
+            try {
+                const resp = fetch(protocol + "//" + domainURL + "/api/wsports", {
+                        method: "GET",
                         cache: 'no-store',
                         headers: {
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify({
-                            "username": username.value,
-                            "password": btoa(password.value)
-                        })
-                    }).then((r) => {
-                        window.location.assign(protocol + "//" + domainURL + "/app.html")
+                            "Content-Type": "text/plain"
+                        }
+                    }).then((res) => {
+                        wsPort = WsProtocol == "ws:" ? res.headers.get("Ws-Port") : res.headers.get("Wss-Port")
                     }).catch((r) => {
-                        setError("Login Error", "Incorrect username or password. Please try again.")
-                        submitBtn.value = "login"
-                        submitBtn.disabled = false
+                        console.log("Failed to fetch websocket port! Using default")
                     })
-                } catch (err) {
-                    console.log(err)
-                    setError("Login Error", "Unable to connect to the server. Please try again later.")
-                    submitBtn.value = "login"
-                    submitBtn.disabled = false
+            } catch {
+                console.log("Failed to fetch websocket port! Using default")
+            }
+
+            console.log("Connecting to websocket via " + WsProtocol + "//")
+
+            const hexToBytes = hex => Uint8Array.from(hex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+            const bytesToHex = bytes => Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+            const textEncode = (text) => new TextEncoder().encode(text);
+            const textDecode = (text) => new TextDecoder().decode(text);
+            var keyPair = null
+
+            async function generatePubKey() {
+                keyPair = await crypto.subtle.generateKey(
+                    { name: "ECDH", namedCurve: "P-256" },
+                    true,
+                    ["deriveKey", "deriveBits"]
+                );
+                const pubBuffer = await crypto.subtle.exportKey("raw", keyPair.publicKey);
+                const pubBytes = new Uint8Array(pubBuffer);
+
+                return pubBytes
+            }
+
+            async function serverKeyRecieved(serverKey) {
+                const serverPubBytes = hexToBytes(serverKey);
+                const serverPublicKey = await crypto.subtle.importKey(
+                    "raw",
+                    serverPubBytes,
+                    { name: "ECDH", namedCurve: "P-256" },
+                    true,
+                    []
+                );
+
+                const sharedSecretBuffer = await crypto.subtle.deriveBits(
+                    { name: "ECDH", public: serverPublicKey },
+                    keyPair.privateKey,
+                    256
+                );
+
+                sharedSecretBytes = new Uint8Array(sharedSecretBuffer);
+            }
+
+            async function encryptAES(text, rawKey) {
+                const key = await window.crypto.subtle.importKey(
+                    "raw", rawKey, { name: "AES-GCM" }, false, ["encrypt"]
+                );
+
+                const iv = window.crypto.getRandomValues(new Uint8Array(12));
+                const encodedText = textEncode(text);
+
+                const ciphertext = await window.crypto.subtle.encrypt(
+                    { name: "AES-GCM", iv: iv }, key, encodedText
+                );
+
+                return {
+                    iv: bytesToHex(iv),
+                    ciphertext: bytesToHex(new Uint8Array(ciphertext))
+                };
+            }
+
+            async function decryptAES(ivHex, ciphertextHex, rawKey) {
+                const key = await window.crypto.subtle.importKey(
+                    "raw", rawKey, { name: "AES-GCM" }, false, ["decrypt"]
+                );
+
+                const iv = hexToBytes(ivHex);
+                const ciphertext = hexToBytes(ciphertextHex);
+
+                const decryptedBuffer = await window.crypto.subtle.decrypt(
+                    { name: "AES-GCM", iv: iv }, key, ciphertext
+                );
+
+                return textDecode(decryptedBuffer);
+            }
+
+            generatePubKey().then((pubBytes) => {
+                try {
+                    const ws = new WebSocket(WsProtocol + "//" + window.location.hostname + ":" + wsPort + "/");
+
+                    ws.onopen = (ev) => {
+                        console.log("Websocket Connected!")
+                        ws.send(JSON.stringify({"type":"encrypt-key-xch", "publicKey": bytesToHex(pubBytes)}))
+                    }
+
+                    ws.onmessage = (event) => {
+                        console.log('Message from server:', event);
+                        const resp = JSON.parse(event.data)
+
+                        if (resp["type"] == "encrypt-key-xch") {
+                            serverKeyRecieved(resp["publicKey"]).then(() => {
+                                encrypted = true
+
+                                const origSend = ws.send
+                                ws.send = function(data) {
+                                    encryptAES(data, sharedSecretBytes).then((encryptionResults) => {
+                                        origSend.call(ws, JSON.stringify({"encryption": "AES", "iv": encryptionResults["iv"],"body":encryptionResults["ciphertext"]}))
+                                    })
+                                }
+                                console.log("Encrypted with AES!")
+                            })
+                        }
+
+                        if (resp["encryption"] == "AES") {
+                            if (encrypted) {
+                                decryptAES(resp["iv"], resp["body"], sharedSecretBytes).then((data) => {
+                                    respBody = JSON.parse(data)
+
+                                    console.log(respBody)
+                                    if (respBody["type"] == "loginSuccess") {
+                                        window.location.assign(protocol + "//" + domainURL + respBody["redirect"])
+                                    } else if (respBody["type"] == "loginFailed") {
+                                        setError("Login Failed", "Incorrect username or password. Please try again.")
+                                    }
+                                })
+                            } else {
+                                console.log("Recieved encrypted message, but we are not ready!")
+                            }
+                        }
+                    };
+
+                    ws.onerror = (error) => {
+                        console.error('WebSocket Error:', error);
+                        
+                    };
+
+                    ws.onclose = (event) => {
+                        console.log('Connection closed:', event.reason);
+                        console.log("Attempting reconnect...")
+                        window.location.reload()
+                    };
+
+                    loginForm.addEventListener("submit", (event) => {
+                        event.preventDefault()
+                        setError("", "")
+
+                        submitBtn.value = "working"
+                        submitBtn.disabled = true
+                        
+                        ws.send(JSON.stringify({"type":"login", "username":username.value, "password": btoa(password.value)}))
+                    })
+                } catch {
+                    console.log("Websocket Connection Failed!")
+                    setError("Failed to Connect", "Failed to connect to the server. Please try again later.")
                 }
             })
         </script>
     </body>
     <footer>
-        Open-LAN is open-source under the <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU General Public License</a> and available on <a href="https://guthib.com">Github</a>
+        Open-LAN is open-source under the <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU General Public License</a> and available on <a href="https://github.com/GigaPixel-Entertainment/GPE-Open-LAN">Github</a>
     </footer>
 </html>

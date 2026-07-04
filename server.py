@@ -1,13 +1,16 @@
 print("""
-##############
-#  Open-LAN  #
-##############
+####################
+#                  #
+#     Open-LAN     #
+#                  #
+####################
 by Gigapixel Entertainment LLC
 """)
 
 print("""
 REQUIRED IMPORTS:
 (use pip to install)
+cryptography,
 websockets,
 http,
 io,
@@ -15,7 +18,6 @@ traceback,
 threading,
 secrets,
 pathlib,
-asyncio,
 msgpack,
 asyncio,
 bcrypt,
@@ -26,11 +28,16 @@ base64,
 time,
 json,
 sys,
-ssl
+ssl,
+os
 """)
 
-from websockets.asyncio.server import serve, broadcast
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from websockets.asyncio.server import serve, broadcast, ServerConnection
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives import serialization
 from http.server import BaseHTTPRequestHandler
+from http import cookies
 from io import BytesIO
 import traceback
 import threading
@@ -50,6 +57,7 @@ import ssl
 
 PORT = 33333
 WS_PORT = 33334
+WSS_PORT = 33335
 SOCKET_BACKLOG_NUM = 5
 MAX_RETRY_ATTEMPTS = 10
 RETRY_ATTEMPTS_CLEAR_AFTER_SEC = 120
@@ -57,7 +65,8 @@ NUM_ENCRYPT_ROUNDS = 15
 
 CWD = pathlib.Path(__file__).resolve().parent
 CA_CERT_DIR = CWD / "CA_CERT"
-CSS_DIR = CWD / "CSS"
+CHATS_DIR = CWD / "Chats/"
+CSS_DIR = CWD / "CSS/"
 MEDIA_DIR = CWD / "Media/"
 USERS_DIR = CWD / "Users/"
 
@@ -68,10 +77,20 @@ FILEEXT_TO_MIME = {
 }
 
 WS_CLIENTS = set()
-WS_CLIENT_LOCK = threading.Lock()
+VALID_TOKENS = {}
+SHORT_REDIRECT_TOKENS = {}
+
+print("Generating encryption key")
+PRIV_KEY = ec.generate_private_key(ec.SECP256R1())
+PUB_KEY = PRIV_KEY.public_key().public_bytes(
+    encoding=serialization.Encoding.X962,
+    format=serialization.PublicFormat.UncompressedPoint
+)
+print("Key generated successfully!")
 
 users = []
-_userData = []
+
+chats = []
 
 class HTTPRequestParser(BaseHTTPRequestHandler):
     def __init__(self, request_bytes):
@@ -95,6 +114,17 @@ def loadUsers():
                 f.close()
     
     print("Users loaded successfully")
+
+def loadChats():
+    print("Loading chats")
+
+    for chat in CHATS_DIR.iterdir():
+        if chat.is_file():
+            with open(chat, "rb") as f:
+                chats.append(msgpack.unpackb(f.read()))
+                f.close()
+    
+    print("Chats loaded successfully")
 
 
 def getIpAddrs():
@@ -130,11 +160,16 @@ def formatHttpResponse(filePath: pathlib.Path):
         "\r\n"
     ).encode("utf-8") + fileContents
 
-def formatLoginResponse():
+def formatLoginResponse(username):
+    if not username:
+        return formatErrorResponse(500)
+
     token = secrets.token_urlsafe(256)
+    VALID_TOKENS[username] = {"TOKEN": token, "EXPIRES": time.time() + (1*24*60*60)} # Expires in 1 day
     return (
-        "HTTP/1.1 200 OK\r\n"
+        "HTTP/1.1 308 Permanent Redirect\r\n"
         f"Set-Cookie: authToken={token}; Secure; HttpOnly; SameSite=Strict; Path=/\r\n"
+        f"Location: /app.html\r\n"
         "Connection: close\r\n"
         "\r\n"
     ).encode("utf-8")
@@ -146,9 +181,10 @@ def formatErrorResponse(statusCode):
         return "HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n".encode("utf-8")
     elif statusCode == 404:
         return "HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n".encode("utf-8")
+    elif statusCode == 500:
+        return "HTTP/1.1 500 Internal Server Error\r\nConnection: close\r\n\r\n".encode("utf-8")
     
-    return "HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n".encode("utf-8")
-
+    return "HTTP/1.1 418 I'm a teapot\r\nConnection: close\r\n\r\n".encode("utf-8")
 
 def closeSocket(sk: socket.socket):
     try:
@@ -192,60 +228,157 @@ def handleRequest(sk: socket.socket):
         
         pagePath = CWD / page.removeprefix("/")
 
-        if isSafePath(pagePath):
+        if page == "/api/wsports":
+            sk.sendall(f"HTTP/1.1 200 OK\r\nWs-Port: {WS_PORT}\r\nWss-Port: {WSS_PORT}\r\nContent-Type: text/plain\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".encode("utf-8"))
+        elif page == "/api/login":
+            if "TK" in uri:
+                username = isValidRedirectToken(uri["TK"])
+
+                if username != None:
+                    sk.sendall(formatLoginResponse(username))
+        elif isSafePath(pagePath):
             sk.sendall(formatHttpResponse(pagePath))
         else:
             sk.sendall(formatErrorResponse(400))
     elif method == "POST":
-        contentLength = int(parsed.headers.get("Content-Length", 0))
-        contentType = parsed.headers.get("Content-Type", "")
-        body = parsed.rfile.read(contentLength).decode("utf-8")
-
-        if page == "/api/login":
-            if contentType == "application/json":
-                bodyJson = json.loads(body)
-                found = False
-                
-                for usr in users:
-                    if usr["USRNAME"] == bodyJson["username"]:
-                        if bcrypt.checkpw(base64.b64decode(bodyJson["password"]).encode("utf-8"), usr["PWD"].encode("utf-8")):
-                            sk.sendall(formatLoginResponse())
-                            found = True
-                        else:
-                            sk.sendall(formatErrorResponse(401))
-                
-                if not found:
-                    sk.sendall(formatErrorResponse(401))
-            else:
-                sk.sendall(formatErrorResponse(400))
+        pass
 
     closeSocket(sk)
 
-async def wsHandler(ws):
+def isValidRedirectToken(redirectToken):
+    for k, v in SHORT_REDIRECT_TOKENS.items():
+        if "TOKEN" in v and v["TOKEN"] == redirectToken and v["EXPIRES"] > time.time():
+            SHORT_REDIRECT_TOKENS.pop(k)
+            return k
+    
+    return None
+
+
+def isValidToken(authToken, username=None):
+    if username:
+        if not username in VALID_TOKENS:
+            return False
+
+        if "EXPIRES" in VALID_TOKENS[username] and VALID_TOKENS[username]["EXPIRES"] < time.time():
+            VALID_TOKENS[username] = None
+            return False
+            
+        if "TOKEN" in VALID_TOKENS[username] and VALID_TOKENS[username]["TOKEN"] == authToken:
+            return True
+        
+    else:
+        for key, value in VALID_TOKENS.items():
+            if "EXPIRES" in value and value["EXPIRES"] < time.time():
+                VALID_TOKENS[key] = None
+                if "TOKEN" in value and value["TOKEN"] == authToken:
+                    return False
+            
+            if "TOKEN" in value and value["TOKEN"] == authToken:
+                return True
+
+    return False
+
+async def getAuth(connection, request):
+    cookie_header = request.headers.get("Cookie")
+    
+    if cookie_header:
+        parser = cookies.SimpleCookie()
+        parser.load(cookie_header)
+        
+        parsed_cookies = {key: morsel.value for key, morsel in parser.items()}
+        
+        connection.authToken = parsed_cookies.get("authToken")
+
+async def wsSendEncrypted(ws: ServerConnection, data: str):
+    iv = secrets.token_bytes(12)
+    encryptor = Cipher(algorithms.AES256(getattr(ws, "secretKey")), modes.GCM(iv)).encryptor()
+    ciphertext = encryptor.update(data.encode("utf-8")) + encryptor.finalize() + encryptor.tag
+
+    await ws.send(json.dumps({"encryption":"AES","iv":iv.hex(),"body":ciphertext.hex()}))
+
+async def wsHandler(ws: ServerConnection):
     WS_CLIENTS.add(ws)
-    print(f"Client Connected. (Now {len(WS_CLIENTS)})")
+
+    authToken = getattr(ws, "authToken", None)
 
     try:
         async for message in ws:
-            print(message)
-            broadcast(WS_CLIENTS, message)
+            msgDecoded = json.loads(message)
+
+            if "type" in msgDecoded and msgDecoded["type"] == "encrypt-key-xch":
+                clientKey = ec.EllipticCurvePublicKey.from_encoded_point(
+                    ec.SECP256R1(),
+                    bytes.fromhex(msgDecoded["publicKey"])
+                )
+
+                setattr(ws, "secretKey", PRIV_KEY.exchange(ec.ECDH(), clientKey))
+
+                await ws.send(json.dumps({"type":"encrypt-key-xch", "publicKey": PUB_KEY.hex()}))
+            
+            if "encryption" in msgDecoded and msgDecoded["encryption"] == "AES":
+                key = getattr(ws, "secretKey", None)
+                if key == None:
+                    print("Encrypted message sent without key!")
+                    raise ConnectionRefusedError
+
+                decryptor = Cipher(algorithms.AES256(key), modes.GCM(bytes.fromhex(msgDecoded["iv"]))).decryptor()
+                decryptedText = decryptor.update(bytes.fromhex(msgDecoded["body"]))
+                lastBrace = decryptedText.rfind(b"}")
+
+                if lastBrace != -1:
+                    decryptedText = decryptedText[:lastBrace + 1]
+                
+                decryptedBody = json.loads(decryptedText.decode("utf-8"))
+
+                if decryptedBody["type"] == "login":
+                    found = False
+                
+                    for usr in users:
+                        if usr["USRNAME"] == decryptedBody["username"]:
+                            if bcrypt.checkpw(base64.b64decode(decryptedBody["password"]), usr["PWD"].encode("utf-8")):
+                                token = secrets.token_urlsafe(32)
+                                SHORT_REDIRECT_TOKENS[usr["USRNAME"]] = {"TOKEN":token,"EXPIRES":time.time() + 60} # 1 minute
+                                await wsSendEncrypted(ws, json.dumps({"type":"loginSuccess","redirect":f"/api/login?TK={token}"}))
+                                found = True
+                            else:
+                                await wsSendEncrypted(ws, json.dumps({"type":"loginFailed"}))
+                    
+                    if not found:
+                        await wsSendEncrypted(ws, json.dumps({"type":"loginFailed"}))
+
+
+
+            #if not isValidToken(authToken):
+            #    await ws.send(json.dumps({"type":"auth_expired"}), text=True)
+            #    await ws.close()
+            #    break
+            
 
     except Exception:
         traceback.print_exc()
     finally:
         WS_CLIENTS.remove(ws)
-        print(f"Client Disconnected. ({len(WS_CLIENTS)} remaining)")
 
 async def shutdownWs(shutdownEvent):
+    print("Stopping Websocket!")
     for ws in list(WS_CLIENTS):
         await ws.close()
 
     shutdownEvent.set()
     asyncio.get_running_loop().stop()
 
-async def wsListen(ipAddrs, shutdownEvent):
-    with serve(wsHandler, ipAddrs, WS_PORT):
-        await shutdownEvent.wait()
+async def wsListen(ipAddrs, context, shutdownEvent):
+    servers = []
+
+    for addr in ipAddrs:
+        servers.append(serve(wsHandler, addr, WSS_PORT, ssl=context, process_request=getAuth))
+        print(f"wss://{addr}/{WSS_PORT}")
+        servers.append(serve(wsHandler, addr, WS_PORT, process_request=getAuth))
+        print(f"ws://{addr}/{WS_PORT}")
+
+    print("Websockets running!")
+    
+    await asyncio.gather(*servers, shutdownEvent.wait())
 
 def wsBootstrap(loop: asyncio.AbstractEventLoop):
     print("Websocket Bootstrap")
@@ -257,6 +390,7 @@ if __name__ == "__main__":
     lastErr = time.time()
 
     loadUsers()
+    loadChats()
     
     ipAddrs = getIpAddrs()
     
@@ -282,7 +416,7 @@ if __name__ == "__main__":
     wsThread = threading.Thread(target=wsBootstrap, args=(wsLoop,), daemon=True)
     wsThread.start()
 
-    asyncio.run_coroutine_threadsafe(wsListen(ipAddrs, wsShutdownEvent), wsLoop)
+    asyncio.run_coroutine_threadsafe(wsListen(ipAddrs, context, wsShutdownEvent), wsLoop)
     
     while True:
         try:

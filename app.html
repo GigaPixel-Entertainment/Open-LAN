@@ -16,20 +16,23 @@
                 --acc2: #145492;
                 --acc3: #3e84c5;
                 --acc4: #0c273f;
+                --acc5: #214685;
                 --text: #FFFFFF;
                 --text2: #cee1f3;
                 --placeholder: #BBBBBB;
                 --button: #a1c3c8;
                 --button-press: #90b2b7;
+                --highlight: #6ea6db;
             }
 
             html, body {
                 height: 100vh;
+                overflow: hidden;
             }
 
             body {
-                overflow: hidden;
                 background-color: var(--bg);
+                margin: 0;
             }
 
             footer {
@@ -45,12 +48,333 @@
                 color: white;
                 text-decoration-color: white;
             }
+
+            #serverList {
+                width: 5%;
+                height: 100%;
+                background-color: var(--acc2);
+            }
+
+            #msgBoxHeader {
+                position: absolute;
+                top: 0;
+                left: 5%;
+                width: 95%;
+                background-color: var(--acc4);
+            }
+
+            #msgBoxHeader > p {
+                font-style: italic;
+                font-size: 1.25em;
+                font-weight: 100;
+                margin-left: 1em;
+                margin-top: 1em;
+                margin-bottom: 1em;
+            }
+
+            #msgBox {
+                position: absolute;
+                width: 95%;
+                height: calc(100% - 40px - 1.25em);
+                bottom: 0;
+                left: 5%;
+                background-color: var(--bg);
+            }
+
+            #friendsShadow {
+                position: absolute;
+                top: 0;
+                right: 0;
+                width: 20%;
+                height: 100%;
+                box-shadow: 0px 0px 4px 4px rgba(0, 0, 0, .5);
+            }
+
+            #friendsHeader {
+                position: absolute;
+                display: flex;
+                top: 0;
+                right: 0;
+                width: 20%;
+                height: 10%;
+                background-color: var(--highlight);
+                justify-content: center;
+                align-items: center;
+                flex-direction: row;
+            }
+
+            #friendsHeader > img {
+                width: 4em;
+                height: 4em;
+                background-color: var(--acc2);
+                margin: 1em;
+            }
+
+            #friendsHeader > p {
+                display: block;
+                font-size: 2em;
+                margin: auto;
+                margin-left: 0;
+            }
+
+            #friendsList {
+                position: absolute;
+                width: 20%;
+                height: 100%;
+                background-color: var(--acc3);
+                right: 0;
+                top: 10%;
+            }
+
+            #friendsList > p {
+                margin-left: 1em;
+            }
+
+            #textEntryWrapper {
+                position: absolute;
+                width: 80%;
+                background-color: var(--acc);
+                bottom: 5%;
+                right: 7.5%;
+                
+            }
+
+            #textEntry {
+                width: calc(100% - 0.75em);
+                font-size: 2em;
+                margin: .25em;
+                border: none;
+                background-color: var(--acc5);
+                color: var(--text);
+                outline: none;
+            }
+
+            #textEntry::placeholder {
+                color: var(--bg);
+                font-style: italic;
+            }
+
+            .font {
+                font-family: "Fira Code", monospace;
+            }
+
+            .white {
+                color: var(--text);
+            }
+
+            .black {
+                color: black;
+            }
+
+            .scroll {
+                overflow-y: scroll;
+            }
+
+            ::-webkit-scrollbar {
+                width: 5px;
+            }
+            
+            ::-webkit-scrollbar-track {
+                background: rgb(0, 0, 0, 0); 
+            }
+            
+            ::-webkit-scrollbar-thumb {
+                background: #333;
+                border-radius: 10000px;
+            }
+            
+            ::-webkit-scrollbar-thumb:hover {
+                background: #111; 
+            }
         </style>
     </head>
     <body>
-        
+        <div id="serverList"></div>
+        <div id="msgBoxHeader">
+            <p class="font white">You are chatting with: The Void</p>
+        </div>
+        <div id="msgBox" class="scroll">
+
+        </div>
+        <div id="textEntryWrapper">
+            <input type="text" placeholder="type a message..." id="textEntry" class="font">
+        </div>
+
+        <div id="friendsShadow"></div>
+        <div id="friendsHeader">
+            <img src="Media/FriendsIcon.png">
+            <p class="font black">friends</p>
+        </div>
+        <div id="friendsList" class="scroll">
+            <p class="font white">active messages</p>
+        </div>
     </body>
     <footer>
-        Open-LAN is open-source under the <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU General Public License</a> and available on <a href="https://guthib.com">Github</a>
+        Open-LAN is open-source under the <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU General Public License</a> and available on <a href="https://github.com/GigaPixel-Entertainment/GPE-Open-LAN">Github</a>
     </footer>
+
+    <script>
+            // Login
+            const protocol = window.location.protocol
+            const domainURL = window.location.host
+            const WsProtocol = protocol == "http:" ? "ws:" : "wss:"
+
+            var wsPort = WsProtocol == "ws:" ? 33334 : 33335
+            var sharedSecretBytes = null
+            var encrypted = false
+
+            if (protocol == "http:") {
+                document.getElementById("httpNotice").style.visibility = "visible"
+            }
+
+            function switchHTTPS() {
+                window.location.assign("https://" + domainURL + "/login.html")
+            }
+
+            try {
+                const resp = fetch(protocol + "//" + domainURL + "/api/wsports", {
+                        method: "GET",
+                        cache: 'no-store',
+                        headers: {
+                            "Content-Type": "text/plain"
+                        }
+                    }).then((res) => {
+                        wsPort = WsProtocol == "ws:" ? res.headers.get("Ws-Port") : res.headers.get("Wss-Port")
+                    }).catch((r) => {
+                        console.log("Failed to fetch websocket port! Using default")
+                    })
+            } catch {
+                console.log("Failed to fetch websocket port! Using default")
+            }
+
+            console.log("Connecting to websocket via " + WsProtocol + "//")
+
+            const hexToBytes = hex => Uint8Array.from(hex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+            const bytesToHex = bytes => Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+            const textEncode = (text) => new TextEncoder().encode(text);
+            const textDecode = (text) => new TextDecoder().decode(text);
+            var keyPair = null
+
+            async function generatePubKey() {
+                keyPair = await crypto.subtle.generateKey(
+                    { name: "ECDH", namedCurve: "P-256" },
+                    true,
+                    ["deriveKey", "deriveBits"]
+                );
+                const pubBuffer = await crypto.subtle.exportKey("raw", keyPair.publicKey);
+                const pubBytes = new Uint8Array(pubBuffer);
+
+                return pubBytes
+            }
+
+            async function serverKeyRecieved(serverKey) {
+                const serverPubBytes = hexToBytes(serverKey);
+                const serverPublicKey = await crypto.subtle.importKey(
+                    "raw",
+                    serverPubBytes,
+                    { name: "ECDH", namedCurve: "P-256" },
+                    true,
+                    []
+                );
+
+                const sharedSecretBuffer = await crypto.subtle.deriveBits(
+                    { name: "ECDH", public: serverPublicKey },
+                    keyPair.privateKey,
+                    256
+                );
+
+                sharedSecretBytes = new Uint8Array(sharedSecretBuffer);
+            }
+
+            async function encryptAES(text, rawKey) {
+                const key = await window.crypto.subtle.importKey(
+                    "raw", rawKey, { name: "AES-GCM" }, false, ["encrypt"]
+                );
+
+                const iv = window.crypto.getRandomValues(new Uint8Array(12));
+                const encodedText = textEncode(text);
+
+                const ciphertext = await window.crypto.subtle.encrypt(
+                    { name: "AES-GCM", iv: iv }, key, encodedText
+                );
+
+                return {
+                    iv: bytesToHex(iv),
+                    ciphertext: bytesToHex(new Uint8Array(ciphertext))
+                };
+            }
+
+            async function decryptAES(ivHex, ciphertextHex, rawKey) {
+                const key = await window.crypto.subtle.importKey(
+                    "raw", rawKey, { name: "AES-GCM" }, false, ["decrypt"]
+                );
+
+                const iv = hexToBytes(ivHex);
+                const ciphertext = hexToBytes(ciphertextHex);
+
+                const decryptedBuffer = await window.crypto.subtle.decrypt(
+                    { name: "AES-GCM", iv: iv }, key, ciphertext
+                );
+
+                return textDecode(decryptedBuffer);
+            }
+
+            generatePubKey().then((pubBytes) => {
+                try {
+                    const ws = new WebSocket(WsProtocol + "//" + window.location.hostname + ":" + wsPort + "/");
+
+                    ws.onopen = (ev) => {
+                        console.log("Websocket Connected!")
+                        ws.send(JSON.stringify({"type":"encrypt-key-xch", "publicKey": bytesToHex(pubBytes)}))
+                    }
+
+                    ws.onmessage = (event) => {
+                        console.log('Message from server:', event);
+                        const resp = JSON.parse(event.data)
+
+                        if (resp["type"] == "encrypt-key-xch") {
+                            serverKeyRecieved(resp["publicKey"]).then(() => {
+                                encrypted = true
+
+                                const origSend = ws.send
+                                ws.send = function(data) {
+                                    encryptAES(data, sharedSecretBytes).then((encryptionResults) => {
+                                        origSend.call(ws, JSON.stringify({"encryption": "AES", "iv": encryptionResults["iv"],"body":encryptionResults["ciphertext"]}))
+                                    })
+                                }
+                                console.log("Encrypted with AES!")
+                            })
+                        }
+
+
+                        if (resp["encryption"] == "AES") {
+                            if (encrypted) {
+                                decryptAES(resp["iv"], resp["body"], sharedSecretBytes).then((data) => {
+                                    respBody = JSON.parse(data)
+
+                                    console.log(respBody)
+                                })
+                            } else {
+                                console.log("Recieved encrypted message, but we are not ready!")
+                            }
+                        }
+                    };
+
+                    ws.onerror = (error) => {
+                        console.error('WebSocket Error:', error);
+                        
+                    };
+
+                    ws.onclose = (event) => {
+                        console.log('Connection closed:', event.reason);
+                        console.log("Attempting reconnect...")
+                        window.location.reload()
+                    };
+                } catch {
+                    console.log("Websocket Connection Failed!")
+                    console.log("Attempting reconnect...")
+                    window.location.reload()
+                }
+            })
+    </script>
 </html>
