@@ -12,5 +12,5 @@ Before using Open-LAN, ensure you are connected to your home's/organization's in
 Most actions will be run on the server side and no downloads are required for client.
 
 # More Stuff
-__
+____________
 More programs and projects at https://sites.google.com/view/gigapixel-/home | https://github.com/GigaPixel-Entertainment?tab=repositories | https://github.com/GigaPixel-Entertainment?tab=projects
