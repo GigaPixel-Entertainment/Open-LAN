@@ -537,17 +537,33 @@
         }
 
         var editingDisplayname = false
+        var origDisplayname = ""
         editCurrDisplayname.onclick = () => {
             if (editingDisplayname) {
                 editCurrDisplayname.classList = "font black editBtn"
                 editCurrDisplayname.textContent = "edit"
                 currDisplaynameI.classList.remove("white")
                 currDisplaynameI.disabled = true
+
+                if (currDisplaynameI.value.trim() == "" || currDisplaynameI.value.trim().length > 30 ) {
+                    currDisplaynameI.value = origDisplayname
+                } else {
+                    request(JSON.stringify({
+                        "type": "updateDisplayname",
+                        "displayname": currDisplaynameI.value.trim()
+                    })).then((respBody) => {
+                        if (respBody["type"] == "updateDisplaynameFailed") {
+                            currDisplaynameI.value = origDisplayname
+                            console.log("Update failed!")
+                        }
+                    })
+                }
             } else {
                 editCurrDisplayname.classList = "font black saveBtn"
                 editCurrDisplayname.textContent = "save"
                 currDisplaynameI.classList.add("white")
                 currDisplaynameI.disabled = false
+                origDisplayname = currDisplaynameI.value
             }
             editingDisplayname = !editingDisplayname
         }
@@ -643,7 +659,7 @@
                 timeDisplay.style.color = "gray"
                 timeDisplay.style.fontWeight = "500"
                 timeDisplay.style.marginLeft = "1em"
-                timeDisplay.textContent = messageDate.toLocaleTimeString()
+                timeDisplay.textContent = messageDate.toLocaleTimeString("en-US", {"hour":"2-digit","minute":"2-digit"})
 
                 username.append(timeDisplay)
             }
@@ -673,7 +689,6 @@
             const padArea = document.createElement("div")
             padArea.style.width = "3%"
 
-            
             if (messageDate) {
                 const timeDisplay = document.createElement("p")
                 timeDisplay.textContent = "(" + messageDate.toLocaleTimeString("en-US", {"hour":"2-digit","minute":"2-digit"}) + ")"
@@ -795,6 +810,22 @@
 
             if (currScroll + chatDiv.offsetHeight >= chatDiv.scrollHeight - 8) {
                 chatDiv.scrollTop = chatDiv.scrollHeight
+            }
+        }
+
+        function updateCachedDisplayname(resp) {
+            updated = false
+            for (let cacheIndex = 0; cacheIndex < userInfoCache.length; cacheIndex++) {
+                const cacheItem = userInfoCache[cacheIndex];
+                
+                if (cacheItem["UID"] == resp["UID"]) {
+                    cacheItem["displayname"] = resp["Displayname"]
+                    updated = true
+                }
+            }
+
+            if (updated) {
+                fetchChatData(currChat)
             }
         }
     </script>
@@ -1071,6 +1102,16 @@
                                             setChat(respBody["chat"])
                                         }
 
+                                        if (respBody["type"] == "updateDisplaynameSuccess") {
+                                            if (trackerId && trackerIds.includes(trackerId)) {
+                                                trackerHit(trackerId, respBody)
+                                            }
+                                        }
+
+                                        if (respBody["type"] == "updateCachedDisplayname") {
+                                            updateCachedDisplayname(respBody)
+                                        }
+
                                         if (respBody["type"] == "reqUserFailed") {
                                             if (loading) {
                                                 fetchSelfData()
@@ -1082,6 +1123,12 @@
                                         if (resp["type"] == "reqChatFailed") {
                                             if (loading) {
                                                 fetchChatData(0)
+                                            }
+                                        }
+
+                                        if (respBody["type"] == "updateDisplaynameFailed") {
+                                            if (trackerId && trackerIds.includes(trackerId)) {
+                                                trackerHit(trackerId, respBody)
                                             }
                                         }
                                     })
@@ -1101,7 +1148,7 @@
 
                             console.log("Attempting reconnect...")
                             loadingText.textContent = "Connection lost"
-                            setTimeout(() => window.location.reload, 5000)
+                            setTimeout(window.location.reload, 5000)
                         };
                     } catch {
                         console.log("Websocket Connection Failed!")

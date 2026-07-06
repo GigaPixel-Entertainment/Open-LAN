@@ -75,7 +75,8 @@ USERS_DIR = CWD / "Users/"
 PRIVATE_DIRS = [
     USERS_DIR,
     CHATS_DIR,
-    CA_CERT_DIR
+    CA_CERT_DIR,
+    SAVE_KEY
 ]
 
 FILEEXT_TO_MIME = {
@@ -361,7 +362,7 @@ def isSafePath(path: pathlib.Path):
     reqPath = path.resolve()
 
     for privDir in PRIVATE_DIRS:
-        if privDir.resolve() in reqPath.parents:
+        if privDir.resolve() in reqPath.parents or privDir.resolve() == reqPath.resolve():
             return False
 
     if CWD.resolve() in reqPath.parents:
@@ -631,6 +632,34 @@ async def wsHandler(ws: ServerConnection):
                         
 
                         await wsBroadcastEncrypted(broadcastClients, json.dumps({"type":"chatUpdate", "chat": newChat}))
+                    else:
+                        break
+
+                if decryptedBody["type"] == "updateDisplayname":
+                    if await checkAuthTokenEncrypted(ws, authToken):
+                        dn = decryptedBody["displayname"].strip()
+
+                        if (dn == ""):
+                            await wsSendEncrypted(ws, json.dumps({"type":"updateDisplaynameFailed"}), trackerId)
+                            continue
+
+                        if (len(dn) > 30):
+                            await wsSendEncrypted(ws, json.dumps({"type":"updateDisplaynameFailed"}), trackerId)
+                            continue
+                        
+                        success = False
+                        for usr in users:
+                            if usr["UID"] == getUserIdFromAuthToken(authToken):
+                                usr["Displayname"] = dn
+                                success = True
+                                break
+                        
+                        if not success:
+                            await wsSendEncrypted(ws, json.dumps({"type":"updateDisplaynameFailed"}), trackerId)
+                            continue
+
+                        await wsSendEncrypted(ws, json.dumps({"type":"updateDisplaynameSuccess"}), trackerId)
+                        await wsBroadcastEncrypted(WS_CLIENTS, json.dumps({"type":"updateCachedDisplayname", "UID": getUserIdFromAuthToken(authToken), "Displayname": dn}))
                     else:
                         break
 
