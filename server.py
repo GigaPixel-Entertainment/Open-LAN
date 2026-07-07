@@ -225,7 +225,9 @@ def saveChats():
                 messages = []
 
                 for msg in chat["messages"]:
-                    messages.append({"time":msg["time"], "content":fernet.encrypt(msg["content"].encode("utf-16")), "UID":msg["UID"]})
+                    messageSaving = msg
+                    messageSaving["content"] = fernet.encrypt(msg["content"].encode("utf-16"))
+                    messages.append(messageSaving)
 
                 f.write(msgpack.packb({"meta":metadata,"Name":chat["Name"],"messages":messages}))
                 f.close()
@@ -637,7 +639,7 @@ async def wsHandler(ws: ServerConnection):
                     if await checkAuthTokenEncrypted(ws, authToken):
                         for chat in chats:
                             if chat["CID"] == decryptedBody["CID"]:
-                                chat["messages"].append({"time": time.time(), "content": decryptedBody["msg"], "UID": getUserIdFromAuthToken(authToken), "MSGID": len(chat["messages"])})
+                                chat["messages"].append({"time": int(time.time()), "content": decryptedBody["msg"], "UID": getUserIdFromAuthToken(authToken), "MSGID": len(chat["messages"])})
 
                         newChat = getChatFromCID(decryptedBody["CID"])
 
@@ -658,6 +660,53 @@ async def wsHandler(ws: ServerConnection):
                         
 
                         await wsBroadcastEncrypted(broadcastClients, json.dumps({"type":"chatUpdate", "chat": newChat}))
+                    else:
+                        break
+                
+                if decryptedBody["type"] == "delMsg":
+                    if await checkAuthTokenEncrypted(ws, authToken):
+                        chat = None
+                        for cht in chats:
+                            if cht["CID"] == decryptedBody["CID"]:
+                                chat = cht
+                                break
+
+                        if chat == None:
+                            await wsSendEncrypted(ws, json.dumps({"type": "delMsgFailed"}))
+                            continue
+                        
+                        message = None
+
+                        for msg in chat["messages"]:
+                            if msg["MSGID"] == decryptedBody["MSGID"]:
+                                message = msg
+                                break
+
+                        if message == None or message["UID"] != getUserIdFromAuthToken(authToken):
+                            await wsSendEncrypted(ws, json.dumps({"type": "delMsgFailed"}))
+                            continue
+
+                        message["content"] = "[message deleted]"
+                        message["deleted"] = True
+
+                        await wsSendEncrypted(ws, json.dumps({"type": "delMsgSuccess"}))
+
+                        broadcastClients = []
+                        for client in WS_CLIENTS:
+                            cAuthToken = getattr(client, "authToken")
+
+                            if cAuthToken == None:
+                                continue
+                            
+                            userInfo = getUserInfoFromToken(cAuthToken)
+
+                            if userInfo == None:
+                                continue
+                            
+                            if decryptedBody["CID"] in userInfo["Chats"]:
+                                broadcastClients.append(client)
+
+                        await wsBroadcastEncrypted(broadcastClients, json.dumps({"type":"chatUpdate", "chat": chat}))
                     else:
                         break
 

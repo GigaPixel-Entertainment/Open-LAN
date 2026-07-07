@@ -266,7 +266,7 @@
                         ws.onclose = (event) => {
                             console.log("Connection closed:", event.reason);
                             console.log("Attempting reconnect...")
-                            setTimeout(window.location.reload, 5000)
+                            setTimeout(() => window.location.reload(), 5000)
                         };
 
                         loginForm.addEventListener("submit", (event) => {

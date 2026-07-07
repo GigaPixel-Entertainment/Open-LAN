@@ -614,8 +614,17 @@
                 cursor: pointer;
             }
 
+            .rClickMenuOption[disabled] {
+                cursor: auto;
+                color: gray;
+            }
+
             .rClickMenuOption:hover {
                 background-color: var(--acc4);
+            }
+
+            .rClickMenuOption[disabled] {
+                background-color: var(--acc);
             }
 
             ::-webkit-scrollbar {
@@ -758,6 +767,9 @@
         const chatDiv = document.getElementById("msgBox")
 
         var currChat = 0
+        var currUID = -1
+
+        var editingMsgId = -1
 
         var friendsListShown = false
         function hideFriendsList() {
@@ -810,6 +822,12 @@
         const editCurrPronouns = document.getElementById("editPronouns")
 
         const msgRClickMenu = document.getElementById("msgRClickMenu")
+        const cpyTxt = document.getElementById("msgCopyTxt")
+        const rplyTxt = document.getElementById("msgReplyTxt")
+        const editTxt = document.getElementById("msgEditTxt")
+        const delTxt = document.getElementById("msgDeleteTxt")
+
+        var msgRClickMenuMsg = null
 
         var selected = null
 
@@ -840,6 +858,40 @@
                     pfpScalingWrapper.style.visibility = "visible"
                     pfpScalingWrapper.style.opacity = "1"
                 })
+            }
+        })
+
+        document.addEventListener("mousedown", (e) => {
+            if (msgRClickMenu.style.visibility == "visible") {
+                msgRClickMenu.style.visibility = "hidden"
+            }
+        })
+
+        cpyTxt.addEventListener("mousedown", (e) => {
+            if (msgRClickMenuMsg) {
+                try {
+                    window.navigator.clipboard.writeText(msgRClickMenuMsg["content"])
+                } catch {
+                    console.log("Failed to copy to clipboard!")
+                }
+            }
+        })
+
+        rplyTxt.addEventListener("mousedown", (e) => {
+            if (msgRClickMenuMsg) {
+                console.log("REPLY!")
+            }
+        })
+
+        editTxt.addEventListener("mousedown", (e) => {
+            if (msgRClickMenuMsg && msgRClickMenuMsg["UID"] == currUID) {
+
+            }
+        })
+
+        delTxt.addEventListener("mousedown", (e) => {
+            if (msgRClickMenuMsg && msgRClickMenuMsg["UID"] == currUID) {
+                request(JSON.stringify({"type": "delMsg", "CID": currChat, "MSGID": msgRClickMenuMsg["MSGID"]}))
             }
         })
 
@@ -895,6 +947,8 @@
         }
 
         function popUserInfo(resp) {
+            currUID = resp["UID"]
+
             currUsernameI.value = resp["username"]
             currDisplaynameI.value = resp["displayname"]
 
@@ -907,7 +961,7 @@
 
             accInfoDisplayname.textContent = resp["displayname"]
             accInfoUsername.textContent = resp["username"]
-            accInfoUID.textContent = "Account ID: " + resp["UID"]
+            accInfoUID.textContent = "Account ID: " + currUID
             accCreatedDate.textContent = new Date(resp["accCreated"] * 1000).toLocaleDateString()
 
             bioArea.value = resp["bio"]
@@ -1253,6 +1307,10 @@
             for (let index = 0; index < chat["messages"].length; index++) {
                 const message = chat["messages"][index];
 
+                if (message["deleted"]) {
+                    continue
+                }
+
                 if (lastMsg && message["time"] && lastMsg["time"]) {
                     currDate = new Date(message["time"] * 1000).toLocaleDateString("en-US", {year: "numeric", month:"long", day:"numeric"})
                     lastDate = new Date(lastMsg["time"] * 1000).toLocaleDateString("en-US", {year: "numeric", month:"long", day:"numeric"})
@@ -1302,20 +1360,25 @@
 
                 messageDiv.addEventListener("contextmenu", (e) => {
                     e.preventDefault()
+
+                    if (message["UID"] == currUID) {
+                        editTxt.disabled = false
+                        delTxt.disabled = false
+                    } else {
+                        editTxt.disabled = true
+                        delTxt.disabled = true
+
+                    }
+
                     msgRClickMenu.style.visibility = "visible"
                     msgRClickMenu.style.left = e.pageX + "px"
                     msgRClickMenu.style.top = e.pageY + "px"
+                    msgRClickMenuMsg = message
                 })
 
                 chatDiv.appendChild(messageDiv)
                 lastMsg = message
             }
-
-            document.addEventListener("mousedown", (e) => {
-                if (msgRClickMenu.style.visibility == "visible") {
-                    msgRClickMenu.style.visibility = "hidden"
-                }
-            })
 
             const padding = document.createElement("div")
             padding.style.width = "100%"
@@ -1535,7 +1598,7 @@
             async function load() {
                 loadingText.textContent = "Fetching data..."
                 await fetchSelfData()
-                await fetchChatData(0)
+                await fetchChatData(currChat)
                 await waitUntilLoadingDone()
 
                 loadingText.textContent = "Waiting for page..."
@@ -1687,7 +1750,7 @@
 
                             console.log("Attempting reconnect...")
                             loadingText.textContent = "Connection lost"
-                            setTimeout(window.location.reload, 5000)
+                            setTimeout(() => window.location.reload(), 5000)
                         };
                     } catch {
                         console.log("Websocket Connection Failed!")
@@ -1725,7 +1788,6 @@
                 sendMsg()
             }
         })
-
 
         document.addEventListener("keydown", (key) => {
             if (key.key == "/" && textEntry != document.activeElement && !myProfileScreenShown) {
