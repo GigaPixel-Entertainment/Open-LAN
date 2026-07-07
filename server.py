@@ -14,6 +14,7 @@ cryptography,
 websockets,
 http,
 io,
+pillow,
 traceback,
 threading,
 secrets,
@@ -40,6 +41,7 @@ from http.server import BaseHTTPRequestHandler
 from cryptography.fernet import Fernet
 from http import cookies
 from io import BytesIO
+from PIL import Image
 import traceback
 import threading
 import secrets
@@ -276,6 +278,16 @@ def getChatFromCID(CID):
     
     return None
 
+def setUserProperty(UID, PropertyName, Value):
+    success = False
+    for usr in users:
+        if usr["UID"] == UID:
+            usr[PropertyName] = Value
+            success = True
+            break
+
+    return success
+
 def tokenInChat(token, CID):
     chat = getChatFromCID(CID)
 
@@ -396,8 +408,6 @@ def handleRequest(sk: socket.socket):
 
         if page == "/api/wsurl":
             currUrl = parsed.headers.get("Domain-Url")
-            print(currUrl)
-
             if "openlan.gigapixel.cc" in currUrl:
                 # POV: Cloudflare
                 sk.sendall(f"HTTP/1.1 200 OK\r\nUrl: ws://openlanws.gigapixel.cc\r\nContent-Type: text/plain\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".encode("utf-8"))
@@ -408,7 +418,7 @@ def handleRequest(sk: socket.socket):
 
             if "openlan.gigapixel.cc" in currUrl:
                 # POV: Cloudflare
-                sk.sendall(f"HTTP/1.1 200 OK\r\nUrl: wss://openlanwss.gigapixel.cc\r\nContent-Type: text/plain\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".encode("utf-8"))
+                sk.sendall(f"HTTP/1.1 200 OK\r\nUrl: wss://openlanws.gigapixel.cc\r\nContent-Type: text/plain\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".encode("utf-8"))
             else:
                 sk.sendall(f"HTTP/1.1 200 OK\r\nUrl: wss://{currUrl}:{WSS_PORT}\r\nContent-Type: text/plain\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".encode("utf-8"))
         elif page == "/api/login":
@@ -459,6 +469,22 @@ def isValidToken(authToken, username=None):
 
     return False
 
+def resizePfp(pfp):
+    if "," in pfp:
+        pfp = pfp.split(",")[1]
+    pfpBytes = base64.b64decode(pfp)
+    pfpStream = BytesIO(pfpBytes)
+    img = Image.open(pfpStream)
+    format = img.format if img.format else "JPEG"
+    resized = img.resize((256, 256), Image.Resampling.LANCZOS)
+    outputStream = BytesIO()
+    resized.save(outputStream, format=format)
+    resizedBytes = outputStream.getvalue()
+    resizedPfp = base64.b64encode(resizedBytes).decode("utf-8")
+    return f"data:image/{format.lower()};base64,{resizedPfp}"
+
+
+
 async def getAuth(connection, request):
     cookie_header = request.headers.get("Cookie")
     
@@ -499,9 +525,9 @@ async def checkAuthTokenEncrypted(ws: ServerConnection, authToken: str):
 async def wsHandler(ws: ServerConnection):
     WS_CLIENTS.add(ws)
 
-    authToken = getattr(ws, "authToken", None)
-
     try:
+        authToken = getattr(ws, "authToken", None)
+
         async for message in ws:
             msgDecoded = json.loads(message)
 
@@ -611,7 +637,7 @@ async def wsHandler(ws: ServerConnection):
                     if await checkAuthTokenEncrypted(ws, authToken):
                         for chat in chats:
                             if chat["CID"] == decryptedBody["CID"]:
-                                chat["messages"].append({"time": time.time(), "content": decryptedBody["msg"], "UID": getUserIdFromAuthToken(authToken)})
+                                chat["messages"].append({"time": time.time(), "content": decryptedBody["msg"], "UID": getUserIdFromAuthToken(authToken), "MSGID": len(chat["messages"])})
 
                         newChat = getChatFromCID(decryptedBody["CID"])
 
@@ -647,14 +673,7 @@ async def wsHandler(ws: ServerConnection):
                             await wsSendEncrypted(ws, json.dumps({"type":"updateDisplaynameFailed"}), trackerId)
                             continue
                         
-                        success = False
-                        for usr in users:
-                            if usr["UID"] == getUserIdFromAuthToken(authToken):
-                                usr["Displayname"] = dn
-                                success = True
-                                break
-                        
-                        if not success:
+                        if not setUserProperty(getUserIdFromAuthToken(authToken), "Displayname", dn):
                             await wsSendEncrypted(ws, json.dumps({"type":"updateDisplaynameFailed"}), trackerId)
                             continue
 
@@ -662,6 +681,66 @@ async def wsHandler(ws: ServerConnection):
                         await wsBroadcastEncrypted(WS_CLIENTS, json.dumps({"type":"updateCachedDisplayname", "UID": getUserIdFromAuthToken(authToken), "Displayname": dn}))
                     else:
                         break
+                
+                if decryptedBody["type"] == "updateBirthday":
+                    if await checkAuthTokenEncrypted(ws, authToken):
+                        bDay = decryptedBody["bd"]
+                        
+                        if not setUserProperty(getUserIdFromAuthToken(authToken), "Birthday", bDay):
+                            await wsSendEncrypted(ws, json.dumps({"type": "updateBirthdayFailed"}), trackerId)
+                            continue
+
+                        await wsSendEncrypted(ws, json.dumps({"type": "updateBirthdaySuccess"}), trackerId)
+                    else:
+                        break
+                
+                if decryptedBody["type"] == "updatePronoun":
+                    if await checkAuthTokenEncrypted(ws, authToken):
+                        pronouns = decryptedBody["pronoun"]
+                        
+                        if not setUserProperty(getUserIdFromAuthToken(authToken), "Pronouns", pronouns):
+                            await wsSendEncrypted(ws, json.dumps({"type": "updatePronounFailed"}), trackerId)
+                            continue
+
+                        await wsSendEncrypted(ws, json.dumps({"type": "updatePronounSuccess"}), trackerId)
+                    else:
+                        break
+                
+                if decryptedBody["type"] == "updatePfp":
+                    if await checkAuthTokenEncrypted(ws, authToken):
+                        pfp = decryptedBody["pfp"]
+                        pfpResized = resizePfp(pfp)
+
+                        if not setUserProperty(getUserIdFromAuthToken(authToken), "PFP", pfpResized):
+                            await wsSendEncrypted(ws, json.dumps({"type": "updatePfpFailed"}), trackerId)
+                            continue
+
+                        await wsSendEncrypted(ws, json.dumps({"type": "updatePfpSuccess"}), trackerId)
+                        await wsBroadcastEncrypted(WS_CLIENTS, json.dumps({"type": "updateCachedPfp", "UID": getUserIdFromAuthToken(authToken), "PFP": pfpResized}))
+                    else:
+                        break
+                
+                if decryptedBody["type"] == "updateBio":
+                    if await checkAuthTokenEncrypted(ws, authToken):
+                        bio = decryptedBody["bio"]
+
+                        if not setUserProperty(getUserIdFromAuthToken(authToken), "Bio", bio):
+                            await wsSendEncrypted(ws, json.dumps({"type": "updateBioFailed"}), trackerId)
+                            continue
+
+                        await wsSendEncrypted(ws, json.dumps({"type": "updateBioSuccess"}), trackerId)
+                    else:
+                        break
+                
+                if decryptedBody["type"] == "logout":
+                    usr = getUserIdFromAuthToken(authToken)
+                    
+                    if usr:
+                        VALID_TOKENS.pop(usr, None)
+
+                    await wsSendEncrypted(ws, json.dumps({"type": "logoutSuccess"}))
+                    await ws.close()
+                    break
 
                 continue
             

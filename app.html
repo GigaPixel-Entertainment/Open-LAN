@@ -271,6 +271,41 @@
                 height: 90%;
             }
 
+            #currPFP {
+                width: 25%;
+                aspect-ratio: 1;
+                margin-left: 5%;
+                border-radius: 999999999px;
+                border: 6px solid var(--acc4);
+            }
+
+            #currPFPOverlay {
+                position: absolute;
+                width: 25%;
+                aspect-ratio: 1;
+                margin-left: 5%;
+                border-radius: 999999999px;
+                border: 6px solid var(--acc4);
+                left: 0;
+                opacity: .5;
+                visibility: hidden;
+                pointer-events: none;
+            }
+
+            #currPFPFile {
+                position: absolute;
+                width: 25%;
+                aspect-ratio: 1;
+                margin-left: 5%;
+                border-radius: 99999999px;
+                border: 6px solid var(--acc4);
+                left: 0;
+                opacity: .5;
+                pointer-events: all;
+                opacity: 0;
+                cursor: pointer;
+            }
+
             #myProfileRight {
                 position: absolute;
                 right: 0;
@@ -331,6 +366,166 @@
                 margin-right: .5em;
             }
 
+            #rightSideActions {
+                position: absolute;
+                bottom: 1em;
+                right: 1em;
+                width: 100%;
+                height: 10%;
+                display: flex;
+                flex-direction: row-reverse;
+            }
+
+            #logoutBtn {
+                background-color: black;
+                border: none;
+                font-size: 2em;
+                font-weight: 700;
+                width: 10em;
+                box-shadow: 0px 0px 4px 4px white;
+                cursor: pointer;
+                padding: 0;
+            }
+
+            #pfpScalingWrapper {
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                top: 0;
+                left: 0;
+                background-color: rgba(0, 0, 0, .5);
+                visibility: hidden;
+                z-index: 3;
+                opacity: 0;
+
+                transition: opacity 0.5s linear;
+            }
+
+            #pfpScaling {
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                width: 50%;
+                height: 75%;
+                transform: translate(-50%, -50%);
+                background-color: var(--acc2);
+            }
+
+            #pfpPreview {
+                position: absolute;
+                max-width: 75%;
+                height: 75%;
+                aspect-ratio: 1;
+                left: 50%;
+                top: 0;
+                transform: translateX(-50%);
+                border-radius: 99999px;
+                border: 6px solid var(--acc4);
+                margin-top: 1%;
+            }
+
+            #pfpPreviewActions {
+                position: absolute;
+                width: 100%;
+                height: 10%;
+                bottom: 1%;
+                display: flex;
+                justify-content: space-evenly;
+
+            }
+
+            #pfpPreviewActions > button {
+                width: 40%;
+                font-size: 2em;
+                cursor: pointer;
+            }
+
+            #pfpPreviewActionsSet {
+                background-color: var(--button);
+                border: none;
+            }
+
+            #pfpPreviewActionsSet:hover {
+                background-color: var(--button-press);
+            }
+
+            #pfpPreviewActionsCancel {
+                background: none;
+                border: 2px solid var(--button);
+                color: var(--button);
+            }
+
+            #pfpPreviewActionsCancel:hover {
+                border-color: var(--button-press);
+                color: var(--button-press);
+            }
+
+            #accInfo {
+                background-color: var(--acc3);
+                margin-left: 5%;
+                margin-right: 5%;
+                width: 90%;
+                margin-top: .5em;
+            }
+
+            #accInfoDisplayname {
+                font-weight: 400;
+                text-align: center;
+                font-size: 2em;
+                margin-bottom: 0;
+            }
+
+            #accInfoUsername {
+                font-style: italic;
+                font-weight: 200;
+                text-align: center;
+                font-size: 1.5em;
+                margin-top: 0;
+                margin-bottom: 0;
+            }
+
+            #accInfoUID {
+                font-weight: 200;
+                text-align: center;
+                font-size: 1.25em;
+                margin-top: 0;
+            }
+
+            #accCreated {
+                background-color: var(--acc3);
+                margin-left: 5%;
+                margin-right: calc(45% - 2em);
+                width: 50%;
+                padding: 1em;
+            }
+
+            #accCreated > p {
+                font-size: 1.25em;
+                margin-bottom: 0;
+                margin-top: 0;
+            }
+
+            #bio {
+                margin-left: 5%;
+                margin-top: 5%;
+                height: 30%;
+            }
+
+            #bioLabel {
+                font-size: 1.5em;
+                margin-bottom: 0;
+            }
+
+            #bioArea {
+                resize: none;
+                width: 90%;
+                height: 75%;
+                background-color: var(--acc3);
+                border: none;
+                outline: none;
+                font-size: 1.5em;
+            }
+
             #loadingOverlay {
                 position: absolute;
                 top: 0;
@@ -373,6 +568,10 @@
                 color: black;
             }
 
+            .gray {
+                color: gray;
+            }
+
             .scroll {
                 overflow-y: scroll;
             }
@@ -394,6 +593,31 @@
                 opacity: 0;
             }
 
+            .rClickMenu {
+                position: absolute;
+                width: 224px;
+                padding: 8px;
+                background-color: var(--acc);
+                left: 0;
+                top: 0;
+                border: 2px solid var(--acc2);
+                display: flex;
+                flex-direction: column;
+                visibility: hidden;
+            }
+
+            .rClickMenuOption {
+                width: 100%;
+                font-size: 1.25em;
+                background-color: var(--acc);
+                border: none;
+                cursor: pointer;
+            }
+
+            .rClickMenuOption:hover {
+                background-color: var(--acc4);
+            }
+
             ::-webkit-scrollbar {
                 width: 5px;
             }
@@ -409,6 +633,10 @@
             
             ::-webkit-scrollbar-thumb:hover {
                 background: #111;
+            }
+
+            input[type="date"]::-webkit-calendar-picker-indicator {
+                filter: invert(1);
             }
         </style>
     </head>
@@ -444,31 +672,62 @@
             </div>
 
             <div id="myProfileLeft">
-
+                <div id="currentStatus">
+                    <img src="" id="currPFP">
+                    <input type="file" id="currPFPFile" accept="image/*">
+                    <img src="Media/camera.png" id="currPFPOverlay">
+                </div>
+                <div id="accInfo">
+                    <h2 id="accInfoDisplayname" class="font white"></h2>
+                    <p id="accInfoUsername" class="font white"></p>
+                    <p id="accInfoUID" class="font white">Account ID: 0</p>
+                </div>
+                <div id="accCreated">
+                    <p class="font white">Account created:</p>
+                    <p class="font white" id="accCreatedDate">01/01/0001</p>
+                </div>
+                <div id="bio">
+                    <p id="bioLabel" class="font white">BIO:</p>
+                    <textarea id="bioArea" class="font white"></textarea>
+                </div>
             </div>
             
             <div id="myProfileRight">
                 <div id="myProfileEditingList">
                     <div>
                         <p class="font white">username</p>
-                        <input type="text" disabled class="font" id="currUsername">
+                        <input type="text" disabled class="font gray" id="currUsername">
                         <button class="font black editBtn invis" style="cursor: auto;">edit</button>
                     </div>
                     <div>
                         <p class="font white">displayname</p>
-                        <input type="text" disabled class="font" id="currDisplayname">
+                        <input type="text" disabled class="font gray" id="currDisplayname" maxlength="30">
                         <button class="font black editBtn" id="editDisplayname">edit</button>
                     </div>
                     <div>
                         <p class="font white">birthday</p>
-                        <input type="date" disabled class="font" id="currBirthday">
+                        <input type="date" disabled class="font gray" id="currBirthday">
                         <button class="font black editBtn" id="editBirthday">edit</button>
                     </div>
                     <div>
                         <p class="font white">pronouns</p>
-                        <input type="text" disabled class="font" id="currPronouns">
+                        <input type="text" disabled class="font gray" id="currPronouns" maxlength="10">
                         <button class="font black editBtn" id="editPronouns">edit</button>
                     </div>
+                </div>
+
+                <div id="rightSideActions">
+                    <button id="logoutBtn" class="font white">logout</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="pfpScalingWrapper">
+            <div id="pfpScaling">
+                <img id="pfpPreview">
+                <div id="pfpPreviewActions">
+                    <button class="font" id="pfpPreviewActionsCancel">Cancel</button>
+                    <button class="font" id="pfpPreviewActionsSet">Set</button>
                 </div>
             </div>
         </div>
@@ -477,9 +736,16 @@
             <img src="Media/Logo.png">
             <p class="font white" id="loadingText">Connecting to server...</p>
         </div>
+
+        <div id="msgRClickMenu" class="rClickMenu">
+            <button id="msgCopyTxt" class="rClickMenuOption font white">copy text</button>
+            <button id="msgReplyTxt" class="rClickMenuOption font white">reply</button>
+            <button id="msgEditTxt" class="rClickMenuOption font white">edit</button>
+            <button id="msgDeleteTxt" class="rClickMenuOption font white">delete</button>
+        </div>
     </body>
     <footer>
-        Open-LAN is open-source under the <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU General Public License</a> and available on <a href="https://github.com/GigaPixel-Entertainment/GPE-Open-LAN">Github</a>
+        Open-LAN is open-source under the <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank">GNU General Public License</a> and available on <a href="https://github.com/GigaPixel-Entertainment/GPE-Open-LAN" target="_blank">Github</a>
     </footer>
 
     <script>
@@ -517,6 +783,24 @@
             myProfileScreenShown = !myProfileScreenShown
         }
 
+        const currPFP = document.getElementById("currPFP")
+        const currPFPFile = document.getElementById("currPFPFile")
+        const currPFPOverlay = document.getElementById("currPFPOverlay")
+
+        const bioArea = document.getElementById("bioArea")
+
+        const accInfoDisplayname = document.getElementById("accInfoDisplayname")
+        const accInfoUsername = document.getElementById("accInfoUsername")
+        const accInfoUID = document.getElementById("accInfoUID")
+        const accCreatedDate = document.getElementById("accCreatedDate")
+
+        const logoutBtn = document.getElementById("logoutBtn")
+
+        const pfpScalingWrapper = document.getElementById("pfpScalingWrapper")
+        const pfpPreview = document.getElementById("pfpPreview")
+        const pfpCancel = document.getElementById("pfpPreviewActionsCancel")
+        const pfpSet = document.getElementById("pfpPreviewActionsSet")
+
         const currUsernameI = document.getElementById("currUsername")
         const currDisplaynameI = document.getElementById("currDisplayname")
         const editCurrDisplayname = document.getElementById("editDisplayname")
@@ -525,28 +809,123 @@
         const currPronounsI = document.getElementById("currPronouns")
         const editCurrPronouns = document.getElementById("editPronouns")
 
+        const msgRClickMenu = document.getElementById("msgRClickMenu")
+
+        var selected = null
+
+        function convertFileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = (error) => reject(error);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        currPFPFile.addEventListener("mouseenter", (e) => {
+            currPFPOverlay.style.visibility = "visible"
+        })
+
+        currPFPFile.addEventListener("mouseleave", (e) => {
+            currPFPOverlay.style.visibility = "hidden"
+        })
+
+        currPFPFile.addEventListener("change", (e) => {
+            const files = e.target.files
+
+            if (files && files.length > 0) {
+                convertFileToBase64(files[0]).then((img) => {
+                    selected = img
+                    pfpPreview.setAttribute("src", selected)
+                    pfpScalingWrapper.style.visibility = "visible"
+                    pfpScalingWrapper.style.opacity = "1"
+                })
+            }
+        })
+
+        var origBio = ""
+        bioArea.addEventListener("focus", (e) => {
+            origBio = bioArea.value
+        })
+
+        bioArea.addEventListener("blur", (e) => {
+            if (bioArea.value != origBio) {
+                request(JSON.stringify({"type": "updateBio", "bio": bioArea.value})).then((res) => {
+                    if (res["type"] == "updateBioFailed") {
+                        bioArea = origBio
+                    }
+                })
+            }
+        })
+
+        pfpCancel.onclick = () => {
+            selected = null
+            pfpScalingWrapper.style.opacity = "0"
+
+            setTimeout(() => {
+                pfpScalingWrapper.style.visibility = "hidden"
+            }, 500);
+        }
+
+        pfpSet.onclick = () => {
+            pfpScalingWrapper.style.opacity = "0"
+
+            setTimeout(() => {
+                pfpScalingWrapper.style.visibility = "hidden"
+            }, 500);
+
+            if (selected) {
+                currPFP.src = selected
+
+                request(JSON.stringify({
+                    "type": "updatePfp",
+                    "pfp": selected
+                })).then((res) => {
+                    if (res["type"] == "updatePfpFailed") {
+                        console.log("Failed to update pfp!")
+                    }
+                })
+
+                selected = null
+            }
+        }
+
+        logoutBtn.onclick = () => {
+            request(JSON.stringify({"type": "logout"}))
+        }
+
         function popUserInfo(resp) {
             currUsernameI.value = resp["username"]
             currDisplaynameI.value = resp["displayname"]
 
-            if (resp["birthday"] && type(resp["birthday"]) == "Number") {
-                currBirthdayI.value = resp["birthday"]
+            if (resp["birthday"] && typeof resp["birthday"] == "number") {
+                currBirthdayI.valueAsNumber = resp["birthday"] * 1000
             }
 
             currPronounsI.value = resp["pronouns"]
+            currPFP.src = resp["pfp"]
+
+            accInfoDisplayname.textContent = resp["displayname"]
+            accInfoUsername.textContent = resp["username"]
+            accInfoUID.textContent = "Account ID: " + resp["UID"]
+            accCreatedDate.textContent = new Date(resp["accCreated"] * 1000).toLocaleDateString()
+
+            bioArea.value = resp["bio"]
         }
 
         var editingDisplayname = false
         var origDisplayname = ""
         editCurrDisplayname.onclick = () => {
             if (editingDisplayname) {
-                editCurrDisplayname.classList = "font black editBtn"
-                editCurrDisplayname.textContent = "edit"
                 currDisplaynameI.classList.remove("white")
+                currDisplaynameI.classList.add("gray")
                 currDisplaynameI.disabled = true
 
-                if (currDisplaynameI.value.trim() == "" || currDisplaynameI.value.trim().length > 30 ) {
+                if (currDisplaynameI.value.trim() == "" || currDisplaynameI.value.trim().length > 30 || currDisplaynameI.value.trim() == origDisplayname) {
                     currDisplaynameI.value = origDisplayname
+                    editingDisplayname = false
+                    editCurrDisplayname.classList = "font black editBtn"
+                    editCurrDisplayname.textContent = "edit"
                 } else {
                     request(JSON.stringify({
                         "type": "updateDisplayname",
@@ -554,7 +933,16 @@
                     })).then((respBody) => {
                         if (respBody["type"] == "updateDisplaynameFailed") {
                             currDisplaynameI.value = origDisplayname
-                            console.log("Update failed!")
+                            console.log("DN update failed!")
+                            currDisplaynameI.classList.add("white")
+                            currDisplaynameI.classList.remove("gray")
+                            currDisplaynameI.disabled = false
+                        } else {
+                            editingDisplayname = false
+                            editCurrDisplayname.classList = "font black editBtn"
+                            editCurrDisplayname.textContent = "edit"
+
+                            accInfoDisplayname.textContent = currDisplaynameI.value.trim()
                         }
                     })
                 }
@@ -562,10 +950,88 @@
                 editCurrDisplayname.classList = "font black saveBtn"
                 editCurrDisplayname.textContent = "save"
                 currDisplaynameI.classList.add("white")
+                currDisplaynameI.classList.remove("gray")
                 currDisplaynameI.disabled = false
                 origDisplayname = currDisplaynameI.value
+                editingDisplayname = true
             }
-            editingDisplayname = !editingDisplayname
+        }
+
+        var editingBirthday = false
+        var origBirthday = "0-0-0"
+        editCurrBirthday.onclick = () => {
+            if (editingBirthday) {
+                currBirthdayI.classList.remove("white")
+                currBirthdayI.classList.add("gray")
+                currBirthdayI.disabled = true
+
+                request(JSON.stringify({
+                    "type":"updateBirthday",
+                    "bd": currBirthdayI.valueAsNumber / 1000
+                })).then((respBody) => {
+                    if (respBody["type"] == "updateBirthdayFailed") {
+                        currBirthdayI.value = origBirthday
+                        console.log("Birthday update failed!")
+                        currBirthdayI.classList.add("white")
+                        currBirthdayI.classList.remove("gray")
+                        currBirthdayI.disabled = false
+                    } else {
+                        editingBirthday = false
+                        editCurrBirthday.classList = "font black editBtn"
+                        editCurrBirthday.textContent = "edit"
+                    }
+                })
+            } else {
+                editCurrBirthday.classList = "font black saveBtn"
+                editCurrBirthday.textContent = "save"
+                currBirthdayI.classList.add("white")
+                currBirthdayI.classList.remove("gray")
+                currBirthdayI.disabled = false
+                origBirthday = currBirthdayI.value
+                editingBirthday = true
+            }
+        }
+
+        var editingPronouns = false
+        var origPronoun = ""
+        editCurrPronouns.onclick = () => {
+            if (editingPronouns) {
+                currPronounsI.classList.remove("white")
+                currPronounsI.classList.add("gray")
+                currPronounsI.disabled = true
+
+                if (currPronounsI.value.trim().length > 10 || currPronounsI.value.trim() == origPronoun) {
+                    currPronounsI.value = origPronoun
+                    editingPronouns = false
+                    editCurrPronouns.classList = "font black editBtn"
+                    editCurrPronouns.textContent = "edit"
+                } else {
+                    request(JSON.stringify({
+                        "type": "updatePronoun",
+                        "pronoun": currPronounsI.value.trim()
+                    })).then((respBody) => {
+                        if (respBody["type"] == "updatePronounFailed") {
+                            currPronounsI.value = origPronoun
+                            console.log("Pronoun update failed!")
+                            currPronounsI.classList.add("white")
+                            currPronounsI.classList.remove("gray")
+                            currPronounsI.disabled = false
+                        } else {
+                            editingPronouns = false
+                            editCurrPronouns.classList = "font black editBtn"
+                            editCurrPronouns.textContent = "edit"
+                        }
+                    })
+                }
+            } else {
+                editCurrPronouns.classList = "font black saveBtn"
+                editCurrPronouns.textContent = "save"
+                currPronounsI.classList.add("white")
+                currPronounsI.classList.remove("gray")
+                currPronounsI.disabled = false
+                origPronoun = currPronounsI.value
+                editingPronouns = true
+            }
         }
 
         function getUserInfoFromUID(userInfoList, UID) {
@@ -637,7 +1103,7 @@
             pfpImg.style.width = "100%"
             pfpImg.style.aspectRatio = "1"
             pfpImg.style.border = "3px solid var(--acc4)"
-            pfpImg.style.borderRadius = "9999999px"
+            pfpImg.style.borderRadius = "9999999999px"
             pfpImg.style.backgroundColor = "rgba(0, 0, 0, 0)"
             pfpImg.src = getUserInfoFromUID(userInfoList, message["UID"])["pfp"]
 
@@ -719,10 +1185,15 @@
         }
 
         const userInfoCache = []
+        var chatCache = null
+        var chatFetchInProgress = false
         async function setChat(chat) {
             if (chat["CID"] != currChat) {
                 return
             }
+
+            chatFetchInProgress = true
+            chatCache = chat
 
             const currScroll = chatDiv.scrollTop
             const atBottom = currScroll + chatDiv.offsetHeight >= chatDiv.scrollHeight - 8
@@ -738,6 +1209,7 @@
 
             if (chat["messages"].length == 0) {
                 chatDiv.replaceChildren()
+                chatFetchInProgress = false
                 return
             }
 
@@ -780,6 +1252,41 @@
 
             for (let index = 0; index < chat["messages"].length; index++) {
                 const message = chat["messages"][index];
+
+                if (lastMsg && message["time"] && lastMsg["time"]) {
+                    currDate = new Date(message["time"] * 1000).toLocaleDateString("en-US", {year: "numeric", month:"long", day:"numeric"})
+                    lastDate = new Date(lastMsg["time"] * 1000).toLocaleDateString("en-US", {year: "numeric", month:"long", day:"numeric"})
+
+                    if (currDate != lastDate) {
+                        const seperatorWrapper = document.createElement("div")
+                        seperatorWrapper.style.width = "95%"
+                        seperatorWrapper.style.margin = "0 auto"
+
+                        const seperator = document.createElement("hr")
+                        seperator.style.position = "absolute"
+                        seperator.style.width = "95%"
+                        seperator.style.border = "none"
+                        seperator.style.height = "4px"
+                        seperator.style.borderRadius = "99999px"
+                        seperator.style.backgroundColor = "var(--acc4)"
+                        seperatorWrapper.appendChild(seperator)
+
+                        const date = document.createElement("p")
+                        date.textContent = currDate
+                        date.classList = "font white"
+                        date.style.backgroundColor = "var(--bg)"
+                        date.style.position = "relative"
+                        date.style.left = "50%"
+                        date.style.width = "fit-content"
+                        date.style.transform = "translateX(-50%)"
+                        date.style.paddingLeft = "1em"
+                        date.style.paddingRight = "1em"
+                        seperatorWrapper.appendChild(date)
+
+                        chatDiv.appendChild(seperatorWrapper)
+                    }
+                }
+
                 var messageDiv = null
 
                 if (lastMsg) {
@@ -793,9 +1300,22 @@
                     messageDiv = genFullMsg(userInfoCache, message)
                 }
 
+                messageDiv.addEventListener("contextmenu", (e) => {
+                    e.preventDefault()
+                    msgRClickMenu.style.visibility = "visible"
+                    msgRClickMenu.style.left = e.pageX + "px"
+                    msgRClickMenu.style.top = e.pageY + "px"
+                })
+
                 chatDiv.appendChild(messageDiv)
                 lastMsg = message
             }
+
+            document.addEventListener("mousedown", (e) => {
+                if (msgRClickMenu.style.visibility == "visible") {
+                    msgRClickMenu.style.visibility = "hidden"
+                }
+            })
 
             const padding = document.createElement("div")
             padding.style.width = "100%"
@@ -811,6 +1331,8 @@
             if (currScroll + chatDiv.offsetHeight >= chatDiv.scrollHeight - 8) {
                 chatDiv.scrollTop = chatDiv.scrollHeight
             }
+
+            chatFetchInProgress = false
         }
 
         function updateCachedDisplayname(resp) {
@@ -825,7 +1347,39 @@
             }
 
             if (updated) {
-                fetchChatData(currChat)
+                if (chatFetchInProgress) {
+                    return
+                }
+
+                if (chatCache) {
+                    setChat(chatCache)
+                } else if (!chatCache) {
+                    fetchChatData(currChat)
+                }
+            }
+        }
+
+        function updateCachedPfp(resp) {
+            updated = false
+            for (let cacheIndex = 0; cacheIndex < userInfoCache.length; cacheIndex++) {
+                const cacheItem = userInfoCache[cacheIndex];
+                
+                if (cacheItem["UID"] == resp["UID"]) {
+                    cacheItem["pfp"] = resp["PFP"]
+                    updated = true
+                }
+            }
+
+            if (updated) {
+                if (chatFetchInProgress) {
+                    return
+                }
+
+                if (chatCache) {
+                    setChat(chatCache)
+                } else if (!chatCache) {
+                    fetchChatData(currChat)
+                }
             }
         }
     </script>
@@ -979,11 +1533,9 @@
             }
 
             async function load() {
-                loadingText.textContent = "Fetching user data..."
+                loadingText.textContent = "Fetching data..."
                 await fetchSelfData()
-                loadingText.textContent = "Fetching chat data..."
                 await fetchChatData(0)
-
                 await waitUntilLoadingDone()
 
                 loadingText.textContent = "Waiting for page..."
@@ -1088,24 +1640,15 @@
                                                 loadingStatus += 1
                                             }
 
-                                            
                                             setChat(respBody["chat"])
                                         }
 
-                                        if (respBody["type"] == "reqUsersListSuccess") {
-                                            if (trackerId && trackerIds.includes(trackerId)) {
-                                                trackerHit(trackerId, respBody)
-                                            }
+                                        if (respBody["type"] == "updateCachedPfp") {
+                                            updateCachedPfp(respBody)
                                         }
 
                                         if (respBody["type"] == "chatUpdate") {
                                             setChat(respBody["chat"])
-                                        }
-
-                                        if (respBody["type"] == "updateDisplaynameSuccess") {
-                                            if (trackerId && trackerIds.includes(trackerId)) {
-                                                trackerHit(trackerId, respBody)
-                                            }
                                         }
 
                                         if (respBody["type"] == "updateCachedDisplayname") {
@@ -1113,23 +1656,19 @@
                                         }
 
                                         if (respBody["type"] == "reqUserFailed") {
-                                            if (loading) {
-                                                fetchSelfData()
-                                            } else {
-
-                                            }
+                                            fetchSelfData()
                                         }
 
-                                        if (resp["type"] == "reqChatFailed") {
-                                            if (loading) {
-                                                fetchChatData(0)
-                                            }
+                                        if (respBody["type"] == "reqChatFailed") {
+                                            fetchChatData(currChat)
                                         }
 
-                                        if (respBody["type"] == "updateDisplaynameFailed") {
-                                            if (trackerId && trackerIds.includes(trackerId)) {
-                                                trackerHit(trackerId, respBody)
-                                            }
+                                        if (respBody["type"] == "logoutSuccess") {
+                                            window.location.assign(protocol + "//" + domainURL + "/login.html")
+                                        }
+
+                                        if (trackerId && trackerIds.includes(trackerId)) {
+                                            trackerHit(trackerId, respBody)
                                         }
                                     })
                                 } else {
@@ -1189,7 +1728,7 @@
 
 
         document.addEventListener("keydown", (key) => {
-            if (key.key == "/" && textEntry != document.activeElement) {
+            if (key.key == "/" && textEntry != document.activeElement && !myProfileScreenShown) {
                 key.preventDefault()
                 textEntry.focus()
             }

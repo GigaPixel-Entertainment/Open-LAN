@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /CA_CERT/
+Disallow: /Users/
+Disallow: /Chats/
+Disallow: /meta.key
