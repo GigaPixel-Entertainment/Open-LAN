@@ -3,9 +3,117 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Fira+Code:wght@300..700&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="CSS/userIdent.css">
+        <link rel="icon" href="Media/LogoSquare.png">
         <title>Open-LAN Success</title>
+
+        <style>
+            :root {
+                --bg: #1a3053;
+                --acc: #113963;
+                --acc2: #145492;
+                --acc3: #3e84c5;
+                --acc4: #0c273f;
+                --text: #FFFFFF;
+                --text2: #cee1f3;
+                --placeholder: #BBBBBB;
+                --button: #a1c3c8;
+                --button-press: #90b2b7;
+                --highlight: #6ea6db;
+            }
+
+            html, body {
+                height: 100vh;
+                overflow: hidden;
+            }
+
+            body {
+                padding: 0;
+                margin: 0;
+                background: linear-gradient(105deg, var(--bg) 65%, var(--acc) 65.1%, var(--acc) 68%, var(--acc2) 68.1%, var(--acc2) 71%, var(--acc3) 71.1%, var(--acc3) 74%, var(--bg) 74.1%);
+                background-repeat: no-repeat;
+                background-attachment: fixed;
+            }
+
+            footer {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                color: white;
+                font-family: "Fire Code", monospace;
+                font-size: small;
+                z-index: 99;
+            }
+
+            footer > a {
+                color: white;
+                text-decoration-color: white;
+            }
+
+            #smallTopLogo {
+                position: absolute;
+                max-width: 10%;
+                margin: 4px;
+            }
+
+            #contentWrapper {
+                position: absolute;
+                margin-left: 10%;
+                top: 50%;
+                transform: translateY(-50%);
+            }
+
+            #title {
+                font-size: 6em;
+                margin-bottom: 0;
+                margin-top: 0;
+            }
+
+            #text {
+                font-size: 1.5em;
+                margin-top: 0;
+            }
+
+            #backBtn {
+                width: 75%;
+                font-size: 2em;
+                padding: .75em;
+                font-weight: 300;
+                border-radius: 0;
+                margin-top: 1em;
+                cursor: pointer;
+                background: none;
+                border: 2px solid var(--button);
+                color: var(--button);
+            }
+
+            #backBtn:hover {
+                border: 2px solid var(--button-press);
+                color: var(--button-press);
+            }
+
+            .font {
+                font-family: "Fira Code", monospace;
+            }
+
+            .white {
+                color: var(--text);
+            }
+        </style>
     </head>
     <body>
-        
+        <a href="index.html"><img src="Media/Logo.png" id="smallTopLogo"></a>
+
+        <div id="contentWrapper">
+            <h1 class="font white" id="title">SIGN UP SUCCESS!</h1>
+            <p class="font white" id="text">Your account may take a maximum of 5 minutes to register</p>
+            <a href="index.html"><button class="font" id="backBtn">Back to main page</button></a>
+        </div>
     </body>
+    <footer>
+        Open-LAN is open-source under the <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank">GNU General Public License</a> and available on <a href="https://github.com/GigaPixel-Entertainment/GPE-Open-LAN" target="_blank">Github</a>
+    </footer>
 </html>

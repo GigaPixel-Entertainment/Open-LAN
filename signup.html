@@ -123,6 +123,7 @@
             function setError(title, content) {
                 if (title == "" && content == "") {
                     errBox.style.visibility = "hidden"
+                    return
                 }
 
                 errTitle.textContent = title
@@ -183,7 +184,6 @@
                 }
             })
 
-            var sharedSecretBytes = null
             var encrypted = false
 
             console.log("Connecting to websocket via " + WsProtocol + "//")
@@ -192,12 +192,13 @@
             const bytesToHex = bytes => Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
             const textEncode = (text) => new TextEncoder().encode(text);
             const textDecode = (text) => new TextDecoder().decode(text);
+            var sharedSecretKey = null
             var keyPair = null
 
             async function generatePubKey() {
                 keyPair = await crypto.subtle.generateKey(
                     { name: "ECDH", namedCurve: "P-256" },
-                    true,
+                    false,
                     ["deriveKey", "deriveBits"]
                 );
                 const pubBuffer = await crypto.subtle.exportKey("raw", keyPair.publicKey);
@@ -222,14 +223,21 @@
                     256
                 );
 
-                sharedSecretBytes = new Uint8Array(sharedSecretBuffer);
+                var sharedSecretBytes = new Uint8Array(sharedSecretBuffer);
+
+                sharedSecretKey = await crypto.subtle.importKey(
+                    "raw",
+                    sharedSecretBytes,
+                    { name: "AES-GCM" },
+                    false,
+                    ["encrypt", "decrypt"]
+                )
+
+                sharedSecretBytes.fill(0)
+                sharedSecretBytes = null
             }
 
-            async function encryptAES(text, rawKey) {
-                const key = await window.crypto.subtle.importKey(
-                    "raw", rawKey, { name: "AES-GCM" }, false, ["encrypt"]
-                );
-
+            async function encryptAES(text) {
                 const iv = window.crypto.getRandomValues(new Uint8Array(12));
                 const encodedText = textEncode(text);
 
@@ -243,11 +251,7 @@
                 };
             }
 
-            async function decryptAES(ivHex, ciphertextHex, rawKey) {
-                const key = await window.crypto.subtle.importKey(
-                    "raw", rawKey, { name: "AES-GCM" }, false, ["decrypt"]
-                );
-
+            async function decryptAES(ivHex, ciphertextHex) {
                 const iv = hexToBytes(ivHex);
                 const ciphertext = hexToBytes(ciphertextHex);
 
@@ -277,7 +281,7 @@
 
                                     const origSend = ws.send
                                     ws.send = function(data) {
-                                        encryptAES(data, sharedSecretBytes).then((encryptionResults) => {
+                                        encryptAES(data).then((encryptionResults) => {
                                             origSend.call(ws, JSON.stringify({"encryption": "AES", "iv": encryptionResults["iv"],"body":encryptionResults["ciphertext"]}))
                                         })
                                     }
@@ -287,7 +291,7 @@
 
                             if (resp["encryption"] == "AES") {
                                 if (encrypted) {
-                                    decryptAES(resp["iv"], resp["body"], sharedSecretBytes).then((data) => {
+                                    decryptAES(resp["iv"], resp["body"]).then((data) => {
                                         respBody = JSON.parse(data)
 
                                         if (respBody["type"] == "signupSuccess") {
