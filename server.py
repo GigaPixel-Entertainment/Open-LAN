@@ -1,5 +1,5 @@
 # Open-LAN allows you to host your own messaging server on the Local Area Network.
-# Copyright (C) 2026  Alex Gan
+# Copyright (C) 2026  GigaPixel Entertainment
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
-# Alex Gan <the_mrjune@gigapixel.cc>
+# GigaPixel Entertainment <the_mrjune@gigapixel.cc>
 
 
 print("""
@@ -25,7 +25,7 @@ print("""
 ####################
 by GigaPixel Entertainment
 
-Open-LAN  Copyright (C) 2026  Alex Gan
+Open-LAN  Copyright (C) 2026  GigaPixel Entertainment
 This program comes with ABSOLUTELY NO WARRANTY.
 This is free software, and you are welcome to redistribute it
 under certain conditions; See <https://www.gnu.org/licenses/>.
