@@ -28,7 +28,7 @@
         <div id="friendsListWrapper">
             <div id="friendsHeader">
                 <img src="Media/FriendsIcon.png">
-                <p class="font black">friends (0)</p>
+                <p class="font black" id="friendCount">friends (0)</p>
                 <div id="friendReqBtnWrapper">
                     <button class="font black" id="friendReqSBtn" onclick="toggleFriendReqScreen()">+</button>
                 </div>
@@ -256,6 +256,8 @@
     </script>
     <script>
         // Misc UI
+        window.scrollTo(0, 0)
+
         const friendsListWrapper = document.getElementById("friendsListWrapper")
         const toggleFriendsList = document.getElementById("toggleFriendsList")
         const myProfileScreen = document.getElementById("myProfileScreen")
@@ -317,6 +319,9 @@
         const editCurrBirthday = document.getElementById("editBirthday")
         const currPronounsI = document.getElementById("currPronouns")
         const editCurrPronouns = document.getElementById("editPronouns")
+
+        const friendCount = document.getElementById("friendCount")
+        const friendsList = document.getElementById("friendsList")
 
         const friendReqScreenBtn = document.getElementById("friendReqSBtn")
         const friendReqScreen = document.getElementById("friendReqScreen")
@@ -403,6 +408,9 @@
                 if (res["UID"] == currUID) {
                     btn.textContent = "you"
                     btn.disabled = true
+                } else if (friends.find((v) => {return v["UID"] == res["UID"]})) {
+                    btn.textContent = "friends"
+                    btn.disabled = true
                 } else if (friendReqs.find((v) => {return v["type"] == "incoming" && v["UID"] == res["UID"]})) {
                     btn.textContent = "accept request"
                     btn.style.backgroundColor = "var(--sendButtonGreen)"
@@ -419,7 +427,6 @@
                     btn.style.cursor = "pointer"
                     btnType = "send"
                 }
-
 
                 btn.onclick = () => {
                     if (btnType == "send") {
@@ -644,6 +651,7 @@
                     reqDiv.style.overflow = "hidden"
                     reqDiv.style.display = "flex"
                     reqDiv.style.flexDirection = "row"
+                    reqDiv.style.marginBottom = "1em"
 
                     let pfpDiv = document.createElement("div")
                     pfpDiv.style.width = "56px"
@@ -657,7 +665,7 @@
                     pfpImg.src = uInfo["pfp"]
 
                     let infoDiv = document.createElement("div")
-                    infoDiv.style.width = "50%"
+                    infoDiv.style.width = "70%"
                     infoDiv.style.height = "100%"
                     infoDiv.style.marginLeft = "1em"
 
@@ -665,7 +673,11 @@
                     displayname.style.width = "100%"
                     displayname.style.height = "75%"
                     displayname.style.margin = "0"
-                    displayname.classList = "font white"
+                    displayname.style.background = "linear-gradient(to right, white 0%, white 80%, transparent 100%)"
+                    displayname.style.backgroundClip = "text"
+                    displayname.style.color = "transparent"
+                    displayname.style.whiteSpace = "nowrap"
+                    displayname.classList = "font"
                     displayname.textContent = uInfo["displayname"]
 
                     let extraInfo = document.createElement("p")
@@ -675,25 +687,89 @@
                     extraInfo.classList = "font white"
                     extraInfo.textContent = uInfo["username"] + " | ID: " + uInfo["UID"]
 
+                    let sep = document.createElement("div")
+                    sep.style.width = "4px"
+                    sep.style.height = "100%"
+                    sep.style.backgroundColor = "var(--acc4)"
+                    sep.style.borderRadius = "9999px"
+
                     let actionDiv = document.createElement("div")
-                    actionDiv.style.width = "50%"
+                    actionDiv.style.width = "30%"
                     actionDiv.style.height = "100%"
-                    
-                    
+                    actionDiv.style.display = "flex"
+                    actionDiv.style.flexDirection = "row"
+                    actionDiv.style.alignItems = "center"
+
                     pfpDiv.appendChild(pfpImg)
 
                     infoDiv.appendChild(displayname)
                     infoDiv.appendChild(extraInfo)
 
-                    
-
                     reqDiv.appendChild(pfpDiv)
                     reqDiv.appendChild(infoDiv)
+                    reqDiv.appendChild(sep)
                     reqDiv.appendChild(actionDiv)
 
                     if (req["type"] == "incoming") {
+                        let checkBtn = document.createElement("button")
+                        checkBtn.style.width = "50%"
+                        checkBtn.style.height = "100%"
+                        checkBtn.style.background = "none"
+                        checkBtn.style.fontSize = "2em"
+                        checkBtn.style.color = "lime"
+                        checkBtn.style.cursor = "pointer"
+                        checkBtn.style.border = "none"
+                        checkBtn.classList = "font"
+                        checkBtn.textContent = "✓"
+
+                        let sep = document.createElement("div")
+                        sep.style.width = "4px"
+                        sep.style.height = "75%"
+                        sep.style.backgroundColor = "var(--acc4)"
+                        sep.style.borderRadius = "9999px"
+
+                        let xBtn = document.createElement("button")
+                        xBtn.style.width = "50%"
+                        xBtn.style.height = "100%"
+                        xBtn.style.background = "none"
+                        xBtn.style.fontSize = "2em"
+                        xBtn.style.color = "red"
+                        xBtn.style.cursor = "pointer"
+                        xBtn.style.border = "none"
+                        xBtn.classList = "font"
+                        xBtn.textContent = "X"
+
+                        checkBtn.onclick = () => {
+                            request(JSON.stringify({"type": "acceptFriendReq", "UID": uInfo["UID"]}))
+                        }
+
+                        xBtn.onclick = () => {
+                            request(JSON.stringify({"type": "declineFriendReq", "UID": uInfo["UID"]}))
+                        }
+
+                        actionDiv.appendChild(checkBtn)
+                        actionDiv.appendChild(sep)
+                        actionDiv.appendChild(xBtn)
+
                         incomingList.appendChild(reqDiv)
                     } else {
+                        let xBtn = document.createElement("button")
+                        xBtn.style.width = "100%"
+                        xBtn.style.height = "100%"
+                        xBtn.style.background = "none"
+                        xBtn.style.fontSize = "2em"
+                        xBtn.style.color = "red"
+                        xBtn.style.cursor = "pointer"
+                        xBtn.style.border = "none"
+                        xBtn.classList = "font"
+                        xBtn.textContent = "X"
+
+                        xBtn.onclick = () => {
+                            request(JSON.stringify({"type": "cancelFriendReq", "UID": uInfo["UID"]}))
+                        }
+
+                        actionDiv.appendChild(xBtn)
+
                         outgoingList.appendChild(reqDiv)
                     }
                 })
@@ -702,12 +778,105 @@
             popSearchResults()
         }
 
+        async function setChatList() {
+            amLabel = document.createElement("p")
+            amLabel.classList = "white font"
+            amLabel.textContent = "active messages"
+
+            friendsList.replaceChildren(
+                amLabel
+            )
+
+            for (let chatInd = 0; chatInd < chats.length; chatInd++) {
+                const chatID = chats[chatInd]
+                const chat = (await request(JSON.stringify({"type": "reqChatMeta", "CID": chatID})))["chat"]
+
+                if (chat == null) {
+                    console.log("Failed to fetch chat " + chatID + ", pretending it doesn't exist")
+                    continue
+                }
+
+                let chatDiv = document.createElement("div")
+                chatDiv.style.width = "100%"
+                chatDiv.style.height = "60px"
+                chatDiv.style.margin = "0"
+                chatDiv.style.paddingTop = ".5em"
+                chatDiv.style.paddingBottom = ".5em"
+                chatDiv.style.display = "flex"
+                chatDiv.style.flexDirection = "row"
+                chatDiv.style.cursor = "pointer"
+
+                if (currChat == chatID) {
+                    chatDiv.style.backgroundColor = "var(--acc2)"
+                }
+
+                chatDiv.onclick = () => {
+                    currChat = chatID
+                    fetchChatData(currChat)
+                    setChatList()
+                }
+
+                let chatImg = document.createElement("div")
+                chatImg.style.width = "60px"
+                chatImg.style.height = "60px"
+
+                let chatImgPic = document.createElement("img")
+                chatImgPic.style.width = "56px"
+                chatImgPic.style.height = "56px"
+                chatImgPic.style.borderRadius = "9999px"
+                chatImgPic.style.border = "2px solid var(--acc4)"
+                
+                let chatInfo = document.createElement("div")
+                chatInfo.style.width = "calc(100% - 60px)"
+                chatInfo.style.height = "100%"
+                chatInfo.style.display = "flex"
+                chatInfo.style.flexDirection = "column"
+
+                let chatName = document.createElement("h2")
+                chatName.style.width = "100%"
+                chatName.style.height = "75%"
+                chatName.style.margin = "0"
+                chatName.style.background = "linear-gradient(to right, white 0%, white 80%, transparent 100%)"
+                chatName.style.backgroundClip = "text"
+                chatName.style.color = "transparent"
+                chatName.style.whiteSpace = "nowrap"
+                chatName.classList = "font"
+
+                if (chat["type"] == "dm") {
+                    let other = chat["recipients"].filter(item => item != currUID)
+
+                    if (other && other.length > 0) {
+                        let otherInfo = await reqUsrInfo(other[0])
+
+                        chatName.textContent = otherInfo["displayname"]
+                        chatImgPic.src = otherInfo["pfp"]
+                    } else {
+                        // Fallback
+                        
+                        chatName.textContent = chat["name"]
+                        chatImgPic.src = "Media/LogoSquare.png"
+                    }
+                } else {
+                    chatName.textContent = chat["name"]
+                    chatImgPic.src = "Media/LogoSquare.png"
+                }
+
+                chatImg.appendChild(chatImgPic)
+                chatInfo.appendChild(chatName)
+                chatDiv.appendChild(chatImg)
+                chatDiv.appendChild(chatInfo)
+                friendsList.appendChild(chatDiv)
+            }
+        }
+
         function popUserInfo(resp) {
             currUID = resp["UID"]
 
             chats = resp["chats"]
             friends = resp["friends"]
             friendReqs = resp["friendReq"]
+
+            friendCount.textContent = "friends (" + friends.length + ")"
 
             currUsernameI.value = resp["username"]
             currDisplaynameI.value = resp["displayname"]
@@ -727,6 +896,7 @@
             bioArea.value = resp["bio"]
 
             setFriendReqs()
+            setChatList()
         }
 
         var editingDisplayname = false
@@ -1016,12 +1186,15 @@
             const atBottom = currScroll + chatDiv.offsetHeight >= chatDiv.scrollHeight - 8
 
             const currChatName = chat["Name"]
+            const currRecipients = chat["Recipients"]
             const currChatType = chat["Type"]
 
-            if (currChatType == "server" || currChatType == "forced-server") {
+            if (currChatType == "forced-gc") {
                 chatName.textContent = "You are chatting on: " + currChatName
             } else if (currChatType == "dm") {
-                chatName.textContent = "You are chatting with: " + currChatName
+                let other = currRecipients.filter(item => item != currUID)
+
+                chatName.textContent = "You are chatting with: " + (await reqUsrInfo(other[0]))["displayname"]
             }
 
             if (chat["messages"].length == 0) {
@@ -1474,12 +1647,20 @@
                                             setFriendReqs()
                                         }
 
+                                        if (respBody["type"] == "updateFriends") {
+                                            friendReqs = respBody["friendReqs"]
+                                            friends = respBody["friends"]
+                                            chats = respBody["chats"]
+                                            setFriendReqs()
+                                            setChatList()
+                                        }
+
                                         if (respBody["type"] == "reqUserFailed") {
-                                            fetchSelfData()
+                                            setTimeout(fetchSelfData, 1000)
                                         }
 
                                         if (respBody["type"] == "reqChatFailed") {
-                                            fetchChatData(currChat)
+                                            setTimeout(() => {fetchChatData(currChat)}, 1000)
                                         }
 
                                         if (respBody["type"] == "logoutSuccess") {

@@ -257,12 +257,13 @@ def loadChats():
                     fileContents = msgpack.unpackb(f.read())
                     metadata = fileContents["meta"]
                     name = fileContents["Name"]
+                    recipients = (fileContents["Recipients"] if "Recipients" in fileContents else [])
                     messages = fileContents["messages"]
 
                     for msg in messages:
                         msg["content"] = fernet.decrypt(msg["content"]).decode("utf-16")
 
-                    chats.append({"CID": metadata["CID"], "Type": metadata["Type"], "Name": name, "messages": messages})
+                    chats.append({"CID": metadata["CID"], "Type": metadata["Type"], "Name": name, "Recipients": recipients, "messages": messages})
                     f.close()
             except Exception:
                 traceback.print_exc()
@@ -305,7 +306,7 @@ def saveChats():
                     messageSaving["content"] = fernet.encrypt(msgContents.encode("utf-16"))
                     messages.append(messageSaving)
                 
-                packed: bytes | None = msgpack.packb({"meta":metadata,"Name":chat["Name"],"messages":messages})
+                packed: bytes | None = msgpack.packb({"meta":metadata,"Name":chat["Name"],"Recipients": chat["Recipients"], "messages":messages})
 
                 if packed:
                     f.write(packed)
@@ -809,6 +810,31 @@ async def wsHandler(ws: ServerConnection):
                         }), trackerId)
                     else:
                         break
+                
+                if decryptedBody["type"] == "reqChatMeta":
+                    if await checkAuthTokenEncrypted(ws, authToken):
+                        if not "CID" in decryptedBody:
+                            await wsSendEncrypted(ws, orjson.dumps({"type": "reqChatMetaFailed", "message": "Request error. Please contact the server owner for help."}), trackerId)
+                            continue
+
+                        if not tokenInChat(authToken, decryptedBody["CID"]):
+                            await wsSendEncrypted(ws, orjson.dumps({"type":"reqChatMetaFailed","message": "User not in chat!"}), trackerId)
+                            continue
+
+                        chat = getChatFromCID(decryptedBody["CID"])
+
+                        if chat == None:
+                            await wsSendEncrypted(ws, orjson.dumps({"type":"reqChatMetaFailed","message":"Chat not found!"}), trackerId)
+                            continue
+
+                        await wsSendEncrypted(ws, orjson.dumps({"type":"reqChatMetaSuccess", "chat": {
+                            "CID": chat["CID"],
+                            "type": chat["Type"],
+                            "name": chat["Name"],
+                            "recipients": chat["Recipients"]
+                        }}), trackerId)
+                    else:
+                        break
 
                 if decryptedBody["type"] == "reqChat":
                     if await checkAuthTokenEncrypted(ws, authToken):
@@ -1107,8 +1133,17 @@ async def wsHandler(ws: ServerConnection):
                                     alreadyRequested = True
                                     break
                         
-                        print(targetFriendReqs)
-                        print(selfFriendReqs)
+                        if not alreadyRequested:
+                            for fri in selfInfo["Friends"]:
+                                if fri["UID"] == targetUID:
+                                    alreadyRequested = True
+                                    break
+                        
+                        if not alreadyRequested:
+                            for fri in targetInfo["Friends"]:
+                                if fri["UID"] == selfUID:
+                                    alreadyRequested = True
+                                    break
                         
                         if alreadyRequested:
                             await wsSendEncrypted(ws, orjson.dumps({"type": "friendReqFailed"}), trackerId)
@@ -1122,16 +1157,13 @@ async def wsHandler(ws: ServerConnection):
                             if usr["UID"] == selfUID:
                                 usr["FriendRequests"].append({"UID":targetUID, "type":"outgoing"})
                                 selfFriendReqs = usr["FriendRequests"]
-
-                        print(targetFriendReqs)
-                        print(selfFriendReqs)
                         
                         await wsSendEncrypted(ws, orjson.dumps({"type": "updateFriendReqs", "friendReqs": selfFriendReqs}), trackerId)
 
-                        for ws in WS_CLIENTS:
-                            wsUID = getattr(ws, "UID", None)
+                        for ws2 in WS_CLIENTS:
+                            wsUID = getattr(ws2, "UID", None)
                             if wsUID != None and wsUID == targetUID:
-                                await wsSendEncrypted(ws, orjson.dumps({"type": "updateFriendReqs", "friendReqs": targetFriendReqs}))
+                                await wsSendEncrypted(ws2, orjson.dumps({"type": "updateFriendReqs", "friendReqs": targetFriendReqs}))
                                 break
                     else:
                         break
@@ -1154,9 +1186,6 @@ async def wsHandler(ws: ServerConnection):
 
                         targetFriendReqs = targetInfo["FriendRequests"]
                         selfFriendReqs = selfInfo["FriendRequests"]
-
-                        print(targetFriendReqs)
-                        print(selfFriendReqs)
                         
                         for usr in users:
                             if usr["UID"] == targetUID:
@@ -1166,21 +1195,118 @@ async def wsHandler(ws: ServerConnection):
                             if usr["UID"] == selfUID:
                                 usr["FriendRequests"].remove({"UID":targetUID, "type":"outgoing"})
                                 selfFriendReqs = usr["FriendRequests"]
-
-                        print(targetFriendReqs)
-                        print(selfFriendReqs)
                         
                         await wsSendEncrypted(ws, orjson.dumps({"type": "updateFriendReqs", "friendReqs": selfFriendReqs}), trackerId)
 
-                        for ws in WS_CLIENTS:
-                            wsUID = getattr(ws, "UID", None)
+                        for ws2 in WS_CLIENTS:
+                            wsUID = getattr(ws2, "UID", None)
                             if wsUID != None and wsUID == targetUID:
-                                await wsSendEncrypted(ws, orjson.dumps({"type": "updateFriendReqs", "friendReqs": targetFriendReqs}))
+                                await wsSendEncrypted(ws2, orjson.dumps({"type": "updateFriendReqs", "friendReqs": targetFriendReqs}))
                                 break
                     else:
                         break
 
-                    
+                if decryptedBody["type"] == "declineFriendReq":
+                    if await checkAuthTokenEncrypted(ws, authToken):
+                        if not "UID" in decryptedBody:
+                            await wsSendEncrypted(ws, orjson.dumps({"type": "declineFriendReqFailed"}), trackerId)
+                            continue
+
+                        targetUID = decryptedBody["UID"]
+                        selfUID = getUserIdFromAuthToken(authToken)
+
+                        targetInfo = getUserInfoFromUserId(targetUID)
+                        selfInfo = getUserInfoFromToken(authToken)
+
+                        if targetInfo is None or selfInfo is None:
+                            await wsSendEncrypted(ws, orjson.dumps({"type": "declineFriendReqFailed"}), trackerId)
+                            continue
+
+                        targetFriendReqs = targetInfo["FriendRequests"]
+                        selfFriendReqs = selfInfo["FriendRequests"]
+                        
+                        for usr in users:
+                            if usr["UID"] == targetUID:
+                                usr["FriendRequests"].remove({"UID":selfUID, "type":"outgoing"})
+                                targetFriendReqs = usr["FriendRequests"]
+                            
+                            if usr["UID"] == selfUID:
+                                usr["FriendRequests"].remove({"UID":targetUID, "type":"incoming"})
+                                selfFriendReqs = usr["FriendRequests"]
+                        
+                        await wsSendEncrypted(ws, orjson.dumps({"type": "updateFriendReqs", "friendReqs": selfFriendReqs}), trackerId)
+
+                        for ws2 in WS_CLIENTS:
+                            wsUID = getattr(ws2, "UID", None)
+                            if wsUID != None and wsUID == targetUID:
+                                await wsSendEncrypted(ws2, orjson.dumps({"type": "updateFriendReqs", "friendReqs": targetFriendReqs}))
+                                break
+                    else:
+                        break
+
+                if decryptedBody["type"] == "acceptFriendReq":
+                    if await checkAuthTokenEncrypted(ws, authToken):
+                        if not "UID" in decryptedBody:
+                            await wsSendEncrypted(ws, orjson.dumps({"type": "acceptFriendReqFailed"}), trackerId)
+                            continue
+
+                        targetUID = decryptedBody["UID"]
+                        selfUID = getUserIdFromAuthToken(authToken)
+
+                        targetInfo = getUserInfoFromUserId(targetUID)
+                        selfInfo = getUserInfoFromToken(authToken)
+
+                        if targetInfo is None or selfInfo is None:
+                            await wsSendEncrypted(ws, orjson.dumps({"type": "acceptFriendReqFailed"}), trackerId)
+                            continue
+
+                        targetFriendReqs: list = targetInfo["FriendRequests"]
+                        selfFriendReqs: list = selfInfo["FriendRequests"]
+
+                        alreadyFriends = False
+                        for fri in selfInfo["Friends"]:
+                            if fri["UID"] == targetUID:
+                                alreadyRequested = True
+                                break
+                        
+                        if not alreadyFriends:
+                            for fri in targetInfo["Friends"]:
+                                if fri["UID"] == selfUID:
+                                    alreadyRequested = True
+                                    break
+                        
+                        if alreadyFriends:
+                            await wsSendEncrypted(ws, orjson.dumps({"type": "acceptFriendReqFailed"}), trackerId)
+                            continue
+                        
+                        if not ({"UID": targetUID, "type": "incoming"} in selfFriendReqs and {"UID": selfUID, "type": "outgoing"} in targetFriendReqs):
+                            await wsSendEncrypted(ws, orjson.dumps({"type": "acceptFriendReqFailed"}), trackerId)
+                            continue
+
+                        cid = len(chats)
+
+                        chats.append({"CID": cid, "Type": "dm", "Name": f"{targetInfo["Displayname"]} & {selfInfo["Displayname"]}", "Recipients": [selfUID, targetUID], "messages": []})
+                        
+                        for usr in users:
+                            if usr["UID"] == targetUID:
+                                usr["FriendRequests"].remove({"UID": selfUID, "type": "outgoing"})
+                                usr["Friends"].append({"UID": selfUID, "CID": cid, "timestamp": time.time()})
+                                usr["Chats"].append(cid)
+                            
+                            if usr["UID"] == selfUID:
+                                usr["FriendRequests"].remove({"UID": targetUID, "type": "incoming"})
+                                usr["Friends"].append({"UID": targetUID, "CID": cid, "timestamp": time.time()})
+                                usr["Chats"].append(cid)
+                        
+                        await wsSendEncrypted(ws, orjson.dumps({"type": "updateFriends", "friendReqs": selfFriendReqs, "friends": selfInfo["Friends"], "chats": selfInfo["Chats"]}), trackerId)
+
+                        for ws2 in WS_CLIENTS:
+                            wsUID = getattr(ws2, "UID", None)
+                            if wsUID != None and wsUID == targetUID:
+                                await wsSendEncrypted(ws2, orjson.dumps({"type": "updateFriends", "friendReqs": targetFriendReqs, "friends": targetInfo["Friends"], "chats": targetInfo["Chats"]}))
+                                break
+                    else:
+                        break
 
                 continue
             
@@ -1267,7 +1393,7 @@ if __name__ == "__main__":
     print("Starting logger")
     logging.basicConfig(
         level=LOG_LEVEL,
-        format="[%(asctime)s]: %(message)s",
+        format="%(asctime)s [%(levelname)s]: %(message)s",
         handlers=[
             logging.StreamHandler(),
             logging.FileHandler(LOG_DIR / f"{datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S")}.log")
