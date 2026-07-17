@@ -133,13 +133,15 @@ footer > a {
     bottom: 2.5%;
     right: 7.5%;
     padding: 0;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-evenly;
 }
 
 #textEntry {
-    width: calc(92.5% - 1em);
+    width: calc(85% - 1em);
     font-size: 1.5em;
     margin: .25em;
-    margin-bottom: 0;
     padding: .25em;
     border: none;
     background-color: var(--acc5);
@@ -151,11 +153,9 @@ footer > a {
 }
 
 #sendMsg {
-    position: absolute;
     width: 7%;
     font-size: 1.5em;
     margin: .25em auto;
-    height: calc(100% - .5em);
     border: none;
     border-radius: 0;
     background-color: var(--acc5);
@@ -166,6 +166,45 @@ footer > a {
 
 #sendMsg:hover {
     background-color: var(--bg);
+}
+
+#addFile {
+    display: flex;
+
+    width: 7%;
+    font-size: 1.5em;
+    margin: .25em auto;
+    border: none;
+    border-radius: 0;
+    background-color: var(--acc5);
+    color: var(--sendButtonGreen);
+    font-weight: bolder;
+    cursor: pointer;
+    
+    justify-content: center;
+    align-items: center;
+}
+
+#addFile:hover {
+    background-color: var(--bg);
+}
+
+#addFileInput {
+    display: none;
+}
+
+#embedList {
+    position: absolute;
+    width: 100%;
+    height: 15vh;
+    background-color: var(--acc);
+    top: 0;
+    transform: translateY(-100%);
+    overflow-y: hidden;
+    overflow-x: scroll;
+    display: flex;
+    flex-direction: row;
+    visibility: hidden;
 }
 
 .smallTime {
@@ -680,12 +719,23 @@ footer > a {
     margin-top: .5em;
 }
 
-#incomingList {
-
+#imageOverlay {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    background-color: rgba(0, 0, 0, 0.75);
+    visibility: hidden;
 }
 
-#outgoingList {
-    
+#imageOverlayImg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    max-width: 75%;
+    max-height: 75%;
+    transform: translate(-50%, -50%);
 }
 
 .header {

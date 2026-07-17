@@ -41,6 +41,7 @@ collections,
 http,
 io,
 pillow,
+mimetypes,
 zstandard,
 traceback,
 threading,
@@ -61,6 +62,7 @@ gzip,
 time,
 json,
 copy,
+math,
 sys,
 ssl
 """)
@@ -77,6 +79,7 @@ from collections.abc import Iterable
 from http import cookies
 from io import BytesIO
 from PIL import Image
+import mimetypes
 import zstandard
 import traceback
 import threading
@@ -96,6 +99,7 @@ import base64
 import gzip
 import time
 import copy
+import math
 import sys
 import ssl
 
@@ -119,6 +123,7 @@ REDIRECT_TOKEN_EXPIRES_SEC = 60 # 1 Minute
 
 CWD = pathlib.Path(__file__).resolve().parent
 CA_CERT_DIR = CWD / "CA_CERT"
+CDN_DIR = CWD / "cdn/"
 CHATS_DIR = CWD / "Chats/"
 SAVE_KEY = CWD / "meta.key"
 CSS_DIR = CWD / "CSS/"
@@ -137,13 +142,6 @@ PRIVATE_DIRS = [
     SAVE_KEY,
     LOG_DIR
 ]
-
-FILEEXT_TO_MIME = {
-    ".png": "image/png",
-    ".html": "text/html; charset=utf-8",
-    ".css": "text/css; charset=utf-8",
-    ".js": "text/js; charset=utf-8"
-}
 
 WS_CLIENTS: set[ServerConnection] = set()
 VALID_TOKENS = {}
@@ -404,6 +402,21 @@ def getIpAddrs():
                 
     return ip_list
 
+def formatHEADResponse(filePath: pathlib.Path):
+    if not filePath.is_file():
+        logging.warning(f"[MAIN] Invalid fetch {filePath}!")
+
+        return formatErrorResponse(404)
+    
+    mime = mimetypes.guess_file_type(filePath)[0] or "application/octet-stream"
+
+    return (
+        "HTTP/1.1 200 OK\r\n"
+        f"Content-Type: {mime}\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+    ).encode("utf-8")
+
 def formatHttpResponse(filePath: pathlib.Path, acceptEncoding: list):
     if not filePath.is_file():
         logging.warning(f"[MAIN] Invalid fetch {filePath}!")
@@ -414,8 +427,11 @@ def formatHttpResponse(filePath: pathlib.Path, acceptEncoding: list):
     with open(filePath, "rb") as f:
         fileContents = f.read()
         f.close()
-
-    mime = FILEEXT_TO_MIME[filePath.suffix]
+    
+    if CDN_DIR.resolve() in filePath.resolve().parents:
+        fileContents = fernet.decrypt(fileContents)
+    
+    mime = mimetypes.guess_file_type(filePath)[0] or "application/octet-stream"
 
     encoding = None
 
@@ -542,8 +558,16 @@ def handleRequest(sk: socket.socket):
             sk.sendall(formatHttpResponse(pagePath, acceptEncoding))
         else:
             sk.sendall(formatErrorResponse(400))
-    elif method == "POST":
-        pass
+    elif method == "HEAD":
+        if page == "/":
+            page = "/index.html"
+        
+        pagePath = CWD / page.removeprefix("/")
+
+        if isSafePath(pagePath):
+            sk.sendall(formatHEADResponse(pagePath))
+        else:
+            sk.sendall(formatErrorResponse(400))
 
     closeSocket(sk)
 
@@ -838,7 +862,7 @@ async def wsHandler(ws: ServerConnection):
 
                 if decryptedBody["type"] == "reqChat":
                     if await checkAuthTokenEncrypted(ws, authToken):
-                        if not "CID" in decryptedBody:
+                        if not "CID" in decryptedBody or not "page" in decryptedBody:
                             await wsSendEncrypted(ws, orjson.dumps({"type": "reqChatFailed", "message": "Request error. Please contact the server owner for help."}), trackerId)
                             continue
 
@@ -852,7 +876,14 @@ async def wsHandler(ws: ServerConnection):
                             await wsSendEncrypted(ws, orjson.dumps({"type":"reqChatFailed","message":"Chat not found!"}), trackerId)
                             continue
 
-                        await wsSendEncrypted(ws, orjson.dumps({"type":"reqChatSuccess", "chat": chat}), trackerId)
+                        pagedChat = copy.deepcopy(chat)
+
+                        if (decryptedBody["page"] == 0):
+                            pagedChat["messages"] = pagedChat["messages"][-100:]
+                        else:
+                            pagedChat["messages"] = pagedChat["messages"][-100 * (decryptedBody["page"] + 1):-100 * decryptedBody["page"]]
+
+                        await wsSendEncrypted(ws, orjson.dumps({"type":"reqChatSuccess", "chat": pagedChat, "numPages": math.ceil(len(chat["messages"]) / 100 + 0.005) - 1}), trackerId)
                     else:
                         break
                 
@@ -881,15 +912,49 @@ async def wsHandler(ws: ServerConnection):
                 
                 if decryptedBody["type"] == "sendMsg":
                     if await checkAuthTokenEncrypted(ws, authToken):
-                        if not "CID" in decryptedBody or not "msg" in decryptedBody:
+                        if not "CID" in decryptedBody or not "msg" in decryptedBody or not "embed" in decryptedBody:
                             await wsSendEncrypted(ws, orjson.dumps({"type": "chatUpdateFailed"}))
                             continue
 
-                        for chat in chats:
-                            if chat["CID"] == decryptedBody["CID"]:
-                                chat["messages"].append({"time": int(time.time()), "content": decryptedBody["msg"], "UID": getUserIdFromAuthToken(authToken), "MSGID": len(chat["messages"])})
+                        if len(decryptedBody["msg"]) > 4000:
+                            await wsSendEncrypted(ws, orjson.dumps({"type": "chatUpdateFailed"}))
+                            continue
 
-                        newChat = getChatFromCID(decryptedBody["CID"])
+                        embedFilePaths = []
+                        for embed in decryptedBody["embed"]:
+                            embedC = embed["contents"]
+                            if "," in embed["contents"]:
+                                embedC = embed["contents"].split(",")[1]
+                            
+                            embedBytes = base64.b64decode(embedC)
+                            uuid = ""
+                            fileType = mimetypes.guess_extension(embed["type"])
+
+                            if fileType == None:
+                                fileType = ".bin"
+
+                            while True:
+                                uuid = secrets.token_urlsafe(48)
+
+                                if (CDN_DIR / f"{uuid}{fileType}").exists():
+                                    continue
+
+                                with open(CDN_DIR / f"{uuid}{fileType}", "wb") as f:
+                                    f.write(fernet.encrypt(embedBytes))
+                                    f.close()
+                                
+                                break
+                            
+                            embedFilePaths.append(str((CDN_DIR / f"{uuid}{fileType}").resolve().relative_to(CWD)))
+                        
+                        chat = getChatFromCID(decryptedBody["CID"])
+
+                        if chat == None:
+                            await wsSendEncrypted(ws, orjson.dumps({"type": "chatUpdateFailed"}))
+                            continue
+
+                        msgObj = {"time": int(time.time()), "content": decryptedBody["msg"], "embed": embedFilePaths, "UID": getUserIdFromAuthToken(authToken), "MSGID": len(chat["messages"])}
+                        chat["messages"].append(msgObj)
 
                         broadcastClients = []
                         for client in WS_CLIENTS:
@@ -907,7 +972,7 @@ async def wsHandler(ws: ServerConnection):
                                 broadcastClients.append(client)
                         
 
-                        await wsBroadcastEncrypted(broadcastClients, orjson.dumps({"type":"chatUpdate", "chat": newChat}))
+                        await wsBroadcastEncrypted(broadcastClients, orjson.dumps({"type":"newMsg", "CID": chat["CID"], "message": msgObj}))
                     else:
                         break
                 
@@ -939,6 +1004,7 @@ async def wsHandler(ws: ServerConnection):
                             continue
 
                         message["content"] = "[message deleted]"
+                        message["embed"] = []
                         message["deleted"] = True
 
                         await wsSendEncrypted(ws, orjson.dumps({"type": "delMsgSuccess"}))
@@ -1327,9 +1393,9 @@ async def wsListen(ipAddrs: list, context: ssl.SSLContext, shutdownEvent: asynci
     servers = []
 
     for addr in ipAddrs:
-        servers.append(serve(wsHandler, addr, WSS_PORT, max_size=(25*1024*1024), ssl=context, process_request=getAuth))
+        servers.append(serve(wsHandler, addr, WSS_PORT, max_size=(25*1024*1024 * 11), ssl=context, process_request=getAuth))
         logging.debug(f"[WS] wss://{addr}/{WSS_PORT}")
-        servers.append(serve(wsHandler, addr, WS_PORT, max_size=(25*1024*1024), process_request=getAuth))
+        servers.append(serve(wsHandler, addr, WS_PORT, max_size=(25*1024*1024 * 11), process_request=getAuth))
         logging.debug(f"[WS] ws://{addr}/{WS_PORT}")
 
     logging.info("[WS] Websockets running")
@@ -1381,6 +1447,7 @@ if __name__ == "__main__":
 
     print("[IO] Generating missing directories")
     CA_CERT_DIR.mkdir(exist_ok=True)
+    CDN_DIR.mkdir(exist_ok=True)
     CHATS_DIR.mkdir(exist_ok=True)
     CSS_DIR.mkdir(exist_ok=True)
     JS_DIR.mkdir(exist_ok=True)

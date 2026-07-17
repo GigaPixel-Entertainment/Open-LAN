@@ -21,7 +21,10 @@
 
         </div>
         <div id="textEntryWrapper">
-            <textarea placeholder="type a message..." id="textEntry" class="font"></textarea>
+            <div id="embedList"></div>
+            <label id="addFile" class="font" for="addFileInput">+</label>
+            <input type="file" id="addFileInput" multiple>
+            <textarea placeholder="type a message..." id="textEntry" class="font" maxlength="4000"></textarea>
             <button id="sendMsg" class="font">-></button>
         </div>
 
@@ -140,6 +143,10 @@
                     <button class="font" id="pfpPreviewActionsSet">Set</button>
                 </div>
             </div>
+        </div>
+
+        <div id="imageOverlay" onclick="imageOverlay.style.visibility = 'hidden'">
+            <img id="imageOverlayImg" onload="imageOverlay.style.visibility = 'visible'">
         </div>
         
         <div id="loadingOverlay">
@@ -333,6 +340,9 @@
 
         const incomingList = document.getElementById("incomingList")
         const outgoingList = document.getElementById("outgoingList")
+
+        const imageOverlay = document.getElementById("imageOverlay")
+        const imageOverlayImg = document.getElementById("imageOverlayImg")
 
         const msgRClickMenu = document.getElementById("msgRClickMenu")
         const cpyTxt = document.getElementById("msgCopyTxt")
@@ -783,9 +793,7 @@
             amLabel.classList = "white font"
             amLabel.textContent = "active messages"
 
-            friendsList.replaceChildren(
-                amLabel
-            )
+            friendsList2 = [amLabel]
 
             for (let chatInd = 0; chatInd < chats.length; chatInd++) {
                 const chatID = chats[chatInd]
@@ -812,6 +820,8 @@
 
                 chatDiv.onclick = () => {
                     currChat = chatID
+                    changedChat = true
+                    currPage = 0
                     fetchChatData(currChat)
                     setChatList()
                 }
@@ -829,6 +839,7 @@
                 let chatInfo = document.createElement("div")
                 chatInfo.style.width = "calc(100% - 60px)"
                 chatInfo.style.height = "100%"
+                chatInfo.style.marginLeft = "1em"
                 chatInfo.style.display = "flex"
                 chatInfo.style.flexDirection = "column"
 
@@ -865,8 +876,14 @@
                 chatInfo.appendChild(chatName)
                 chatDiv.appendChild(chatImg)
                 chatDiv.appendChild(chatInfo)
-                friendsList.appendChild(chatDiv)
+                friendsList2.push(chatDiv)
             }
+
+            friendsList.replaceChildren()
+
+            friendsList2.forEach((e) => {
+                friendsList.appendChild(e)
+            })
         }
 
         function popUserInfo(resp) {
@@ -1031,7 +1048,111 @@
             return {"UID": UID, "displayname":"[missing user]", "pfp":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABAAAAAQACAYAAAB/HSuDAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGHaVRYdFhNTDpjb20uYWRvYmUueG1wAAAAAAA8P3hwYWNrZXQgYmVnaW49J++7vycgaWQ9J1c1TTBNcENlaGlIenJlU3pOVGN6a2M5ZCc/Pg0KPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyI+PHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj48cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0idXVpZDpmYWY1YmRkNS1iYTNkLTExZGEtYWQzMS1kMzNkNzUxODJmMWIiIHhtbG5zOnRpZmY9Imh0dHA6Ly9ucy5hZG9iZS5jb20vdGlmZi8xLjAvIj48dGlmZjpPcmllbnRhdGlvbj4xPC90aWZmOk9yaWVudGF0aW9uPjwvcmRmOkRlc2NyaXB0aW9uPjwvcmRmOlJERj48L3g6eG1wbWV0YT4NCjw/eHBhY2tldCBlbmQ9J3cnPz4slJgLAAAZHUlEQVR4Xu3YMQEAIAzAsIF/z/AjgSZnJXTNzBkAAADga/sNAAAAwH8MAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDgAr4+CP9pcPk3AAAAAElFTkSuQmCC","username":"[missing user]"}
         }
 
-        function genMsg(message) {
+        async function evalEmbeds(message, msgP) {
+            const embeds = document.createElement("div")
+            embeds.style.width = "100%"
+            embeds.style.maxHeight = "10em"
+            embeds.style.overflowY = "hidden"
+            embeds.style.overflowX = "scroll"
+
+            for (let index = 0; index < message["embed"].length; index++) {
+                const embed = message["embed"][index];
+                embedType = "application/octet-stream"
+
+                try {
+                    let resp = await fetch(embed, {"method": "HEAD"})
+                    
+                    if (resp.ok) {
+                        embedType = resp.headers.get("content-type")
+                    }
+                } catch {
+                    console.log("Failed to get embed type")
+                }
+
+                if (embedType.startsWith("image/")) {
+                    let img = document.createElement("img")
+                    img.style.maxHeight = "9em"
+                    img.style.maxWidth = "50vw"
+                    img.style.border = "none"
+                    img.style.borderRadius = "8px"
+                    img.style.cursor = "pointer"
+
+                    img.style.marginRight = "1em"
+                    img.style.marginBottom = "1em"
+
+                    img.onclick = () => {
+                        imageOverlayImg.src = embed
+                    }
+
+                    loadPromise = new Promise((resolve, reject) => {
+                        img.onload = () => {
+                            resolve()
+                        }
+
+                        img.onabort = () => {
+                            reject()
+                        }
+
+                        img.onerror = () => {
+                            reject()
+                        }
+                    })
+
+                    img.src = embed
+
+                    await loadPromise
+
+                    embeds.appendChild(img)
+                } else if (embedType.startsWith("audio/")) {
+                    let audio = document.createElement("audio")
+                    audio.style.height = "4em"
+                    audio.style.width = "25vw"
+                    audio.style.border = "none"
+                    audio.style.borderRadius = "8px"
+                    audio.controls = "true"
+                    audio.src = embed
+
+                    audio.style.marginRight = "1em"
+                    
+                    embeds.appendChild(audio)
+                } else if (embedType.startsWith("video/")) {
+                    let video = document.createElement("video")
+                    video.style.height = "9em"
+                    video.style.maxWidth = "50vw"
+                    video.style.border = "none"
+                    video.style.borderRadius = "8px"
+                    video.style.marginRight = "1em"
+                    video.style.marginBottom = "1em"
+                    video.controls = "true"
+                    video.src = embed
+                    
+                    embeds.appendChild(video)
+                } else {
+                    let generic = document.createElement("div")
+                    generic.style.height = "5em"
+                    generic.style.width = "25vw"
+                    generic.style.border = "none"
+                    generic.style.borderRadius = "8px"
+                    generic.style.backgroundColor = "var(--acc2)"
+
+                    let title = document.createElement("a")
+                    title.style.width = "100%"
+                    title.style.height = "1em"
+                    title.style.fontSize = "1.25em"
+                    title.href = embed
+                    title.download = embed
+                    title.classList = "font white"
+                    title.textContent = embed.slice(4)
+                    
+                    generic.appendChild(title)
+                    embeds.appendChild(generic)
+                }
+            }
+
+            msgP.appendChild(embeds)
+        }
+
+        async function genMsg(message) {
             const lines = message["content"].split("\n")
             const msgP = document.createElement("p")
             msgP.classList = "font white"
@@ -1070,11 +1191,15 @@
                     msgP.appendChild(br)
                 }
             }
+
+            if (message["embed"] && message["embed"].length > 0) {
+                await evalEmbeds(message, msgP)
+            }
             
             return msgP
         }
 
-        function genFullMsg(userInfoList, message) {
+        async function genFullMsg(userInfoList, message) {
             var messageDate = null
 
             if (message["time"]) {
@@ -1118,7 +1243,7 @@
                 username.append(timeDisplay)
             }
 
-            const msgP = genMsg(message)
+            const msgP = await genMsg(message)
 
             imgArea.append(pfpImg)
             textarea.appendChild(username)
@@ -1129,7 +1254,7 @@
             return messageDiv
         }
 
-        function genSmallMsg(userInfoList, message) {
+        async function genSmallMsg(userInfoList, message) {
             var messageDate = null
 
             if (message["time"]) {
@@ -1163,7 +1288,7 @@
             textarea.style.width = "96%"
             textarea.style.background = "none"
 
-            const msgP = genMsg(message)
+            const msgP = await genMsg(message)
 
             textarea.append(msgP)
             messageDiv.append(padArea)
@@ -1174,6 +1299,11 @@
 
         var chatCache = null
         var chatFetchInProgress = false
+        var changedChat = true
+        var startAtTop = false
+        var currPage = 0
+        var maxPage = 0
+
         async function setChat(chat) {
             if (chat["CID"] != currChat) {
                 return
@@ -1183,7 +1313,9 @@
             chatCache = chat
 
             const currScroll = chatDiv.scrollTop
-            const atBottom = currScroll + chatDiv.offsetHeight >= chatDiv.scrollHeight - 8
+            const atBottom = ((currScroll + chatDiv.offsetHeight >= chatDiv.scrollHeight - 8) || changedChat) && !startAtTop
+
+            changedChat = false
 
             const currChatName = chat["Name"]
             const currRecipients = chat["Recipients"]
@@ -1195,12 +1327,6 @@
                 let other = currRecipients.filter(item => item != currUID)
 
                 chatName.textContent = "You are chatting with: " + (await reqUsrInfo(other[0]))["displayname"]
-            }
-
-            if (chat["messages"].length == 0) {
-                chatDiv.replaceChildren()
-                chatFetchInProgress = false
-                return
             }
 
             chat["messages"].sort((a, b) => a["time"] - b["time"]);
@@ -1216,10 +1342,30 @@
                 loadingStatus += 1
             }
 
-            chatDiv.replaceChildren()
+            const chatDiv2 = []
 
             lastMsg = null
 
+            if (currPage < maxPage) {
+                let goUpBtn = document.createElement("button")
+                goUpBtn.style.width = "100%"
+                goUpBtn.style.backgroundColor = "var(--button)"
+                goUpBtn.style.fontSize = "2em"
+                goUpBtn.style.border = "none"
+                goUpBtn.style.borderRadius = "0"
+                goUpBtn.classList = "font"
+                goUpBtn.textContent = "Go Up"
+
+                goUpBtn.onclick = () => {
+                    currPage += 1
+                    changedChat = true
+                    fetchChatData(currChat)
+                }
+
+                chatDiv2.push(goUpBtn)
+            }
+
+            
             for (let index = 0; index < chat["messages"].length; index++) {
                 const message = chat["messages"][index];
 
@@ -1257,7 +1403,7 @@
                         date.style.paddingRight = "1em"
                         seperatorWrapper.appendChild(date)
 
-                        chatDiv.appendChild(seperatorWrapper)
+                        chatDiv2.push(seperatorWrapper)
                     }
                 }
 
@@ -1265,13 +1411,13 @@
 
                 if (lastMsg) {
                     if (message["UID"] == lastMsg["UID"] && message["time"] - lastMsg["time"] < 10*60) {
-                        messageDiv = genSmallMsg(userInfos, message)
+                        messageDiv = await genSmallMsg(userInfos, message)
 
                     } else {
-                        messageDiv = genFullMsg(userInfos, message)
+                        messageDiv = await genFullMsg(userInfos, message)
                     }
                 } else {
-                    messageDiv = genFullMsg(userInfos, message)
+                    messageDiv = await genFullMsg(userInfos, message)
                 }
 
                 messageDiv.addEventListener("contextmenu", (e) => {
@@ -1297,17 +1443,44 @@
                     msgRClickMenuMsg = message
                 })
 
-                chatDiv.appendChild(messageDiv)
+                chatDiv2.push(messageDiv)
                 lastMsg = message
+            }
+
+            if (currPage > 0) {
+                let goDownBtn = document.createElement("button")
+                goDownBtn.style.width = "100%"
+                goDownBtn.style.backgroundColor = "var(--button)"
+                goDownBtn.style.fontSize = "2em"
+                goDownBtn.style.border = "none"
+                goDownBtn.style.borderRadius = "0"
+                goDownBtn.classList = "font"
+                goDownBtn.textContent = "Go Down"
+
+                goDownBtn.onclick = () => {
+                    currPage -= 1
+                    startAtTop = true
+                    fetchChatData(currChat)
+                }
+
+                chatDiv2.push(goDownBtn)
             }
 
             const padding = document.createElement("div")
             padding.style.width = "100%"
             padding.style.height = "5em"
-            chatDiv.appendChild(padding)
+            chatDiv2.push(padding)
+
+            chatDiv.replaceChildren()
+
+            chatDiv2.forEach((e) => {
+                chatDiv.appendChild(e)
+            })
 
             if (atBottom) {
                 chatDiv.scrollTop = chatDiv.scrollHeight
+            } else if (startAtTop) {
+                chatDiv.scrollTop = 0
             } else {
                 chatDiv.scrollTop = currScroll
             }
@@ -1316,6 +1489,7 @@
                 chatDiv.scrollTop = chatDiv.scrollHeight
             }
 
+            startAtTop = false
             chatFetchInProgress = false
         }
 
@@ -1486,7 +1660,7 @@
             }
 
             async function fetchChatData(CID) {
-                ws.send(JSON.stringify({"type": "reqChat", "CID": CID}))
+                ws.send(JSON.stringify({"type": "reqChat", "CID": CID, "page": currPage}))
             }
 
             async function waitUntilLoadingDone() {
@@ -1627,6 +1801,7 @@
                                                 loadingStatus += 1
                                             }
 
+                                            maxPage = respBody["numPages"]
                                             setChat(respBody["chat"])
                                         }
 
@@ -1636,6 +1811,30 @@
 
                                         if (respBody["type"] == "chatUpdate") {
                                             setChat(respBody["chat"])
+                                        }
+
+                                        if (respBody["type"] == "newMsg") {
+                                            if (currChat == respBody["CID"]) {
+                                                chatCache["messages"].push(respBody["message"])
+
+                                                if (chatCache["messages"].length > 100) {
+                                                    let oldestMsg = 0
+                                                    let oldestMsgTime = 99999999999999
+
+                                                    for (let index = 0; index < chatCache["messages"].length; index++) {
+                                                        const msg = chatCache["messages"][index];
+                                                        
+                                                        if (msg["time"] < oldestMsgTime) {
+                                                            oldestMsgTime = msg["time"]
+                                                            oldestMsg = index
+                                                        }
+                                                    }
+
+                                                    chatCache["messages"].splice(oldestMsg, 1)
+                                                }
+
+                                                setChat(chatCache)
+                                            }
                                         }
 
                                         if (respBody["type"] == "updateCachedDisplayname") {
@@ -1699,23 +1898,149 @@
     </script>
     <script>
         // Send msg
+        const embedList = document.getElementById("embedList")
         const textEntry = document.getElementById("textEntry")
         const sendMsgBtn = document.getElementById("sendMsg")
+        const addFileBtn = document.getElementById("addFileInput")
+
+        var embeddedFiles = []
 
         async function sendMsg() {
             message = textEntry.value.trim()
             textEntry.value = ""
 
-            if (message == "") {
+            if (message == "" && embeddedFiles.length == 0) {
                 return
             }
 
-            msgSendResults = await request(JSON.stringify({"type":"sendMsg","CID":currChat,"msg":message}))
+            encodedFiles = []
+
+            for (let index = 0; index < embeddedFiles.length; index++) {
+                const file = embeddedFiles[index];
+                encodedFiles.push({"contents": await convertFileToBase64(file), "type": file.type})
+            }
+
+            embeddedFiles = []
+            embedList.replaceChildren()
+            embedList.style.visibility = "hidden"
+
+            msgSendResults = await request(JSON.stringify({"type":"sendMsg","CID":currChat,"msg":message,"embed": encodedFiles}))
+
+            console.log(msgSendResults)
+        }
+
+        async function updateEmbeds() {
+            if (embeddedFiles.length > 0) {
+                embedList.style.visibility = "visible"
+
+                embedList.replaceChildren()
+                embeddedFiles.forEach((file) => {
+                    let embedImgWrapper = document.createElement("div")
+                    embedImgWrapper.style.position = "relative"
+                    embedImgWrapper.style.height = "calc(100%-4px)"
+                    embedImgWrapper.style.aspectRatio = 1
+                    embedImgWrapper.style.overflow = "hidden"
+                    embedImgWrapper.style.border = "2px solid var(--acc4)"
+                    embedImgWrapper.style.borderRadius = "8px"
+                    embedImgWrapper.style.margin = "4px"
+
+                    let embedImg = document.createElement("img")
+                    embedImg.style.objectFit = "cover"
+                    embedImg.style.width = "100%"
+                    embedImg.style.height = "100%"
+
+                    let embedImgOverlay = document.createElement("img")
+                    embedImgOverlay.style.position = "absolute"
+                    embedImgOverlay.style.width = "100%"
+                    embedImgOverlay.style.height = "100%"
+                    embedImgOverlay.style.top = "0"
+                    embedImgOverlay.style.left = "0"
+                    embedImgOverlay.style.backgroundColor = "rgba(0, 0, 0, 0.5)"
+                    embedImgOverlay.style.visibility = "hidden"
+                    embedImgOverlay.style.pointerEvents = "none"
+                    embedImgOverlay.src = "Media/trash.png"
+
+                    embedImgWrapper.appendChild(embedImg)
+                    embedImgWrapper.appendChild(embedImgOverlay)
+
+                    embedImg.addEventListener("mouseenter", () => {
+                        embedImgOverlay.style.visibility = "visible"
+                    })
+
+                    embedImg.addEventListener("mouseleave", () => {
+                        embedImgOverlay.style.visibility = "hidden"
+                    })
+
+                    embedImg.onclick = () => {
+                        embeddedFiles = embeddedFiles.filter((v) => {return v != file})
+                        embedImgOverlay.style.visibility = "hidden"
+                        updateEmbeds()
+                    }
+
+                    if (file.type.startsWith("image/")) {
+                        convertFileToBase64(file).then((b64) => {
+                            embedImg.src = b64
+                        })
+                    } else if (file.type.startsWith("audio/")) {
+                        embedImg.src = "Media/music.png"
+                    } else if (file.type.startsWith("video/")) {
+                        embedImg.src = "Media/video.png"
+                    } else {
+                        embedImg.src = "Media/file.png"
+                    }
+
+                    embedList.appendChild(embedImgWrapper)
+                })
+            } else {
+                embedList.style.visibility = "hidden"
+            }
+        }
+
+        async function uploadFiles(files) {
+            if (files && files.length > 0) {
+                if (files.length > 10) {
+                    // Too many files
+                    return
+                }
+
+                for (let index = 0; index < files.length; index++) {
+                    const file = files[index];
+                    
+                    if (file.size > (25*1024*1024)) {
+                        // File too large
+                        continue
+                    }
+
+                    embeddedFiles.push(file)
+                }
+
+                await updateEmbeds()
+            }
         }
 
         sendMsgBtn.onclick = () => {
             sendMsg()
         }
+
+        addFileBtn.addEventListener("change", (e) => {
+            const files = e.target.files
+            uploadFiles(files)
+        })
+
+        textEntry.addEventListener("paste", (event) => {
+            const files = event.clipboardData.files
+            uploadFiles(files)
+        })
+
+        document.addEventListener("dragover", (event) => {
+            event.preventDefault()
+        })
+
+        document.addEventListener("drop", (event) => {
+            event.preventDefault()
+            const files = event.dataTransfer.files
+            uploadFiles(files)
+        })
 
         textEntry.addEventListener("keydown", (event) => {
             if (event.key == "Enter" && !event.shiftKey) {
