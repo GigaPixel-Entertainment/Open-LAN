@@ -276,6 +276,8 @@
         var currUID = -1
 
         var editingMsgId = -1
+        var origEditingMsg = ""
+        var editingMsgCurr = ""
 
         var friendsListShown = false
         function hideFriendsList() {
@@ -587,7 +589,13 @@
 
         editTxt.addEventListener("mousedown", (e) => {
             if (msgRClickMenuMsg && msgRClickMenuMsg["UID"] == currUID) {
+                if (editingMsgId == -1) {
+                    editingMsgId = msgRClickMenuMsg["MSGID"]
+                    origEditingMsg = msgRClickMenuMsg["content"]
+                    editingMsgCurr = origEditingMsg
 
+                    setChat(chatCache)
+                }
             }
         })
 
@@ -825,10 +833,14 @@
                 }
 
                 chatDiv.onclick = () => {
+                    if (currChat == chatID) {
+                        return
+                    }
+
                     currChat = chatID
                     changedChat = true
                     currPage = 0
-                    fetchChatData(currChat)
+                    fetchChatData()
                     setChatList()
                 }
 
@@ -1174,6 +1186,30 @@
         }
 
         async function genMsg(message) {
+            if (message["MSGID"] == editingMsgId) {
+                let msgT = document.createElement("textarea")
+                msgT.classList = "font white"
+                msgT.style.backgroundColor = "rgba(0, 0, 0, 0)"
+                msgT.style.border = "4px solid var(--acc4)"
+                msgT.style.width = "90%"
+                msgT.style.resize = "none"
+                msgT.style.outline = "none"
+                msgT.id = "currEditing"
+                msgT.value = editingMsgCurr
+
+                msgT.addEventListener("keydown", (e) => {
+                    if (e.key == "Enter" && !e.shiftKey) {
+                        request(JSON.stringify({"type": "editMsg", "CID": currChat, "MSGID": message["MSGID"], "new": msgT.value.trim()}))
+                        editingMsgId = -1
+                        origEditingMsg = ""
+                        editingMsgCurr = ""
+                        e.preventDefault()
+                    }
+                })
+                
+                return msgT
+            }
+
             const lines = message["content"].split("\n")
             const msgP = document.createElement("p")
             msgP.classList = "font white"
@@ -1292,6 +1328,7 @@
             if (messageDate) {
                 const timeDisplay = document.createElement("p")
                 timeDisplay.textContent = "(" + messageDate.toLocaleTimeString("en-US", {"hour":"2-digit","minute":"2-digit"}) + ")"
+                timeDisplay.style.width = "3%"
                 timeDisplay.classList = "font smallTime"
 
                 messageDiv.addEventListener("mouseenter", (e) => {
@@ -1424,8 +1461,27 @@
                 return
             }
 
+            if (chat["messages"].length > 100) {
+                let len = chat["messages"].length
+                
+                chat["messages"].splice(0, len - 100 * (currPage + 1))
+                chat["messages"].splice(100, len)
+
+                console.log(chat["messages"].length)
+            }
+
             chatFetchInProgress = true
             chatCache = chat
+
+            if (editingMsgId != -1) {
+                let editingMsgE = document.getElementById("currEditing")
+
+                if (editingMsgE) {
+                    editingMsgCurr = editingMsgE.value
+                }
+            }
+
+            
 
             const currScroll = chatDiv.scrollTop
             const atBottom = ((currScroll + chatDiv.offsetHeight >= chatDiv.scrollHeight - 8) || changedChat) && !startAtTop
@@ -1453,10 +1509,6 @@
 
             userInfos = await reqMultiUsrInfo(requiredUIDs)
 
-            if (loading) {
-                loadingStatus += 1
-            }
-
             const chatDiv2 = []
 
             let padding = document.createElement("div")
@@ -1477,7 +1529,7 @@
                 goUpBtn.onclick = () => {
                     currPage += 1
                     changedChat = true
-                    fetchChatData(currChat)
+                    fetchChatData()
                 }
 
                 chatDiv2.push(goUpBtn)
@@ -1486,6 +1538,10 @@
             let lastMsg = null
             for (let index = 0; index < chat["messages"].length; index++) {
                 const message = chat["messages"][index];
+
+                if (message["deleted"]) {
+                    continue
+                }
 
                 await newMsg(message, chatDiv2, lastMsg, userInfos)
                 lastMsg = message
@@ -1504,7 +1560,7 @@
                 goDownBtn.onclick = () => {
                     currPage -= 1
                     startAtTop = true
-                    fetchChatData(currChat)
+                    fetchChatData()
                 }
 
                 chatDiv2.push(goDownBtn)
@@ -1525,6 +1581,10 @@
 
             startAtTop = false
             chatFetchInProgress = false
+
+            if (loading) {
+                loadingStatus += 1
+            }
         }
 
         function updateCachedDisplayname(resp) {
@@ -1545,8 +1605,8 @@
 
                 if (chatCache) {
                     setChat(chatCache)
-                } else if (!chatCache) {
-                    fetchChatData(currChat)
+                } else {
+                    fetchChatData()
                 }
             }
         }
@@ -1569,8 +1629,8 @@
 
                 if (chatCache) {
                     setChat(chatCache)
-                } else if (!chatCache) {
-                    fetchChatData(currChat)
+                } else {
+                    fetchChatData()
                 }
             }
         }
@@ -1693,8 +1753,8 @@
                 ws.send(JSON.stringify({"type": "reqUser"}))
             }
 
-            async function fetchChatData(CID) {
-                ws.send(JSON.stringify({"type": "reqChat", "CID": CID, "page": currPage}))
+            async function fetchChatData() {
+                ws.send(JSON.stringify({"type": "reqChat", "CID": currChat, "page": currPage}))
             }
 
             async function waitUntilLoadingDone() {
@@ -1730,7 +1790,7 @@
             async function load() {
                 loadingText.textContent = "Fetching data..."
                 await fetchSelfData()
-                await fetchChatData(currChat)
+                await fetchChatData()
                 await waitUntilLoadingDone()
 
                 loadingText.textContent = "Waiting for page..."
@@ -1852,10 +1912,8 @@
                                                 if (currPage == 0) {
                                                     chatCache["messages"].push(respBody["message"])
                                                 } else {
-                                                    // OHHHH NOOOOO WHY DID I MAKE MESSAGE PAGING LIKE THIS THIS IS AWFUL
                                                     // TODO: Push next message onto this screen
-                                                    // I guess refetch messages? IDK
-                                                    fetchChatData(currChat)
+                                                    fetchChatData()
                                                     return
                                                 }
 
@@ -1876,8 +1934,15 @@
                                                 });
 
                                                 userInfos = reqMultiUsrInfo(requiredUIDs).then((userInfos) => {
-                                                    let lastMsg = chatCache["messages"][chatCache["messages"].length - 2]
+                                                    let lastMsg = null
                                                     let thisMsg = chatCache["messages"][chatCache["messages"].length - 1]
+
+                                                    chatCache["messages"].forEach((msg) => {
+                                                        if (!msg["deleted"] && msg != thisMsg) {
+                                                            lastMsg = msg
+                                                        }
+                                                    })
+
                                                     let msgList = []
 
                                                     const currScroll = chatDiv.scrollTop
@@ -1885,11 +1950,28 @@
 
                                                     newMsg(thisMsg, msgList, lastMsg, userInfos).then(() => {
                                                         let lastMsgE = document.querySelector('[title="MSGID' + lastMsg["MSGID"] + '"]')
-                                                        lastMsgE.after(msgList[0])
 
-                                                        attemptScroll(atBottom, startAtTop, currScroll)
+                                                        if (lastMsgE) {
+                                                            let lastE = lastMsgE
+                                                            msgList.forEach((e) => {
+                                                                lastE.after(e)
+                                                                lastE = e
+                                                            })
+
+                                                            attemptScroll(atBottom, startAtTop, currScroll)
+                                                        }
                                                     })
                                                 })
+                                            }
+                                        }
+
+                                        if (respBody["type"] == "delMsg") {
+                                            if (currChat == respBody["CID"]) {
+                                                let msg = document.querySelector('[title="MSGID' + respBody["MSGID"] + '"]')
+
+                                                if (msg) {
+                                                    msg.remove()
+                                                }
                                             }
                                         }
 
@@ -1915,7 +1997,7 @@
                                         }
 
                                         if (respBody["type"] == "reqChatFailed") {
-                                            setTimeout(() => {fetchChatData(currChat)}, 1000)
+                                            setTimeout(() => {fetchChatData()}, 1000)
                                         }
 
                                         if (respBody["type"] == "logoutSuccess") {

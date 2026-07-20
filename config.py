@@ -29,6 +29,7 @@ JS_DIR = CWD / "JS/"
 LOG_DIR = CWD / "logs/"
 MEDIA_DIR = CWD / "Media/"
 PFP_DIR = CWD / "pfps/"
+RUN_LOG_DIR = CWD / "runLogs/"
 SECURITY_DIR = CWD / "security"
 USERS_DIR = CWD / "Users/"
 
@@ -38,5 +39,11 @@ PRIVATE_DIRS = [
     CA_CERT_DIR,
     SECURITY_DIR,
     SAVE_KEY,
-    LOG_DIR
+    LOG_DIR,
+    RUN_LOG_DIR
+]
+
+IMPORTANT_FILES = [
+    CWD / "server.py",
+    CWD / "httphelper.py"
 ]

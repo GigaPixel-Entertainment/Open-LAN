@@ -6,7 +6,9 @@ import zstandard
 import mimetypes
 import logging
 import pathlib
+import psutil # type: ignore
 import brotli
+import socket
 import gzip
 
 from config import *
@@ -23,7 +25,7 @@ class HTTPRequestParser(BaseHTTPRequestHandler):
         self.error_code = code
         self.error_message = message
 
-def formatHttpHeaderRaw(statusCode: int, headerDict: dict):
+def formatHttpHeaderRaw(statusCode: int, headerDict: dict | None = None):
     respPhrase = ""
 
     try:
@@ -33,8 +35,9 @@ def formatHttpHeaderRaw(statusCode: int, headerDict: dict):
 
     header = f"HTTP/1.1 {statusCode} {respPhrase}\r\n"
 
-    for k, v in headerDict.items():
-        header = header + f"{k}: {v}\r\n"
+    if headerDict:
+        for k, v in headerDict.items():
+            header = header + f"{k}: {v}\r\n"
     
     return (header + "\r\n").encode("utf-8")
 
@@ -115,3 +118,15 @@ def isSafePath(path: pathlib.Path):
 
     if CWD.resolve() in reqPath.parents:
         return True
+
+def getIpAddrs():
+    ip_list = []
+    interfaces = psutil.net_if_addrs()
+    
+    for interface_name, interface_addresses in interfaces.items():
+        for address in interface_addresses:
+            if address.family == socket.AF_INET and not address.address.startswith("127."):
+                logging.debug(f"[MAIN] Interface: {interface_name} -> IP Address: {address.address}")
+                ip_list.append(address.address)
+                
+    return ip_list

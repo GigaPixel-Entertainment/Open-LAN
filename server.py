@@ -246,17 +246,17 @@ def getUserIdFromAuthToken(token: str | None) -> int | None:
     
     return userInfo["UID"]
 
+def getUserInfoFromUserId(UID: int) -> dict | None:
+    for user in users:
+        if user["UID"] == UID:
+            return user
+    return None
+
 def getUserInfoFromUsername(username: str) -> dict | None:
     for user in users:
         if user["USRNAME"] == username:
             return user
         
-    return None
-
-def getUserInfoFromUserId(UID: int) -> dict | None:
-    for user in users:
-        if user["UID"] == UID:
-            return user
     return None
 
 def getUserInfoFromToken(token: str | None) -> dict | None:
@@ -302,18 +302,6 @@ def tokenInChat(token: str | None, CID: int) -> bool:
         return False
     
     return True
-
-def getIpAddrs():
-    ip_list = []
-    interfaces = psutil.net_if_addrs()
-    
-    for interface_name, interface_addresses in interfaces.items():
-        for address in interface_addresses:
-            if address.family == socket.AF_INET and not address.address.startswith("127."):
-                logging.debug(f"[MAIN] Interface: {interface_name} -> IP Address: {address.address}")
-                ip_list.append(address.address)
-                
-    return ip_list
 
 def formatLoginResponse(username: str, cloudflare: bool):
     if not username:
@@ -817,7 +805,7 @@ async def wsHandler(ws: ServerConnection):
                 if decryptedBody["type"] == "delMsg":
                     if await checkAuthTokenEncrypted(ws, authToken):
                         if not "CID" in decryptedBody or not "MSGID" in decryptedBody:
-                            await wsSendEncrypted(ws, orjson.dumps({"type": "delMsgFailed"}))
+                            await wsSendEncrypted(ws, orjson.dumps({"type": "delMsgFailed"}), trackerId)
                             continue
 
                         chat = None
@@ -826,8 +814,8 @@ async def wsHandler(ws: ServerConnection):
                                 chat = cht
                                 break
 
-                        if chat == None:
-                            await wsSendEncrypted(ws, orjson.dumps({"type": "delMsgFailed"}))
+                        if chat == None or not tokenInChat(authToken, chat["CID"]):
+                            await wsSendEncrypted(ws, orjson.dumps({"type": "delMsgFailed"}), trackerId)
                             continue
                         
                         message = None
@@ -838,14 +826,61 @@ async def wsHandler(ws: ServerConnection):
                                 break
 
                         if message == None or message["UID"] != getUserIdFromAuthToken(authToken):
-                            await wsSendEncrypted(ws, orjson.dumps({"type": "delMsgFailed"}))
+                            await wsSendEncrypted(ws, orjson.dumps({"type": "delMsgFailed"}), trackerId)
                             continue
 
                         message["content"] = "[message deleted]"
                         message["embed"] = []
                         message["deleted"] = True
 
-                        await wsSendEncrypted(ws, orjson.dumps({"type": "delMsgSuccess"}))
+                        await wsSendEncrypted(ws, orjson.dumps({"type": "delMsgSuccess"}), trackerId)
+
+                        broadcastClients = []
+                        for client in WS_CLIENTS:
+                            cAuthToken = getattr(client, "authToken")
+
+                            if cAuthToken == None:
+                                continue
+                            
+                            userInfo = getUserInfoFromToken(cAuthToken)
+
+                            if userInfo == None:
+                                continue
+                            
+                            if decryptedBody["CID"] in userInfo["Chats"]:
+                                broadcastClients.append(client)
+
+                        await wsBroadcastEncrypted(broadcastClients, orjson.dumps({"type":"chatUpdate", "chat": chat}))
+                    else:
+                        break
+                
+                if decryptedBody["type"] == "editMsg":
+                    if await checkAuthTokenEncrypted(ws, authToken):
+                        if not "CID" in decryptedBody or not "MSGID" in decryptedBody or not "new" in decryptedBody:
+                            await wsSendEncrypted(ws, orjson.dumps({"type": "editMsgFailed"}), trackerId)
+                            continue
+
+                        chat = None
+                        for cht in chats:
+                            if cht["CID"] == decryptedBody["CID"]:
+                                chat = cht
+
+                        if chat == None or not tokenInChat(authToken, chat["CID"]):
+                            await wsSendEncrypted(ws, orjson.dumps({"type": "editMsgFailed"}), trackerId)
+                            continue
+
+                        message = None
+                        for msg in chat["messages"]:
+                            if msg["MSGID"] == decryptedBody["MSGID"]:
+                                message = msg
+                        
+                        if message == None or message["UID"] != getUserIdFromAuthToken(authToken):
+                            await wsSendEncrypted(ws, orjson.dumps({"type": "editMsgFailed"}), trackerId)
+                            continue
+
+                        message["content"] = decryptedBody["new"].strip()
+
+                        await wsSendEncrypted(ws, orjson.dumps({"type": "editMsgSuccess"}), trackerId)
 
                         broadcastClients = []
                         for client in WS_CLIENTS:
@@ -1306,7 +1341,7 @@ if __name__ == "__main__":
     print("Starting logger")
     logging.basicConfig(
         level=LOG_LEVEL,
-        format="%(asctime)s [%(levelname)s]: %(message)s",
+        format="%(asctime)s [%(filename)s] [%(levelname)s]: %(message)s",
         handlers=[
             logging.StreamHandler(),
             logging.FileHandler(LOG_DIR / f"{datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S")}.log")
@@ -1341,7 +1376,7 @@ if __name__ == "__main__":
     loadUsers()
     loadChats()
     
-    ipAddrs = getIpAddrs()
+    ipAddrs = httphelper.getIpAddrs()
     
     if len(ipAddrs) == 0:
         logging.fatal("[MAIN] No valid network interfaces found! Please connect to a network")
