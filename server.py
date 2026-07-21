@@ -212,9 +212,8 @@ def saveChats():
                 messages = []
 
                 for msg in chat["messages"]:
-                    msgContents = msg["content"]
                     messageSaving = copy.deepcopy(msg)
-                    messageSaving["content"] = fernet.encrypt(msgContents.encode("utf-16"))
+                    messageSaving["content"] = fernet.encrypt(messageSaving["content"].encode("utf-16"))
                     messages.append(messageSaving)
                 
                 packed: bytes | None = msgpack.packb({"meta":metadata,"Name":chat["Name"],"Recipients": chat["Recipients"], "messages":messages})
@@ -707,6 +706,36 @@ async def wsHandler(ws: ServerConnection):
                     else:
                         break
                 
+                if decryptedBody["type"] == "reqMsg":
+                    if await checkAuthTokenEncrypted(ws, authToken):
+                        if not "CID" in decryptedBody or not "MSGID" in decryptedBody:
+                            await wsSendEncrypted(ws, orjson.dumps({"type": "reqMsgFailed"}), trackerId)
+                            continue
+
+                        if not tokenInChat(authToken, decryptedBody["CID"]):
+                            await wsSendEncrypted(ws, orjson.dumps({"type":"reqMsgFailed"}), trackerId)
+                            continue
+
+                        chat = getChatFromCID(decryptedBody["CID"])
+
+                        if chat == None:
+                            await wsSendEncrypted(ws, orjson.dumps({"type":"reqMsgFailed"}), trackerId)
+                            continue
+                        
+                        targetMsg = None
+                        for msg in chat["messages"]:
+                            if msg["MSGID"] == decryptedBody["MSGID"]:
+                                targetMsg = msg
+                                break
+                        
+                        if targetMsg == None:
+                            await wsSendEncrypted(ws, orjson.dumps({"type":"reqMsgFailed"}), trackerId)
+                            continue
+
+                        await wsSendEncrypted(ws, orjson.dumps({"type": "reqMsgSuccess", "msg": targetMsg}), trackerId)
+                    else:
+                        break
+                
                 if decryptedBody["type"] == "reqUsersList":
                     if await checkAuthTokenEncrypted(ws, authToken):
                         if not "users" in decryptedBody:
@@ -732,12 +761,12 @@ async def wsHandler(ws: ServerConnection):
                 
                 if decryptedBody["type"] == "sendMsg":
                     if await checkAuthTokenEncrypted(ws, authToken):
-                        if not "CID" in decryptedBody or not "msg" in decryptedBody or not "embed" in decryptedBody:
-                            await wsSendEncrypted(ws, orjson.dumps({"type": "chatUpdateFailed"}))
+                        if not "CID" in decryptedBody or not "msg" in decryptedBody or not "embed" in decryptedBody or not "replyTo" in decryptedBody:
+                            await wsSendEncrypted(ws, orjson.dumps({"type": "chatUpdateFailed"}), trackerId)
                             continue
 
                         if len(decryptedBody["msg"]) > 4000:
-                            await wsSendEncrypted(ws, orjson.dumps({"type": "chatUpdateFailed"}))
+                            await wsSendEncrypted(ws, orjson.dumps({"type": "chatUpdateFailed"}), trackerId)
                             continue
 
                         embedFilePaths = []
@@ -776,11 +805,13 @@ async def wsHandler(ws: ServerConnection):
                         chat = getChatFromCID(decryptedBody["CID"])
 
                         if chat == None:
-                            await wsSendEncrypted(ws, orjson.dumps({"type": "chatUpdateFailed"}))
+                            await wsSendEncrypted(ws, orjson.dumps({"type": "chatUpdateFailed"}), trackerId)
                             continue
 
-                        msgObj = {"time": int(time.time()), "content": decryptedBody["msg"], "embed": embedFilePaths, "UID": getUserIdFromAuthToken(authToken), "MSGID": len(chat["messages"])}
+                        msgObj = {"time": int(time.time()), "content": decryptedBody["msg"], "embed": embedFilePaths, "replyTo": decryptedBody["replyTo"], "UID": getUserIdFromAuthToken(authToken), "MSGID": len(chat["messages"])}
                         chat["messages"].append(msgObj)
+
+                        await wsSendEncrypted(ws, orjson.dumps({"type": "chatUpdateSuccess"}), trackerId)
 
                         broadcastClients = []
                         for client in WS_CLIENTS:
@@ -879,6 +910,7 @@ async def wsHandler(ws: ServerConnection):
                             continue
 
                         message["content"] = decryptedBody["new"].strip()
+                        message["edited"] = True
 
                         await wsSendEncrypted(ws, orjson.dumps({"type": "editMsgSuccess"}), trackerId)
 

@@ -22,6 +22,12 @@
         </div>
         <div id="textEntryWrapper">
             <div id="embedList"></div>
+            <div id="replying">
+                <img id="replyingPFP">
+                <h1 class="font white" id="replyingUsername"></h1>
+                <p class="font white" id="replyingMsg"></p>
+                <button class="font white" id="replyingCancel" onclick="cancelReply()">x</button>
+            </div>
             <label id="addFile" class="font" for="addFileInput">+</label>
             <input type="file" id="addFileInput" multiple>
             <textarea placeholder="type a message..." id="textEntry" class="font" maxlength="4000"></textarea>
@@ -279,6 +285,8 @@
         var origEditingMsg = ""
         var editingMsgCurr = ""
 
+        var replyingMsgId = -1
+
         var friendsListShown = false
         function hideFriendsList() {
             if (friendsListShown) {
@@ -345,6 +353,11 @@
 
         const imageOverlay = document.getElementById("imageOverlay")
         const imageOverlayImg = document.getElementById("imageOverlayImg")
+
+        const replying = document.getElementById("replying")
+        const replyingPFP = document.getElementById("replyingPFP")
+        const replyingUsername = document.getElementById("replyingUsername")
+        const replyingMsg = document.getElementById("replyingMsg")
 
         const msgRClickMenu = document.getElementById("msgRClickMenu")
         const cpyTxt = document.getElementById("msgCopyTxt")
@@ -583,9 +596,23 @@
 
         rplyTxt.addEventListener("mousedown", (e) => {
             if (msgRClickMenuMsg) {
-                console.log("REPLY!")
+                replyingMsgId = msgRClickMenuMsg["MSGID"]
+                
+                reqUsrInfo(msgRClickMenuMsg["UID"]).then((usrInfo) => {
+                    replyingPFP.src = usrInfo["pfp"]
+                    replyingUsername.textContent = usrInfo["displayname"]
+                    replyingMsg.textContent = msgRClickMenuMsg["content"]
+                    replying.style.visibility = "visible"
+                    embedList.style.top = "-2.5vh"
+                })
             }
         })
+
+        function cancelReply() {
+            replyingMsgId = -1
+            replying.style.visibility = "hidden"
+            embedList.style.top = "0"
+        }
 
         editTxt.addEventListener("mousedown", (e) => {
             if (msgRClickMenuMsg && msgRClickMenuMsg["UID"] == currUID) {
@@ -862,10 +889,10 @@
                 chatInfo.style.flexDirection = "column"
 
                 let chatName = document.createElement("h2")
-                chatName.style.width = "100%"
+                chatName.style.width = "90%"
                 chatName.style.height = "75%"
                 chatName.style.margin = "0"
-                chatName.style.background = "linear-gradient(to right, white 0%, white 80%, transparent 100%)"
+                chatName.style.background = "linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%)"
                 chatName.style.backgroundClip = "text"
                 chatName.style.color = "transparent"
                 chatName.style.whiteSpace = "nowrap"
@@ -1057,15 +1084,16 @@
             }
         }
 
-        function getUserInfoFromUID(userInfoList, UID) {
-            for (let index = 0; index < userInfoList.length; index++) {
-                const element = userInfoList[index];
-                if (element["UID"] == UID) {
-                    return element
+        async function getMessageFromMSGID(msgid) {
+            for (let i = 0; i < chatCache["messages"].length; i++) {
+                const msg = chatCache["messages"][i];
+
+                if (msg["MSGID"] == msgid) {
+                    return msg
                 }
             }
 
-            return {"UID": UID, "displayname":"[missing user]", "pfp":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABAAAAAQACAYAAAB/HSuDAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGHaVRYdFhNTDpjb20uYWRvYmUueG1wAAAAAAA8P3hwYWNrZXQgYmVnaW49J++7vycgaWQ9J1c1TTBNcENlaGlIenJlU3pOVGN6a2M5ZCc/Pg0KPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyI+PHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj48cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0idXVpZDpmYWY1YmRkNS1iYTNkLTExZGEtYWQzMS1kMzNkNzUxODJmMWIiIHhtbG5zOnRpZmY9Imh0dHA6Ly9ucy5hZG9iZS5jb20vdGlmZi8xLjAvIj48dGlmZjpPcmllbnRhdGlvbj4xPC90aWZmOk9yaWVudGF0aW9uPjwvcmRmOkRlc2NyaXB0aW9uPjwvcmRmOlJERj48L3g6eG1wbWV0YT4NCjw/eHBhY2tldCBlbmQ9J3cnPz4slJgLAAAZHUlEQVR4Xu3YMQEAIAzAsIF/z/AjgSZnJXTNzBkAAADga/sNAAAAwH8MAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDAAAAAAIAAAwAAAAACDAAAAAAIMAAAAAAgwAAAAACAAAMAAAAAAgwAAAAACDAAAAAAIMAAAAAAgAADAAAAAAIMAAAAAAgwAAAAACDgAr4+CP9pcPk3AAAAAElFTkSuQmCC","username":"[missing user]"}
+            return (await request(JSON.stringify({"type": "reqMsg", "CID": currChat, "MSGID": msgid})))["msg"]
         }
 
         async function evalEmbeds(message, msgP) {
@@ -1205,6 +1233,13 @@
                         editingMsgCurr = ""
                         e.preventDefault()
                     }
+                    
+                    if (e.key == "Escape") {
+                        editingMsgId = -1
+                        origEditingMsg = ""
+                        editingMsgCurr = ""
+                        setChat(chatCache)
+                    }
                 })
                 
                 return msgT
@@ -1249,6 +1284,21 @@
                 }
             }
 
+            if (message["edited"]) {
+                let editedTxt = document.createElement("p")
+                editedTxt.style.color = "gray"
+                editedTxt.style.fontSize = "0.7em"
+                editedTxt.style.display = "inline-block"
+                editedTxt.style.width = "max-content"
+                editedTxt.style.overflowWrap = "break-word"
+                editedTxt.style.wordWrap = "break-word"
+                editedTxt.style.margin = "0"
+                editedTxt.style.whiteSpace = "pre-wrap"
+                editedTxt.textContent = " (edited)"
+
+                msgP.appendChild(editedTxt)
+            }
+
             if (message["embed"] && message["embed"].length > 0) {
                 await evalEmbeds(message, msgP)
             }
@@ -1263,8 +1313,81 @@
                 messageDate = new Date(message["time"] * 1000)
             }
 
+            const usrInfo = await reqUsrInfo(message["UID"])
+
             const messageDiv = document.createElement("div")
             messageDiv.classList = "messageDiv"
+
+            if (message["replyTo"] && message["replyTo"] != -1) {
+                const replyTarget = await getMessageFromMSGID(message["replyTo"])
+                const replyUsr = await reqUsrInfo(replyTarget["UID"])
+
+                messageDiv.style.paddingTop = "2em"
+
+                const replyToHead = document.createElement("div")
+                replyToHead.style.position = "absolute"
+                replyToHead.style.width = "calc(100%-6em)"
+                replyToHead.style.paddingLeft = "5em"
+                replyToHead.style.paddingRight = "1em"
+                replyToHead.style.height = "1em"
+                replyToHead.style.transform = "translateY(-125%)"
+                replyToHead.style.display = "flex"
+                replyToHead.style.flexDirection = "row"
+                
+                const replyPfp = document.createElement("img")
+                replyPfp.style.aspectRatio = 1
+                replyPfp.style.height = "100%"
+                replyPfp.style.borderRadius = "9999px"
+                replyPfp.src = replyUsr["pfp"]
+
+                const replyDn = document.createElement("h1")
+                replyDn.classList = "font"
+                replyDn.style.color = "lightgray"
+                replyDn.style.fontSize = "1em"
+                replyDn.style.padding = "0"
+                replyDn.style.margin = "0"
+                replyDn.style.cursor = "pointer"
+                replyDn.textContent = replyUsr["displayname"]
+
+                const replyCont = document.createElement("p")
+                replyCont.classList = "font"
+                replyCont.style.width = "80vw"
+                replyCont.style.color = "transparent"
+                replyCont.style.fontSize = "1em"
+                replyCont.style.padding = "0"
+                replyCont.style.paddingLeft = "1em"
+                replyCont.style.margin = "0"
+                replyCont.style.whiteSpace = "nowrap"
+                replyCont.style.background = "linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%)"
+                replyCont.style.backgroundClip = "text"
+                replyCont.style.cursor = "pointer"
+                replyCont.textContent = replyTarget["content"]
+
+                replyToHead.appendChild(replyPfp)
+                replyToHead.appendChild(replyDn)
+                replyToHead.appendChild(replyCont)
+                messageDiv.appendChild(replyToHead)
+
+                replyToHead.addEventListener("click", (e) => {
+                    let msgE = document.querySelector('[title="MSGID' + message["replyTo"] + '"]')
+
+                    if (msgE) {
+                        msgE.scrollIntoView({"behavior": "smooth", "block": "center"})
+
+                        let origBg = msgE.style.backgroundColor
+                        msgE.style.backgroundColor = "var(--acc6)"
+
+                        setTimeout(() => msgE.style.backgroundColor = origBg, 2500)
+                    }
+
+                    // TODO: Scroll onto different pages
+                })
+
+                if (replyUsr["UID"] == currUID) {
+                    messageDiv.style.backgroundColor = "var(--highlight-transparent)"
+                    messageDiv.style.borderLeft = "2px solid var(--highlight)"
+                }
+            }
 
             const imgArea = document.createElement("div")
             imgArea.style.width = "2.5%"
@@ -1275,7 +1398,7 @@
             pfpImg.style.border = "3px solid var(--acc4)"
             pfpImg.style.borderRadius = "9999999999px"
             pfpImg.style.backgroundColor = "rgba(0, 0, 0, 0)"
-            pfpImg.src = getUserInfoFromUID(userInfoList, message["UID"])["pfp"]
+            pfpImg.src = usrInfo["pfp"]
 
             const textarea = document.createElement("div")
             textarea.style.width = "96%"
@@ -1285,7 +1408,7 @@
             username.style.margin = "0"
             username.classList = "font white"
             username.style.display = "flex"
-            username.textContent = getUserInfoFromUID(userInfoList, message["UID"])["displayname"]
+            username.textContent = usrInfo["displayname"]
 
             if (messageDate) {
                 const timeDisplay = document.createElement("p")
@@ -1320,15 +1443,15 @@
 
             const messageDiv = document.createElement("div")
             messageDiv.classList = "messageDiv"
-            messageDiv.style.paddingTop = "0"
+            messageDiv.style.padding = "0"
 
             const padArea = document.createElement("div")
-            padArea.style.width = "3%"
+            padArea.style.width = "4%"
 
             if (messageDate) {
                 const timeDisplay = document.createElement("p")
                 timeDisplay.textContent = "(" + messageDate.toLocaleTimeString("en-US", {"hour":"2-digit","minute":"2-digit"}) + ")"
-                timeDisplay.style.width = "3%"
+                timeDisplay.style.width = "4%"
                 timeDisplay.classList = "font smallTime"
 
                 messageDiv.addEventListener("mouseenter", (e) => {
@@ -1405,8 +1528,11 @@
 
             if (lastMsg) {
                 if (message["UID"] == lastMsg["UID"] && message["time"] - lastMsg["time"] < 10*60) {
-                    messageDiv = await genSmallMsg(userInfos, message)
-
+                    if (message["replyTo"] && message["replyTo"] != -1) {
+                        messageDiv = await genFullMsg(userInfos, message)
+                    } else {
+                        messageDiv = await genSmallMsg(userInfos, message)
+                    }
                 } else {
                     messageDiv = await genFullMsg(userInfos, message)
                 }
@@ -1478,8 +1604,6 @@
                     editingMsgCurr = editingMsgE.value
                 }
             }
-
-            
 
             const currScroll = chatDiv.scrollTop
             const atBottom = ((currScroll + chatDiv.offsetHeight >= chatDiv.scrollHeight - 8) || changedChat) && !startAtTop
@@ -1566,7 +1690,7 @@
 
             padding = document.createElement("div")
             padding.style.width = "100%"
-            padding.style.height = "5em"
+            padding.style.height = "6em"
             chatDiv2.push(padding)
 
             chatDiv.replaceChildren()
@@ -2057,12 +2181,13 @@
             }
 
             embeddedFiles = []
+            replying.style.visibility = "hidden"
             embedList.replaceChildren()
             embedList.style.visibility = "hidden"
+            embedList.style.top = "0"
 
-            msgSendResults = await request(JSON.stringify({"type":"sendMsg","CID":currChat,"msg":message,"embed": encodedFiles}))
-
-            console.log(msgSendResults)
+            msgSendResults = await request(JSON.stringify({"type":"sendMsg","CID":currChat,"msg":message,"embed": encodedFiles, "replyTo": replyingMsgId}))
+            replyingMsgId = -1
         }
 
         async function updateEmbeds() {
