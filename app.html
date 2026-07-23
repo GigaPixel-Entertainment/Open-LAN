@@ -130,17 +130,13 @@
                     <div id="incomingHeader" class="header">
                         <p class="font white">incoming requests</p>
                     </div>
-                    <div id="incomingList" class="scroll">
-
-                    </div>
+                    <div id="incomingList" class="scroll"></div>
                 </div>
                 <div id="outgoingRequests">
                     <div id="outgoingHeader" class="header">
                         <p class="font white">outgoing requests</p>
                     </div>
-                    <div id="outgoingList" class="scroll">
-
-                    </div>
+                    <div id="outgoingList" class="scroll"></div>
                 </div>
             </div>
         </div>
@@ -155,8 +151,22 @@
             </div>
         </div>
 
-        <div id="imageOverlay" onclick="imageOverlay.style.visibility = 'hidden'">
-            <img id="imageOverlayImg" onload="imageOverlay.style.visibility = 'visible'">
+        <div id="imageOverlay">
+            <img id="imageOverlayImg">
+        </div>
+
+        <div id="textOverlay">
+            <div id="textOverlayContents">
+                <textarea id="textOverlayText" class="font white" readonly>TEXT</textarea>
+                <div id="textOverlayInfoWrapper">
+                    <p id="textOverlayFilename" class="font textOverlayFilename">FILENAME</p>
+                    <div id="textOverlayControls" class="textOverlayControls">
+                        <img id="textOverlayMinimize" src="Media/Minimize.png">
+                        <a id="textOverlayDownload"><img src="Media/Download.png"></a>
+                        <img id="textOverlayCopy" src="Media/Copy.png">
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div id="genericPopup">
@@ -184,146 +194,12 @@
     </footer>
     <script src="JS/stop.js"></script>
     <script>
-        // Userinfo Mgr
+        // constants
         const userInfoCache = []
-
-        async function reqUsrInfo(UID) {
-            for (let index = 0; index < userInfoCache.length; index++) {
-                const userInfo = userInfoCache[index];
-                if (userInfo["UID"] == UID) {
-                    return userInfo
-                }
-            }
-
-            usr = await request(JSON.stringify({"type": "reqUsersList", "users": [UID]}))
-
-            usr["users"].forEach((userInfo) => {
-                userInfoCache.push(userInfo)
-            })
-
-            return await reqUsrInfo(UID)
-        }
-
-        async function reqMultiUsrInfo(UidList) {
-            var requiredUIDs = []
-
-            UidList.forEach((uid) => {
-                if (!requiredUIDs.includes(uid)) {
-                    cached = false
-                    for (let cacheIndex = 0; cacheIndex < userInfoCache.length; cacheIndex++) {
-                        const cache = userInfoCache[cacheIndex];
-                        
-                        if (cache["UID"] == uid) {
-                            cached = true
-                            break
-                        }
-                    }
-
-                    if (!cached) {
-                        requiredUIDs.push(uid)
-                    }
-                }
-            })
-            
-            if (requiredUIDs.length > 0) {
-                usr = await request(JSON.stringify({"type": "reqUsersList", "users": requiredUIDs}))
-
-                usr["users"].forEach((userInfo) => {
-                    userInfoCache.push(userInfo)
-                })
-            }
-
-            finalUserinfoList = []
-
-            for (let index = 0; index < UidList.length; index++) {
-                const uid = UidList[index];
-                finalUserinfoList.push(await reqUsrInfo(uid))
-            }
-
-            return finalUserinfoList
-        }
-    </script>
-    <script>
-        // String comparison by aceakash (https://github.com/aceakash/string-similarity)
-        
-        function compareTwoStrings(first, second) {
-            first = first.replace(/\s+/g, '')
-            second = second.replace(/\s+/g, '')
-
-            if (first === second) return 1; // identical or empty
-            if (first.length < 2 || second.length < 2) return 0; // if either is a 0-letter or 1-letter string
-
-            let firstBigrams = new Map();
-            for (let i = 0; i < first.length - 1; i++) {
-                const bigram = first.substring(i, i + 2);
-                const count = firstBigrams.has(bigram)
-                    ? firstBigrams.get(bigram) + 1
-                    : 1;
-
-                firstBigrams.set(bigram, count);
-            };
-
-            let intersectionSize = 0;
-            for (let i = 0; i < second.length - 1; i++) {
-                const bigram = second.substring(i, i + 2);
-                const count = firstBigrams.has(bigram)
-                    ? firstBigrams.get(bigram)
-                    : 0;
-
-                if (count > 0) {
-                    firstBigrams.set(bigram, count - 1);
-                    intersectionSize++;
-                }
-            }
-
-            return (2.0 * intersectionSize) / (first.length + second.length - 2);
-        }
-    </script>
-    <script>
-        // Popups
 
         const genericPopup = document.getElementById("genericPopup")
         const popupTitle = document.getElementById("popupTitle")
         const popupContent = document.getElementById("popupContent")
-
-        var popupOpen = false
-
-        async function openPopup(title, content) {
-            if (popupOpen) {
-                await new Promise((r, _) => {
-                    function checkPopupOpen() {
-                        if (!popupOpen) {
-                            r()
-                        } else {
-                            setTimeout(checkPopupOpen, 100)
-                        }
-                    }
-
-                    checkPopupOpen()
-                })
-            }
-
-            popupOpen = true
-
-            popupTitle.textContent = title
-            popupContent.textContent = content
-
-            genericPopup.style.visibility = "visible"
-            genericPopup.style.opacity = "1"
-        }
-
-        function closePopup() {
-            genericPopup.style.opacity = "0"
-
-            setTimeout(() => {
-                genericPopup.style.visibility = "hidden"
-                popupOpen = false
-            }, 250)
-        }
-    </script>
-    <script>
-        // Misc UI
-        window.scrollTo(0, 0)
 
         const friendsListWrapper = document.getElementById("friendsListWrapper")
         const toggleFriendsList = document.getElementById("toggleFriendsList")
@@ -331,39 +207,6 @@
         const chatName = document.getElementById("ChatName")
 
         const chatDiv = document.getElementById("msgBox")
-
-        var currChat = 0
-        var currUID = -1
-
-        var editingMsgId = -1
-        var origEditingMsg = ""
-        var editingMsgCurr = ""
-
-        var replyingMsgId = -1
-
-        var friendsListShown = false
-        function hideFriendsList() {
-            if (friendsListShown) {
-                friendsListWrapper.style.transform = "translateX(calc(100% + 8px))"
-                toggleFriendsList.textContent = "<"
-            } else {
-                friendsListWrapper.style.transform = "translateX(0%)"
-                toggleFriendsList.textContent = ">"
-            }
-
-            friendsListShown = !friendsListShown
-        }
-
-        var myProfileScreenShown = false
-        function showMyProfileScreen() {
-            if (myProfileScreenShown) {
-                myProfileScreen.style.transform = "translateY(calc(-100% - 8px))"
-            } else {
-                myProfileScreen.style.transform = "translateY(0%)"
-            }
-
-            myProfileScreenShown = !myProfileScreenShown
-        }
 
         const lookingAtOldMsgs = document.getElementById("lookingAtOldMsgs")
 
@@ -410,6 +253,14 @@
         const imageOverlay = document.getElementById("imageOverlay")
         const imageOverlayImg = document.getElementById("imageOverlayImg")
 
+        const textOverlay = document.getElementById("textOverlay")
+        const textOverlayContents = document.getElementById("textOverlayContents")
+        const textOverlayContent = document.getElementById("textOverlayText")
+        const textOverlayFilename = document.getElementById("textOverlayFilename")
+        const textOverlayMinimize = document.getElementById("textOverlayMinimize")
+        const textOverlayDownload = document.getElementById("textOverlayDownload")
+        const textOverlayCopy = document.getElementById("textOverlayCopy")
+
         const replying = document.getElementById("replying")
         const replyingPFP = document.getElementById("replyingPFP")
         const replyingUsername = document.getElementById("replyingUsername")
@@ -420,6 +271,208 @@
         const rplyTxt = document.getElementById("msgReplyTxt")
         const editTxt = document.getElementById("msgEditTxt")
         const delTxt = document.getElementById("msgDeleteTxt")
+
+        const embedList = document.getElementById("embedList")
+        const textEntry = document.getElementById("textEntry")
+        const sendMsgBtn = document.getElementById("sendMsg")
+        const addFileBtn = document.getElementById("addFileInput")
+    </script>
+    <script>
+        // String comparison by aceakash (https://github.com/aceakash/string-similarity)
+        
+        function compareTwoStrings(first, second) {
+            first = first.replace(/\s+/g, '')
+            second = second.replace(/\s+/g, '')
+
+            if (first === second) return 1; // identical or empty
+            if (first.length < 2 || second.length < 2) return 0; // if either is a 0-letter or 1-letter string
+
+            let firstBigrams = new Map();
+            for (let i = 0; i < first.length - 1; i++) {
+                const bigram = first.substring(i, i + 2);
+                const count = firstBigrams.has(bigram)
+                    ? firstBigrams.get(bigram) + 1
+                    : 1;
+
+                firstBigrams.set(bigram, count);
+            };
+
+            let intersectionSize = 0;
+            for (let i = 0; i < second.length - 1; i++) {
+                const bigram = second.substring(i, i + 2);
+                const count = firstBigrams.has(bigram)
+                    ? firstBigrams.get(bigram)
+                    : 0;
+
+                if (count > 0) {
+                    firstBigrams.set(bigram, count - 1);
+                    intersectionSize++;
+                }
+            }
+
+            return (2.0 * intersectionSize) / (first.length + second.length - 2);
+        }
+    </script>
+    <script>
+        // Userinfo Mgr
+        async function reqUsrInfo(UID) {
+            for (let index = 0; index < userInfoCache.length; index++) {
+                const userInfo = userInfoCache[index];
+                if (userInfo["UID"] == UID) {
+                    return userInfo
+                }
+            }
+
+            usr = await request(JSON.stringify({"type": "reqUsersList", "users": [UID]}))
+
+            usr["users"].forEach((userInfo) => {
+                userInfoCache.push(userInfo)
+            })
+
+            return await reqUsrInfo(UID)
+        }
+
+        async function reqMultiUsrInfo(UidList) {
+            const requiredUIDs = []
+
+            UidList.forEach((uid) => {
+                if (!requiredUIDs.includes(uid)) {
+                    cached = false
+                    for (let cacheIndex = 0; cacheIndex < userInfoCache.length; cacheIndex++) {
+                        const cache = userInfoCache[cacheIndex];
+                        
+                        if (cache["UID"] == uid) {
+                            cached = true
+                            break
+                        }
+                    }
+
+                    if (!cached) {
+                        requiredUIDs.push(uid)
+                    }
+                }
+            })
+            
+            if (requiredUIDs.length > 0) {
+                usr = await request(JSON.stringify({"type": "reqUsersList", "users": requiredUIDs}))
+
+                usr["users"].forEach((userInfo) => {
+                    userInfoCache.push(userInfo)
+                })
+            }
+
+            finalUserinfoList = []
+
+            for (let index = 0; index < UidList.length; index++) {
+                const uid = UidList[index];
+                finalUserinfoList.push(await reqUsrInfo(uid))
+            }
+
+            return finalUserinfoList
+        }
+    </script>
+    <script>
+        // Popups
+        var popupOpen = false
+
+        async function openPopup(title, content) {
+            if (popupOpen) {
+                await new Promise((r, _) => {
+                    function checkPopupOpen() {
+                        if (!popupOpen) {
+                            r()
+                        } else {
+                            setTimeout(checkPopupOpen, 100)
+                        }
+                    }
+
+                    checkPopupOpen()
+                })
+            }
+
+            popupOpen = true
+
+            popupTitle.textContent = title
+            popupContent.textContent = content
+
+            genericPopup.style.visibility = "visible"
+            genericPopup.style.opacity = "1"
+        }
+
+        function closePopup() {
+            genericPopup.style.opacity = "0"
+
+            setTimeout(() => {
+                genericPopup.style.visibility = "hidden"
+                popupOpen = false
+            }, 250)
+        }
+    </script>
+    <script>
+        // Misc UI
+        window.scrollTo(0, 0)
+
+        var currChat = 0
+        var currUID = -1
+
+        var editingMsgId = -1
+        var origEditingMsg = ""
+        var editingMsgCurr = ""
+
+        var replyingMsgId = -1
+
+        var friendsListShown = false
+        function hideFriendsList() {
+            if (friendsListShown) {
+                friendsListWrapper.style.transform = "translateX(calc(100% + 8px))"
+                toggleFriendsList.textContent = "<"
+            } else {
+                friendsListWrapper.style.transform = "translateX(0%)"
+                toggleFriendsList.textContent = ">"
+            }
+
+            friendsListShown = !friendsListShown
+        }
+
+        var myProfileScreenShown = false
+        function showMyProfileScreen() {
+            if (myProfileScreenShown) {
+                myProfileScreen.style.transform = "translateY(calc(-100% - 8px))"
+            } else {
+                myProfileScreen.style.transform = "translateY(0%)"
+            }
+
+            myProfileScreenShown = !myProfileScreenShown
+        }
+
+        imageOverlay.addEventListener("click", () => {
+            imageOverlay.style.visibility = "hidden"
+        })
+
+        imageOverlayImg.addEventListener("click", (e) => {
+            e.stopPropagation()
+        })
+
+        textOverlay.addEventListener("click", () => {
+            textOverlay.style.visibility = "hidden"
+        })
+
+        textOverlayContents.addEventListener("click", (e) => {
+            e.stopPropagation()
+            console.log("stopped")
+        })
+
+        textOverlayMinimize.addEventListener("click", () => {
+            textOverlay.style.visibility = "hidden"
+        })
+
+        textOverlayCopy.addEventListener("click", () => {
+            try {
+                window.navigator.clipboard.writeText(textOverlayContent.textContent)
+            } catch {
+                console.warn("Failed to copy to clipboard!")
+            }
+        })
 
         var chats = []
         var friends = []
@@ -434,7 +487,7 @@
             friendSearchResult.replaceChildren()
 
             searchResult["results"].forEach((res) => {
-                let parent = document.createElement("div")
+                const parent = document.createElement("div")
                 parent.style.width = "calc(100% - 2em)"
                 parent.style.height = "calc(100px - 2em)"
                 parent.style.display = "flex"
@@ -442,24 +495,24 @@
                 parent.style.overflow = "hidden"
                 parent.style.padding = "1em"
 
-                let pfpWrapper = document.createElement("div")
+                const pfpWrapper = document.createElement("div")
                 pfpWrapper.style.height = "100%"
                 pfpWrapper.style.width = "fit-content"
                 
-                let pfpImg = document.createElement("img")
+                const pfpImg = document.createElement("img")
                 pfpImg.src = res["pfp"]
                 pfpImg.style.height = "100%"
                 pfpImg.style.borderRadius = "9999px"
                 pfpImg.style.border = "4px solid var(--acc4)"
 
-                let infoWrapper = document.createElement("div")
+                const infoWrapper = document.createElement("div")
                 infoWrapper.style.width = "70%"
                 infoWrapper.style.height = "100%"
                 infoWrapper.style.marginLeft = "1em"
                 infoWrapper.style.display = "flex"
                 infoWrapper.style.flexDirection = "column"
 
-                let displayname = document.createElement("h1")
+                const displayname = document.createElement("h1")
                 displayname.style.width = "100%"
                 displayname.style.height = "75%"
                 displayname.style.margin = "0"
@@ -467,7 +520,7 @@
                 displayname.classList = "font white"
                 displayname.textContent = res["displayname"]
 
-                let extraInfo = document.createElement("p")
+                const extraInfo = document.createElement("p")
                 extraInfo.style.widows = "100%"
                 extraInfo.style.height = "25%"
                 extraInfo.style.margin = "0"
@@ -475,7 +528,7 @@
                 extraInfo.classList = "font white"
                 extraInfo.textContent = res["username"] + " | ID: " + res["UID"]
 
-                let btn = document.createElement("button")
+                const btn = document.createElement("button")
                 btn.style.width = "30%"
                 btn.style.height = "100%"
                 btn.style.border = "none"
@@ -538,7 +591,7 @@
             }
 
             if (search.length < 3 || search.length > 30) {
-                let err = document.createElement("p")
+                const err = document.createElement("p")
                 err.classList = "font white"
                 err.style.textAlign = "center"
                 err.textContent = "Please input a valid username!"
@@ -546,7 +599,7 @@
                 return
             }
 
-            let searching = document.createElement("p")
+            const searching = document.createElement("p")
             searching.classList = "font white"
             searching.style.textAlign = "center"
             searching.textContent = "Searching..."
@@ -557,7 +610,7 @@
             searching.remove()
 
             if (searchResult["type"] == "userSearchFailed") {
-                let err = document.createElement("p")
+                const err = document.createElement("p")
                 err.classList = "font white"
                 err.style.textAlign = "center"
                 err.textContent = "We could not find that user!"
@@ -744,9 +797,9 @@
             outgoingList.replaceChildren()
 
             friendReqs.forEach((req) => {
-                let uid = req["UID"]
+                const uid = req["UID"]
                 reqUsrInfo(uid).then((uInfo) => {
-                    let reqDiv = document.createElement("div")
+                    const reqDiv = document.createElement("div")
                     reqDiv.style.width = "100%"
                     reqDiv.style.height = "60px"
                     reqDiv.style.overflow = "hidden"
@@ -754,23 +807,23 @@
                     reqDiv.style.flexDirection = "row"
                     reqDiv.style.marginBottom = "1em"
 
-                    let pfpDiv = document.createElement("div")
+                    const pfpDiv = document.createElement("div")
                     pfpDiv.style.width = "56px"
                     pfpDiv.style.height = "56px"
 
-                    let pfpImg = document.createElement("img")
+                    const pfpImg = document.createElement("img")
                     pfpImg.style.width = "100%"
                     pfpImg.style.height = "100%"
                     pfpImg.style.borderRadius = "99999px"
                     pfpImg.style.border = "2px solid var(--acc4)"
                     pfpImg.src = uInfo["pfp"]
 
-                    let infoDiv = document.createElement("div")
+                    const infoDiv = document.createElement("div")
                     infoDiv.style.width = "70%"
                     infoDiv.style.height = "100%"
                     infoDiv.style.marginLeft = "1em"
 
-                    let displayname = document.createElement("h1")
+                    const displayname = document.createElement("h1")
                     displayname.style.width = "100%"
                     displayname.style.height = "75%"
                     displayname.style.margin = "0"
@@ -781,20 +834,20 @@
                     displayname.classList = "font"
                     displayname.textContent = uInfo["displayname"]
 
-                    let extraInfo = document.createElement("p")
+                    const extraInfo = document.createElement("p")
                     extraInfo.style.width = "100%"
                     extraInfo.style.height = "25%"
                     extraInfo.style.margin = "0"
                     extraInfo.classList = "font white"
                     extraInfo.textContent = uInfo["username"] + " | ID: " + uInfo["UID"]
 
-                    let sep = document.createElement("div")
+                    const sep = document.createElement("div")
                     sep.style.width = "4px"
                     sep.style.height = "100%"
                     sep.style.backgroundColor = "var(--acc4)"
                     sep.style.borderRadius = "9999px"
 
-                    let actionDiv = document.createElement("div")
+                    const actionDiv = document.createElement("div")
                     actionDiv.style.width = "30%"
                     actionDiv.style.height = "100%"
                     actionDiv.style.display = "flex"
@@ -812,7 +865,7 @@
                     reqDiv.appendChild(actionDiv)
 
                     if (req["type"] == "incoming") {
-                        let checkBtn = document.createElement("button")
+                        const checkBtn = document.createElement("button")
                         checkBtn.style.width = "50%"
                         checkBtn.style.height = "100%"
                         checkBtn.style.background = "none"
@@ -823,13 +876,13 @@
                         checkBtn.classList = "font"
                         checkBtn.textContent = "✓"
 
-                        let sep = document.createElement("div")
+                        const sep = document.createElement("div")
                         sep.style.width = "4px"
                         sep.style.height = "75%"
                         sep.style.backgroundColor = "var(--acc4)"
                         sep.style.borderRadius = "9999px"
 
-                        let xBtn = document.createElement("button")
+                        const xBtn = document.createElement("button")
                         xBtn.style.width = "50%"
                         xBtn.style.height = "100%"
                         xBtn.style.background = "none"
@@ -854,7 +907,7 @@
 
                         incomingList.appendChild(reqDiv)
                     } else {
-                        let xBtn = document.createElement("button")
+                        const xBtn = document.createElement("button")
                         xBtn.style.width = "100%"
                         xBtn.style.height = "100%"
                         xBtn.style.background = "none"
@@ -901,7 +954,7 @@
                     continue
                 }
 
-                let chatDiv = document.createElement("div")
+                const chatDiv = document.createElement("div")
                 chatDiv.style.width = "100%"
                 chatDiv.style.height = "60px"
                 chatDiv.style.margin = "0"
@@ -927,24 +980,24 @@
                     setChatList()
                 }
 
-                let chatImg = document.createElement("div")
+                const chatImg = document.createElement("div")
                 chatImg.style.width = "60px"
                 chatImg.style.height = "60px"
 
-                let chatImgPic = document.createElement("img")
+                const chatImgPic = document.createElement("img")
                 chatImgPic.style.width = "56px"
                 chatImgPic.style.height = "56px"
                 chatImgPic.style.borderRadius = "9999px"
                 chatImgPic.style.border = "2px solid var(--acc4)"
                 
-                let chatInfo = document.createElement("div")
+                const chatInfo = document.createElement("div")
                 chatInfo.style.width = "calc(100% - 60px)"
                 chatInfo.style.height = "100%"
                 chatInfo.style.marginLeft = "1em"
                 chatInfo.style.display = "flex"
                 chatInfo.style.flexDirection = "column"
 
-                let chatName = document.createElement("h2")
+                const chatName = document.createElement("h2")
                 chatName.style.width = "90%"
                 chatName.style.height = "75%"
                 chatName.style.margin = "0"
@@ -955,10 +1008,10 @@
                 chatName.classList = "font"
 
                 if (chat["type"] == "dm") {
-                    let other = chat["recipients"].filter(item => item != currUID)
+                    const other = chat["recipients"].filter(item => item != currUID)
 
                     if (other && other.length > 0) {
-                        let otherInfo = await reqUsrInfo(other[0])
+                        const otherInfo = await reqUsrInfo(other[0])
 
                         chatName.textContent = otherInfo["displayname"]
                         chatImgPic.src = otherInfo["pfp"]
@@ -1011,7 +1064,7 @@
             accInfoDisplayname.textContent = resp["displayname"]
             accInfoUsername.textContent = resp["username"]
             accInfoUID.textContent = "Account ID: " + currUID
-            accCreatedDate.textContent = new Date(resp["accCreated"] * 1000).toLocaleDateString()
+            accCreatedDate.textContent = (new Date(resp["accCreated"] * 1000)).toLocaleDateString()
 
             bioArea.value = resp["bio"]
 
@@ -1166,6 +1219,7 @@
             return null
         }
 
+        const embedCache = []
         async function evalEmbeds(message, msgP) {
             const embeds = document.createElement("div")
             embeds.style.width = "100%"
@@ -1175,19 +1229,20 @@
 
             for (let index = 0; index < message["embed"].length; index++) {
                 const embed = message["embed"][index];
-                embedType = "application/octet-stream"
 
-                try {
-                    let resp = await fetch(embed, {"method": "HEAD"})
-                    
-                    if (resp.ok) {
-                        embedType = resp.headers.get("content-type")
-                    }
-                } catch {
-                    console.log("Failed to get embed type")
+                if (embedCache[embed]) {
+                    embedContent = embedCache[embed]
+                } else {
+                    embedContent = await request(JSON.stringify({"type": "getEmbed", "embedUrl": embed}))
+                    embedCache[embed] = embedContent
                 }
 
-                filename = embed.slice(4)
+                if (!embedContent) {
+                    continue
+                }
+
+                const embedType = embedContent["embedType"]
+                let filename = embed.slice(4)
 
                 try {
                     splits = filename.split(".")
@@ -1198,7 +1253,7 @@
                 } catch {}
 
                 if (embedType.startsWith("image/")) {
-                    let img = document.createElement("img")
+                    const img = document.createElement("img")
                     img.style.maxHeight = "9em"
                     img.style.maxWidth = "50vw"
                     img.style.border = "none"
@@ -1210,43 +1265,27 @@
                     img.style.marginBottom = "1em"
 
                     img.onclick = () => {
-                        imageOverlayImg.src = embed
+                        imageOverlayImg.src = img.src
+                        imageOverlay.style.visibility = "visible"
                     }
 
-                    loadPromise = new Promise((resolve, reject) => {
-                        img.onload = () => {
-                            resolve()
-                        }
-
-                        img.onabort = () => {
-                            reject()
-                        }
-
-                        img.onerror = () => {
-                            reject()
-                        }
-                    })
-
-                    img.src = embed
-
-                    await loadPromise
+                    img.src = "data:" + embedType + ";base64," + embedContent["embedContent"]
 
                     embeds.appendChild(img)
                 } else if (embedType.startsWith("audio/")) {
-                    let audio = document.createElement("audio")
+                    const audio = document.createElement("audio")
                     audio.style.height = "4em"
                     audio.style.width = "25vw"
                     audio.style.border = "none"
                     audio.style.borderRadius = "8px"
+                    audio.style.marginRight = "1em"
                     audio.controls = "true"
                     audio.title = filename
-                    audio.src = embed
-
-                    audio.style.marginRight = "1em"
+                    audio.src = "data:" + embedType + ";base64," + embedContent["embedContent"]
                     
                     embeds.appendChild(audio)
                 } else if (embedType.startsWith("video/")) {
-                    let video = document.createElement("video")
+                    const video = document.createElement("video")
                     video.style.height = "9em"
                     video.style.maxWidth = "50vw"
                     video.style.border = "none"
@@ -1255,18 +1294,107 @@
                     video.style.marginBottom = "1em"
                     video.controls = "true"
                     video.title = filename
-                    video.src = embed
+                    video.src = "data:" + embedType + ";base64," + embedContent["embedContent"]
                     
                     embeds.appendChild(video)
+                } else if (embedType.startsWith("text/")) {
+                    const text = document.createElement("div")
+                    text.style.height = "9em"
+                    text.style.maxWidth = "25vw"
+                    text.style.border = "none"
+                    text.style.borderRadius = "8px"
+                    text.style.marginRight = "1em"
+                    text.style.marginBottom = "1em"
+                    text.style.backgroundColor = "var(--acc2)"
+                    text.style.display = "flex"
+                    text.style.flexDirection = "column"
+
+                    const actualText = document.createElement("textarea")
+                    actualText.style.resize = "none"
+                    actualText.style.width = "100%"
+                    actualText.style.height = "80%"
+                    actualText.style.padding = "0"
+                    actualText.style.backgroundColor = "var(--acc4)"
+                    actualText.style.border = "none"
+                    actualText.style.borderTopLeftRadius = "8px"
+                    actualText.style.borderTopRightRadius = "8px"
+                    actualText.style.outline = "none"
+                    actualText.classList = "font white"
+                    actualText.readOnly = true
+                    
+                    const contentBytes = Uint8Array.fromBase64(embedContent["embedContent"])
+                    const content = textDecode(contentBytes)
+
+                    actualText.textContent = content.slice(0, 1000)
+                    
+                    if (contentBytes.length > 1000) {
+                        actualText.textContent = actualText.textContent + "...\n(End of preview)"
+                    }
+
+                    const infoWrapper = document.createElement("div")
+                    infoWrapper.style.width = "100%"
+                    infoWrapper.style.height = "20%"
+                    infoWrapper.style.padding = "0"
+                    infoWrapper.style.display = "flex"
+                    infoWrapper.style.flexDirection = "row"
+                    infoWrapper.style.alignItems = "center"
+
+                    const filenameP = document.createElement("p")
+                    filenameP.classList = "font textOverlayFilename"
+                    filenameP.textContent = filename
+
+                    const controls = document.createElement("div")
+                    controls.classList = "textOverlayControls"
+
+                    const maximize = document.createElement("img")
+                    maximize.src = "Media/Maximize.png"
+
+                    const downloadA = document.createElement("a")
+                    downloadA.download = filename
+                    downloadA.href = embed
+
+                    const download = document.createElement("img")
+                    download.src = "Media/Download.png"
+                    downloadA.appendChild(download)
+
+                    const copy = document.createElement("img")
+                    copy.src = "Media/Copy.png"
+
+                    maximize.onclick = () => {
+                        textOverlayContent.textContent = content
+                        textOverlayFilename.textContent = filename
+                        textOverlayDownload.download = filename
+                        textOverlayDownload.href = embed
+                        textOverlay.style.visibility = "visible"
+                    }
+
+                    copy.onclick = () => {
+                        try {
+                            window.navigator.clipboard.writeText(content)
+                        } catch {
+                            console.warn("Failed to copy to clipboard!")
+                        }
+                    }
+
+                    controls.appendChild(maximize)
+                    controls.appendChild(downloadA)
+                    controls.appendChild(copy)
+
+                    infoWrapper.appendChild(filenameP)
+                    infoWrapper.appendChild(controls)
+
+                    text.appendChild(actualText)
+                    text.appendChild(infoWrapper)
+                    embeds.appendChild(text)
                 } else {
-                    let generic = document.createElement("div")
+                    const generic = document.createElement("div")
                     generic.style.height = "5em"
                     generic.style.width = "25vw"
                     generic.style.border = "none"
                     generic.style.borderRadius = "8px"
                     generic.style.backgroundColor = "var(--acc2)"
 
-                    let title = document.createElement("a")
+                    const title = document.createElement("a")
                     title.style.width = "100%"
                     title.style.height = "1em"
                     title.style.fontSize = "1.25em"
@@ -1285,7 +1413,7 @@
 
         async function genMsg(message) {
             if (message["MSGID"] == editingMsgId) {
-                let msgT = document.createElement("textarea")
+                const msgT = document.createElement("textarea")
                 msgT.classList = "font white"
                 msgT.style.backgroundColor = "rgba(0, 0, 0, 0)"
                 msgT.style.border = "4px solid var(--acc4)"
@@ -1329,7 +1457,7 @@
                 for (let index = 0; index < words.length; index++) {
                     const word = words[index];
 
-                    var wordE = null
+                    let wordE = null
                     if (word.startsWith("http://") || word.startsWith("https://")) {
                         wordE = document.createElement("a")
                         wordE.href = word
@@ -1348,13 +1476,15 @@
                     wordE.style.whiteSpace = "pre-wrap"
 
                     if (word.startsWith("@")) {
-                        let usrInfo = await getUsernameInChat(word.split("@")[1])
+                        const usrInfo = await getUsernameInChat(word.split("@")[1])
 
                         if (usrInfo) {
                             wordE.style.backgroundColor = "var(--highlight)"
                             wordE.style.borderRadius = "8px"
                             wordE.style.paddingLeft = "0.5em"
                             wordE.style.paddingRight = "0.5em"
+                            wordE.style.marginRight = "0.5em"
+                            wordE.style.cursor = "pointer"
                             wordE.textContent = "@" + usrInfo["displayname"]
 
                             if (usrInfo["UID"] == currUID) {
@@ -1367,13 +1497,13 @@
                 }
 
                 if (line + 1 < lines.length) {
-                    var br = document.createElement("br")
+                    const br = document.createElement("br")
                     msgP.appendChild(br)
                 }
             }
 
             if (message["edited"]) {
-                let editedTxt = document.createElement("p")
+                const editedTxt = document.createElement("p")
                 editedTxt.style.color = "gray"
                 editedTxt.style.fontSize = "0.7em"
                 editedTxt.style.display = "inline-block"
@@ -1395,7 +1525,7 @@
         }
 
         async function genFullMsg(userInfoList, message) {
-            var messageDate = null
+            let messageDate = null
 
             if (message["time"]) {
                 messageDate = new Date(message["time"] * 1000)
@@ -1456,19 +1586,26 @@
                 replyToHead.appendChild(replyCont)
                 messageDiv.appendChild(replyToHead)
 
-                replyToHead.addEventListener("click", (e) => {
-                    let msgE = document.querySelector('[title="MSGID' + message["replyTo"] + '"]')
+                replyToHead.addEventListener("click", () => {
+                    const msgE = document.querySelector('[data-msgid="MSGID' + message["replyTo"] + '"]')
 
                     if (msgE) {
                         msgE.scrollIntoView({"behavior": "smooth", "block": "center"})
 
-                        let origBg = msgE.style.backgroundColor
+                        const origBg = msgE.style.backgroundColor
                         msgE.style.backgroundColor = "var(--acc6)"
 
                         setTimeout(() => msgE.style.backgroundColor = origBg, 2500)
-                    }
+                    } else {
+                        let msgPage = Math.floor(message["replyTo"] / 100)
+                        let currPageFromTop = Math.floor(message["MSGID"] / 100)
 
-                    // TODO: Scroll onto different pages
+                        if (currPageFromTop > msgPage) {
+                            currPage = currPageFromTop - msgPage
+                            highlightMsg = message["replyTo"]
+                            fetchChatData()
+                        }
+                    }
                 })
 
                 if (replyUsr["UID"] == currUID) {
@@ -1528,7 +1665,7 @@
         }
 
         async function genSmallMsg(userInfoList, message) {
-            var messageDate = null
+            let messageDate = null
 
             if (message["time"]) {
                 messageDate = new Date(message["time"] * 1000)
@@ -1580,6 +1717,7 @@
         var chatFetchInProgress = false
         var changedChat = true
         var startAtTop = false
+        var highlightMsg = -1
         var currPage = 0
         var maxPage = 0
 
@@ -1622,7 +1760,7 @@
                 }
             }
 
-            var messageDiv = null
+            let messageDiv = null
 
             if (lastMsg) {
                 if (message["UID"] == lastMsg["UID"] && message["time"] - lastMsg["time"] < 10*60) {
@@ -1638,7 +1776,7 @@
                 messageDiv = await genFullMsg(userInfos, message)
             }
 
-            messageDiv.title = "MSGID" + message["MSGID"]
+            messageDiv.dataset.msgid = "MSGID" + message["MSGID"]
 
             messageDiv.addEventListener("contextmenu", (e) => {
                 e.preventDefault()
@@ -1663,6 +1801,35 @@
                 msgRClickMenuMsg = message
             })
 
+            if (highlightMsg == message["MSGID"]) {
+                highlightMsg = -1
+
+                const chatFinishedPromise = new Promise((r) => {
+                    function check() {
+                        if (!chatFetchInProgress) {
+                            r()
+                        } else {
+                            setTimeout(check, 100)
+                        }
+                    }
+
+                    check()
+                })
+
+                chatFinishedPromise.then(() => {
+                    const origBg = messageDiv.style.backgroundColor
+                    messageDiv.style.backgroundColor = "var(--acc6)"
+                    messageDiv.scrollIntoView({
+                        "behavior": "smooth",
+                        "block": "center"
+                    })
+
+                    setTimeout(() => {
+                        messageDiv.style.backgroundColor = origBg
+                    }, 2500)
+                })
+            }
+
             chatDiv2.push(messageDiv)
         }
 
@@ -1686,7 +1853,7 @@
             }
 
             if (chat["messages"].length > 100) {
-                let len = chat["messages"].length
+                const len = chat["messages"].length
                 
                 chat["messages"].splice(0, len - 100 * (currPage + 1))
                 chat["messages"].splice(100, len)
@@ -1696,7 +1863,7 @@
             chatCache = chat
 
             if (editingMsgId != -1) {
-                let editingMsgE = document.getElementById("currEditing")
+                const editingMsgE = document.getElementById("currEditing")
 
                 if (editingMsgE) {
                     editingMsgCurr = editingMsgE.value
@@ -1715,7 +1882,7 @@
             if (currChatType == "forced-gc") {
                 chatName.textContent = "You are chatting on: " + currChatName
             } else if (currChatType == "dm") {
-                let other = currRecipients.filter(item => item != currUID)
+                const other = currRecipients.filter(item => item != currUID)
 
                 chatName.textContent = "You are chatting with: " + (await reqUsrInfo(other[0]))["displayname"]
             }
@@ -1731,13 +1898,13 @@
 
             const chatDiv2 = []
 
-            let padding = document.createElement("div")
+            const padding = document.createElement("div")
             padding.style.width = "100%"
             padding.style.height = "2.5em"
             chatDiv2.push(padding)
 
             if (currPage < maxPage) {
-                let goUpBtn = document.createElement("button")
+                const goUpBtn = document.createElement("button")
                 goUpBtn.style.width = "100%"
                 goUpBtn.style.backgroundColor = "var(--button)"
                 goUpBtn.style.fontSize = "2em"
@@ -1764,11 +1931,12 @@
                 }
 
                 await newMsg(message, chatDiv2, lastMsg, userInfos)
+
                 lastMsg = message
             }
 
             if (currPage > 0) {
-                let goDownBtn = document.createElement("button")
+                const goDownBtn = document.createElement("button")
                 goDownBtn.style.width = "100%"
                 goDownBtn.style.backgroundColor = "var(--button)"
                 goDownBtn.style.fontSize = "2em"
@@ -1792,10 +1960,11 @@
                 lookingAtOldMsgs.style.visibility = "hidden"
             }
 
-            padding = document.createElement("div")
-            padding.style.width = "100%"
-            padding.style.height = "6em"
-            chatDiv2.push(padding)
+
+            const padding2 = document.createElement("div")
+            padding2.style.width = "100%"
+            padding2.style.height = "6em"
+            chatDiv2.push(padding2)
 
             chatDiv.replaceChildren()
 
@@ -1880,7 +2049,7 @@
             const trackerIdToFunc = []
 
             var wsURL = WsProtocol + "//" + window.location.hostname + ":" + (WsProtocol == "ws:" ? 33334 : 33335)
-            var wsUrlReady = new Promise((res) => {
+            const wsUrlReady = new Promise((res) => {
                 try {
                     const resp = fetch(protocol + "//" + domainURL + "/api/" + WsProtocol.split(":")[0] + "url", {
                             method: "GET",
@@ -2150,10 +2319,10 @@
                                                 }
 
                                                 if (chatCache["messages"].length > 100) {
-                                                    let msgid = chatCache["messages"][0]["MSGID"]
+                                                    const msgid = chatCache["messages"][0]["MSGID"]
                                                     chatCache["messages"].splice(0, 1)
 
-                                                    let msgDiv = document.querySelector('[title="MSGID' + msgid + '"]')
+                                                    const msgDiv = document.querySelector('[data-msgid="MSGID' + msgid + '"]')
 
                                                     if (msgDiv) {
                                                         msgDiv.remove()
@@ -2167,7 +2336,7 @@
 
                                                 userInfos = reqMultiUsrInfo(requiredUIDs).then((userInfos) => {
                                                     let lastMsg = null
-                                                    let thisMsg = chatCache["messages"][chatCache["messages"].length - 1]
+                                                    const thisMsg = chatCache["messages"][chatCache["messages"].length - 1]
 
                                                     chatCache["messages"].forEach((msg) => {
                                                         if (!msg["deleted"] && msg != thisMsg) {
@@ -2181,7 +2350,7 @@
                                                     const atBottom = ((currScroll + chatDiv.offsetHeight >= chatDiv.scrollHeight - 8) || changedChat) && !startAtTop
 
                                                     newMsg(thisMsg, msgList, lastMsg, userInfos).then(() => {
-                                                        let lastMsgE = document.querySelector('[title="MSGID' + lastMsg["MSGID"] + '"]')
+                                                        const lastMsgE = document.querySelector('[data-msgid="MSGID' + lastMsg["MSGID"] + '"]')
 
                                                         if (lastMsgE) {
                                                             let lastE = lastMsgE
@@ -2199,7 +2368,7 @@
 
                                         if (respBody["type"] == "delMsg") {
                                             if (currChat == respBody["CID"]) {
-                                                let msg = document.querySelector('[title="MSGID' + respBody["MSGID"] + '"]')
+                                                const msg = document.querySelector('[data-msgid="MSGID' + respBody["MSGID"] + '"]')
 
                                                 if (msg) {
                                                     msg.remove()
@@ -2268,11 +2437,6 @@
     </script>
     <script>
         // Send msg
-        const embedList = document.getElementById("embedList")
-        const textEntry = document.getElementById("textEntry")
-        const sendMsgBtn = document.getElementById("sendMsg")
-        const addFileBtn = document.getElementById("addFileInput")
-
         var embeddedFiles = []
 
         async function sendMsg() {
@@ -2306,7 +2470,7 @@
 
                 embedList.replaceChildren()
                 embeddedFiles.forEach((file) => {
-                    let embedImgWrapper = document.createElement("div")
+                    const embedImgWrapper = document.createElement("div")
                     embedImgWrapper.style.position = "relative"
                     embedImgWrapper.style.height = "calc(100%-4px)"
                     embedImgWrapper.style.aspectRatio = 1
@@ -2315,12 +2479,12 @@
                     embedImgWrapper.style.borderRadius = "8px"
                     embedImgWrapper.style.margin = "4px"
 
-                    let embedImg = document.createElement("img")
+                    const embedImg = document.createElement("img")
                     embedImg.style.objectFit = "cover"
                     embedImg.style.width = "100%"
                     embedImg.style.height = "100%"
 
-                    let embedImgOverlay = document.createElement("img")
+                    const embedImgOverlay = document.createElement("img")
                     embedImgOverlay.style.position = "absolute"
                     embedImgOverlay.style.width = "100%"
                     embedImgOverlay.style.height = "100%"

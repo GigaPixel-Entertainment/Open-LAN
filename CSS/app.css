@@ -825,6 +825,82 @@ footer > a {
     transform: translate(-50%, -50%);
 }
 
+#textOverlay {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    background-color: rgba(0, 0, 0, 0.75);
+    visibility: hidden;
+}
+
+#textOverlayContents {
+    position: absolute;
+    width: calc(50% - 2em);
+    height: calc(75% - 2em);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--acc2);
+    display: flex;
+    flex-direction: column;
+    border-radius: 8px;
+}
+
+#textOverlayText {
+    width: calc(100% - 1em);
+    height: calc(95% - 1em);
+    resize: none;
+    padding: .5em;
+    background-color: var(--acc4);
+    border: none;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    outline: none;
+    font-size: 1.25em;
+}
+
+#textOverlayInfoWrapper {
+    width: 100%;
+    height: 5%;
+    padding: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.textOverlayFilename {
+    flex: 0 0 50%;
+    padding: 0;
+    margin: 0;
+    white-space: nowrap;
+    background: linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%);
+    background-clip: text;
+    color: transparent;
+    overflow: hidden;
+}
+
+.textOverlayControls {
+    flex: 0 0 50%;
+    height: 100%;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: row;
+    justify-content: end;
+}
+
+.textOverlayControls > img, .textOverlayControls > a > img {
+    width: auto;
+    height: 100%;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: .5em;
+    margin-right: .5em;
+}
+
 #genericPopup {
     position: absolute;
     width: 100%;

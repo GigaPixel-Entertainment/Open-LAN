@@ -53,7 +53,6 @@ import msgpack
 import asyncio
 import orjson
 import bcrypt
-import psutil # type: ignore
 import socket
 import select
 import base64
@@ -309,13 +308,12 @@ def formatLoginResponse(username: str, cloudflare: bool):
 
     token = secrets.token_urlsafe(256)
     VALID_TOKENS[username] = {"TOKEN": token, "EXPIRES": time.time() + TOKEN_EXPIRES_SEC}
-    return (
-        "HTTP/1.1 308 Permanent Redirect\r\n"
-        f"Set-Cookie: authToken={token}; HttpOnly; SameSite=Strict; {"Domain=gigapixel.cc;" if cloudflare else ""} Path=/\r\n"
-        f"Location: /app.html\r\n"
-        "Connection: close\r\n"
-        "\r\n"
-    ).encode("utf-8")
+
+    return httphelper.formatHttpHeaderRaw(308, {
+        "Set-Cookie": f"authToken={token}; HttpOnly; SameSite=Strict; {"Domain=gigapixel.cc" if cloudflare else ""} Path=/",
+        "Location": "/app.html",
+        "Connection": "close"
+    })
 
 def closeSocket(sk: socket.socket):
     try:
@@ -357,17 +355,29 @@ def handleRequest(sk: socket.socket):
 
             if currUrl and "openlan.gigapixel.cc" in currUrl:
                 # POV: Cloudflare
-                sk.sendall(f"HTTP/1.1 200 OK\r\nUrl: ws://openlanws.gigapixel.cc\r\nContent-Type: text/plain\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".encode("utf-8"))
+                sk.sendall(httphelper.formatHttpHeaderRaw(200, {
+                    "Url": "ws://openlanws.gigapixel.cc",
+                    "Connection": "close"
+                }))
             else:
-                sk.sendall(f"HTTP/1.1 200 OK\r\nUrl: ws://{currUrl}:{WS_PORT}\r\nContent-Type: text/plain\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".encode("utf-8"))
+                sk.sendall(httphelper.formatHttpHeaderRaw(200, {
+                    "Url": f"ws://{currUrl}:{WS_PORT}",
+                    "Connection": "close"
+                }))
         elif page == "/api/wssurl":
             currUrl = parsed.headers.get("Domain-Url")
 
             if currUrl and "openlan.gigapixel.cc" in currUrl:
                 # POV: Cloudflare
-                sk.sendall(f"HTTP/1.1 200 OK\r\nUrl: wss://openlanws.gigapixel.cc\r\nContent-Type: text/plain\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".encode("utf-8"))
+                sk.sendall(httphelper.formatHttpHeaderRaw(200, {
+                    "Url": "wss://openlanws.gigapixel.cc",
+                    "Connection": "close"
+                }))
             else:
-                sk.sendall(f"HTTP/1.1 200 OK\r\nUrl: wss://{currUrl}:{WSS_PORT}\r\nContent-Type: text/plain\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".encode("utf-8"))
+                sk.sendall(httphelper.formatHttpHeaderRaw(200, {
+                    "Url": f"wss://{currUrl}:{WSS_PORT}",
+                    "Connection": "close"
+                }))
         elif page == "/api/login":
             if "TK" in uri and "hostname" in uri:
                 username = isValidRedirectToken(uri["TK"])
@@ -596,7 +606,7 @@ async def wsHandler(ws: ServerConnection):
                         await wsSendEncrypted(ws, data=orjson.dumps({"type":"loginFailed"}))
                 
                 if decryptedBody["type"] == "signup":
-                    if not "realname" in decryptedBody or not "username" in decryptedBody or not "password" in decryptedBody or not "securityKey" in decryptedBody:
+                    if not checkFields(decryptedBody, ["realname", "username", "password", "securityKey"]):
                         await wsSendEncrypted(ws, orjson.dumps({"type": "signupFailed", "reason": "Request error. Please contact the server owner for help."}))
                         continue
 
@@ -680,7 +690,7 @@ async def wsHandler(ws: ServerConnection):
                 
                 if decryptedBody["type"] == "reqChatMeta":
                     if await checkAuthTokenEncrypted(ws, authToken):
-                        if not "CID" in decryptedBody:
+                        if not checkFields(decryptedBody, ["CID"]):
                             await wsSendEncrypted(ws, orjson.dumps({"type": "reqChatMetaFailed", "message": "Request error. Please contact the server owner for help."}), trackerId)
                             continue
 
@@ -705,7 +715,7 @@ async def wsHandler(ws: ServerConnection):
 
                 if decryptedBody["type"] == "reqChat":
                     if await checkAuthTokenEncrypted(ws, authToken):
-                        if not "CID" in decryptedBody or not "page" in decryptedBody:
+                        if not checkFields(decryptedBody, ["CID", "page"]):
                             await wsSendEncrypted(ws, orjson.dumps({"type": "reqChatFailed", "message": "Request error. Please contact the server owner for help."}), trackerId)
                             continue
 
@@ -732,7 +742,7 @@ async def wsHandler(ws: ServerConnection):
                 
                 if decryptedBody["type"] == "reqMsg":
                     if await checkAuthTokenEncrypted(ws, authToken):
-                        if not "CID" in decryptedBody or not "MSGID" in decryptedBody:
+                        if not checkFields(decryptedBody, ["CID", "MSGID"]):
                             await wsSendEncrypted(ws, orjson.dumps({"type": "reqMsgFailed"}), trackerId)
                             continue
 
@@ -759,10 +769,39 @@ async def wsHandler(ws: ServerConnection):
                         await wsSendEncrypted(ws, orjson.dumps({"type": "reqMsgSuccess", "msg": targetMsg}), trackerId)
                     else:
                         break
+
+                if decryptedBody["type"] == "getEmbed":
+                    if await checkAuthTokenEncrypted(ws, authToken):
+                        if not checkFields(decryptedBody, ["embedUrl"]):
+                            await wsSendEncrypted(ws, orjson.dumps({"type": "getEmbedFailed"}), trackerId)
+                            continue
+
+                        filePath = CWD / decryptedBody["embedUrl"]
+
+                        if not httphelper.isSafePath(filePath) or not filePath.exists():
+                            await wsSendEncrypted(ws, orjson.dumps({"type": "getEmbedFailed"}), trackerId)
+                            continue
+
+                        fileType, e = mimetypes.guess_type(filePath)
+
+                        fileContents = None
+                        with open(filePath, "rb") as f:
+                            fileContents = f.read()
+                            f.close()
+
+                        fileContentsDecoded = fernet.decrypt(fileContents)
+                        encodedFile = base64.b64encode(fileContentsDecoded)
+                        await wsSendEncrypted(ws, orjson.dumps({
+                            "type": "getEmbedSuccess",
+                            "embedContent": encodedFile.decode("utf-8"),
+                            "embedType": fileType
+                        }), trackerId)
+                    else:
+                        break
                 
                 if decryptedBody["type"] == "reqUsersList":
                     if await checkAuthTokenEncrypted(ws, authToken):
-                        if not "users" in decryptedBody:
+                        if not checkFields(decryptedBody, ["users"]):
                             await wsSendEncrypted(ws, orjson.dumps({"type": "reqUsersListFailed"}), trackerId)
                             continue
 
@@ -785,7 +824,7 @@ async def wsHandler(ws: ServerConnection):
                 
                 if decryptedBody["type"] == "sendMsg":
                     if await checkAuthTokenEncrypted(ws, authToken):
-                        if not "CID" in decryptedBody or not "msg" in decryptedBody or not "embed" in decryptedBody or not "replyTo" in decryptedBody:
+                        if not checkFields(decryptedBody, ["CID", "msg", "embed", "replyTo"]):
                             await wsSendEncrypted(ws, orjson.dumps({"type": "chatUpdateFailed"}), trackerId)
                             continue
 
@@ -863,7 +902,7 @@ async def wsHandler(ws: ServerConnection):
                 
                 if decryptedBody["type"] == "delMsg":
                     if await checkAuthTokenEncrypted(ws, authToken):
-                        if not "CID" in decryptedBody or not "MSGID" in decryptedBody:
+                        if not checkFields(decryptedBody, ["CID", "MSGID"]):
                             await wsSendEncrypted(ws, orjson.dumps({"type": "delMsgFailed"}), trackerId)
                             continue
 
@@ -915,7 +954,7 @@ async def wsHandler(ws: ServerConnection):
                 
                 if decryptedBody["type"] == "editMsg":
                     if await checkAuthTokenEncrypted(ws, authToken):
-                        if not "CID" in decryptedBody or not "MSGID" in decryptedBody or not "new" in decryptedBody:
+                        if not checkFields(decryptedBody, ["CID", "MSGID", "new"]):
                             await wsSendEncrypted(ws, orjson.dumps({"type": "editMsgFailed"}), trackerId)
                             continue
 
@@ -963,7 +1002,7 @@ async def wsHandler(ws: ServerConnection):
 
                 if decryptedBody["type"] == "updateDisplayname":
                     if await checkAuthTokenEncrypted(ws, authToken):
-                        if not "displayname" in decryptedBody:
+                        if not checkFields(decryptedBody, ["displayname"]):
                             await wsSendEncrypted(ws, orjson.dumps({"type":"updateDisplaynameFailed"}), trackerId)
                             continue
 
@@ -988,7 +1027,7 @@ async def wsHandler(ws: ServerConnection):
                 
                 if decryptedBody["type"] == "updateBirthday":
                     if await checkAuthTokenEncrypted(ws, authToken):
-                        if not "bd" in decryptedBody:
+                        if not checkFields(decryptedBody, ["bd"]):
                             await wsSendEncrypted(ws, orjson.dumps({"type":"updateBirthdayFailed"}), trackerId)
                             continue
 
@@ -1004,7 +1043,7 @@ async def wsHandler(ws: ServerConnection):
                 
                 if decryptedBody["type"] == "updatePronoun":
                     if await checkAuthTokenEncrypted(ws, authToken):
-                        if not "pronoun" in decryptedBody:
+                        if not checkFields(decryptedBody, ["pronoun"]):
                             await wsSendEncrypted(ws, orjson.dumps({"type":"updatePronounFailed"}), trackerId)
                             continue
 
@@ -1020,7 +1059,7 @@ async def wsHandler(ws: ServerConnection):
                 
                 if decryptedBody["type"] == "updatePfp":
                     if await checkAuthTokenEncrypted(ws, authToken):
-                        if not "pfp" in decryptedBody:
+                        if not checkFields(decryptedBody, ["pfp"]):
                             await wsSendEncrypted(ws, orjson.dumps({"type":"updatePfpFailed"}), trackerId)
                             continue
 
@@ -1038,7 +1077,7 @@ async def wsHandler(ws: ServerConnection):
                 
                 if decryptedBody["type"] == "updateBio":
                     if await checkAuthTokenEncrypted(ws, authToken):
-                        if not "bio" in decryptedBody:
+                        if not checkFields(decryptedBody, ["bio"]):
                             await wsSendEncrypted(ws, orjson.dumps({"type":"updatePfpFailed"}), trackerId)
                             continue
 
@@ -1064,7 +1103,7 @@ async def wsHandler(ws: ServerConnection):
 
                 if decryptedBody["type"] == "userSearch":
                     if await checkAuthTokenEncrypted(ws, authToken):
-                        if not "unameSearch" in decryptedBody:
+                        if not checkFields(decryptedBody, ["unameSearch"]):
                             await wsSendEncrypted(ws, orjson.dumps({"type": "userSearchFailed"}), trackerId)
                             continue
 
@@ -1103,7 +1142,8 @@ async def wsHandler(ws: ServerConnection):
                 if decryptedBody["type"] == "friendReq":
                     if await checkAuthTokenEncrypted(ws, authToken):
                         # TODO: Blocking users & stuff idk
-                        if not "UID" in decryptedBody:
+
+                        if not checkFields(decryptedBody, ["UID"]):
                             await wsSendEncrypted(ws, orjson.dumps({"type": "friendReqFailed"}), trackerId)
                             continue
 
@@ -1169,7 +1209,7 @@ async def wsHandler(ws: ServerConnection):
                 
                 if decryptedBody["type"] == "cancelFriendReq":
                     if await checkAuthTokenEncrypted(ws, authToken):
-                        if not "UID" in decryptedBody:
+                        if not checkFields(decryptedBody, ["UID"]):
                             await wsSendEncrypted(ws, orjson.dumps({"type": "cancelFriendReqFailed"}), trackerId)
                             continue
 
@@ -1207,7 +1247,7 @@ async def wsHandler(ws: ServerConnection):
 
                 if decryptedBody["type"] == "declineFriendReq":
                     if await checkAuthTokenEncrypted(ws, authToken):
-                        if not "UID" in decryptedBody:
+                        if not checkFields(decryptedBody, ["UID"]):
                             await wsSendEncrypted(ws, orjson.dumps({"type": "declineFriendReqFailed"}), trackerId)
                             continue
 
@@ -1245,7 +1285,7 @@ async def wsHandler(ws: ServerConnection):
 
                 if decryptedBody["type"] == "acceptFriendReq":
                     if await checkAuthTokenEncrypted(ws, authToken):
-                        if not "UID" in decryptedBody:
+                        if not checkFields(decryptedBody, ["UID"]):
                             await wsSendEncrypted(ws, orjson.dumps({"type": "acceptFriendReqFailed"}), trackerId)
                             continue
 
@@ -1407,6 +1447,8 @@ if __name__ == "__main__":
             logging.FileHandler(LOG_DIR / f"{datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S")}.log")
         ]
     )
+
+    logging.info(f"[MAIN] Open-LAN v{VER}-{STAGE} {"(DEV)" if DEV else ""} initalizing!")
 
     logging.debug("[MAIN] Generating encryption key")
     PRIV_KEY = ec.generate_private_key(ec.SECP256R1())
