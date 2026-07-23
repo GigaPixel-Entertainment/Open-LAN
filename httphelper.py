@@ -23,14 +23,14 @@ class HTTPRequestParser(BaseHTTPRequestHandler):
     # pylint: disable=super-init-not-called
     def __init__(self, request_bytes: bytes):
         self.rfile = BytesIO(request_bytes)
-        self.rawRequestLine = self.rfile.readline()
-        self.errorCode = self.errorMessage = None
+        self.raw_requestline = self.rfile.readline()
+        self.error_code = self.error_message = None
 
         self.parse_request()
 
     def send_error(self, code: int, message: str | None=None, explain: str | None=None):
-        self.errorCode = code
-        self.errorMessage = message
+        self.error_code = code
+        self.error_message = message
 
 def formatHttpHeaderRaw(statusCode: int, headerDict: dict | None = None):
     respPhrase = ""
