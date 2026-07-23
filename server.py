@@ -16,7 +16,6 @@
 #
 # GigaPixel Entertainment <the_mrjune@gigapixel.cc>
 
-
 print("""
 ####################
 #                  #
@@ -102,9 +101,9 @@ def loadPfps():
                 DEFAULT_PFPS.append(base64Pfp)
             except:
                 traceback.print_exc()
-                logging.error(f"[IO] Failed to load pfp {pfp}")
+                logging.error("[IO] Failed to load pfp %s", pfp)
         else:
-            logging.warning(f"[IO] File {pfp} is not a valid img file!")
+            logging.warning("[IO] File %s is not a valid img file!", pfp)
     logging.info("[IO] Loaded default PFPs")
 
 def loadUsers():
@@ -178,7 +177,7 @@ def loadChats():
                     f.close()
             except Exception:
                 traceback.print_exc()
-                logging.error(f"[IO] Failed to load chat! {chat.name}")
+                logging.error("[IO] Failed to load chat! %s", chat.name)
     
     logging.info("[IO] Chats loaded")
 
@@ -193,12 +192,12 @@ def saveUsers():
                 if packed:
                     f.write(fernet.encrypt(packed))
                 else:
-                    logging.error(f"[IO] Failed to save user {usr["USRNAME"]}!")
+                    logging.error("[IO] Failed to save user %s!", usr["USRNAME"])
 
                 f.close()
         except:
             traceback.print_exc()
-            logging.error(f"[IO] Failed to save user {usr["USRNAME"]}!")
+            logging.error("[IO] Failed to save user %s!", usr["USRNAME"])
     logging.info("[IO] Users saved")
 
 def saveChats():
@@ -221,12 +220,12 @@ def saveChats():
                 if packed:
                     f.write(packed)
                 else:
-                    logging.error(f"[IO] Failed to save chat! {chat}")
+                    logging.error("[IO] Failed to save chat! %s", chat)
 
                 f.close()
         except Exception:
             traceback.print_exc()
-            logging.error(f"[IO] Failed to save chat! {chat}")
+            logging.error("[IO] Failed to save chat! %s", chat)
     
     logging.info("[IO] Chats saved")
         
@@ -240,7 +239,7 @@ def getUsernameFromAuthToken(token: str | None) -> str | None:
 def getUserIdFromAuthToken(token: str | None) -> int | None:
     userInfo = getUserInfoFromToken(token)
 
-    if userInfo == None:
+    if userInfo is None:
         return None
     
     return userInfo["UID"]
@@ -261,7 +260,7 @@ def getUserInfoFromUsername(username: str) -> dict | None:
 def getUserInfoFromToken(token: str | None) -> dict | None:
     username = getUsernameFromAuthToken(token)
 
-    if username == None:
+    if username is None:
         return None
     
     return getUserInfoFromUsername(username)
@@ -274,7 +273,7 @@ def getChatFromCID(CID: int) -> dict | None:
     return None
 
 def setUserProperty(UID: int | None, PropertyName: str, Value) -> bool:
-    if UID == None:
+    if UID is None:
         return False
 
     success = False
@@ -289,12 +288,12 @@ def setUserProperty(UID: int | None, PropertyName: str, Value) -> bool:
 def tokenInChat(token: str | None, CID: int) -> bool:
     chat = getChatFromCID(CID)
 
-    if chat == None:
+    if chat is None:
         return False
 
     userInfo = getUserInfoFromToken(token)
 
-    if userInfo == None:
+    if userInfo is None:
         return False
     
     if not CID in userInfo["Chats"]:
@@ -327,7 +326,7 @@ def handleRequest(sk: socket.socket):
     parsed = httphelper.HTTPRequestParser(request)
 
     if parsed.error_code:
-        logging.error(f"[MAIN] Failed to parse {request.decode("utf-8")}")
+        logging.error("[MAIN] Failed to parse %s", request)
         closeSocket(sk)
         return
     
@@ -382,7 +381,7 @@ def handleRequest(sk: socket.socket):
             if "TK" in uri and "hostname" in uri:
                 username = isValidRedirectToken(uri["TK"])
 
-                if username != None:
+                if username is not None:
                     sk.sendall(formatLoginResponse(username, "gigapixel.cc" in uri["hostname"]))
         elif httphelper.isSafePath(pagePath):
             sk.sendall(httphelper.formatHttpResponse(pagePath, acceptEncoding, fernet))
@@ -411,7 +410,7 @@ def isValidRedirectToken(redirectToken):
 
 
 def isValidToken(authToken: str | None, username=None):
-    if authToken == None:
+    if authToken is None:
         return False
 
     if username:
@@ -479,7 +478,7 @@ async def getAuth(connection: ServerConnection, request: Request):
         setattr(connection, "authToken", parsed_cookies.get("authToken"))
 
 async def wsSendEncrypted(ws: ServerConnection, data: bytes, trackerId: int | None=None):
-    if trackerId != None:
+    if trackerId is not None:
         dataParsed = orjson.loads(data)
         dataParsed["trackerID"] = trackerId
         data = orjson.dumps(dataParsed)
@@ -517,7 +516,7 @@ async def handleEncryption(ws: ServerConnection, msgDecoded: dict):
 async def decrypt(ws: ServerConnection, msgDecoded: dict) -> tuple[dict, int] | tuple[None, None]:
     key = getattr(ws, "secretKey", None)
 
-    if key == None:
+    if key is None:
         logging.warning("[WS] Encrypted message sent without key!")
         await ws.close()
         return (None, None)
@@ -569,7 +568,7 @@ async def wsHandler(ws: ServerConnection):
             if "encryption" in msgDecoded and msgDecoded["encryption"] == "AES":
                 decryptedBody, trackerId = await decrypt(ws, msgDecoded)
 
-                if decryptedBody == None:
+                if decryptedBody is None:
                     break
 
                 if not "type" in decryptedBody:
@@ -646,7 +645,7 @@ async def wsHandler(ws: ServerConnection):
                         f.write(fernet.encrypt(orjson.dumps({"name": name, "username": username, "secQ": securityKey})))
                         f.close()
                     
-                    users.append({"UID": len(users), "USRNAME": username, "PWD": bcrypt.hashpw(password, bcrypt.gensalt(NUM_ENCRYPT_ROUNDS)).decode("utf-8"), "Displayname": username, "Birthday": None, "BirthdayV": "PRIVATE", "AccCreated": time.time(), "Pronouns": "", "Bio": "", "PFP": DEFAULT_PFPS[secrets.randbelow(len(DEFAULT_PFPS))], "Friends": list(), "Chats": [0], "FriendRequests": list()})
+                    users.append({"UID": len(users), "USRNAME": username, "PWD": bcrypt.hashpw(password, bcrypt.gensalt(NUM_ENCRYPT_ROUNDS)).decode("utf-8"), "Displayname": username, "Birthday": None, "BirthdayV": "PRIVATE", "AccCreated": time.time(), "Pronouns": "", "Bio": "", "PFP": DEFAULT_PFPS[secrets.randbelow(len(DEFAULT_PFPS))], "Friends": [], "Chats": [0], "FriendRequests": []})
                     
                     RATELIMITED_IPS.append({"ip": ws.remote_address[0], "expire": time.time() + ACC_CREATION_COOLDOWN_SEC})
                     
@@ -655,7 +654,7 @@ async def wsHandler(ws: ServerConnection):
                     targetChat = None
                     for cht in chats:
                         if cht["CID"] == 0:
-                            cht["Recipients"] = [x for x in range(len(users))]
+                            cht["Recipients"] = list(range(len(users)))
                             targetChat = cht
                     
                     if targetChat:
@@ -666,7 +665,7 @@ async def wsHandler(ws: ServerConnection):
                     if await checkAuthTokenEncrypted(ws, authToken):
                         userinfo = getUserInfoFromToken(authToken)
 
-                        if userinfo == None:
+                        if userinfo is None:
                             await wsSendEncrypted(ws, orjson.dumps({"type":"reqUserFailed", "message": "User not found!"}), trackerId)
                             continue
                         
@@ -700,7 +699,7 @@ async def wsHandler(ws: ServerConnection):
 
                         chat = getChatFromCID(decryptedBody["CID"])
 
-                        if chat == None:
+                        if chat is None:
                             await wsSendEncrypted(ws, orjson.dumps({"type":"reqChatMetaFailed","message":"Chat not found!"}), trackerId)
                             continue
 
@@ -725,7 +724,7 @@ async def wsHandler(ws: ServerConnection):
 
                         chat = getChatFromCID(decryptedBody["CID"])
 
-                        if chat == None:
+                        if chat is None:
                             await wsSendEncrypted(ws, orjson.dumps({"type":"reqChatFailed","message":"Chat not found!"}), trackerId)
                             continue
 
@@ -752,7 +751,7 @@ async def wsHandler(ws: ServerConnection):
 
                         chat = getChatFromCID(decryptedBody["CID"])
 
-                        if chat == None:
+                        if chat is None:
                             await wsSendEncrypted(ws, orjson.dumps({"type":"reqMsgFailed"}), trackerId)
                             continue
                         
@@ -762,7 +761,7 @@ async def wsHandler(ws: ServerConnection):
                                 targetMsg = msg
                                 break
                         
-                        if targetMsg == None:
+                        if targetMsg is None:
                             await wsSendEncrypted(ws, orjson.dumps({"type":"reqMsgFailed"}), trackerId)
                             continue
 
@@ -810,7 +809,7 @@ async def wsHandler(ws: ServerConnection):
                         for usr in decryptedBody["users"]:
                             userinfo = getUserInfoFromUserId(usr)
 
-                            if userinfo != None:
+                            if userinfo is not None:
                                 userInfoList.append({
                                     "username": userinfo["USRNAME"],
                                     "UID": userinfo["UID"],
@@ -852,7 +851,7 @@ async def wsHandler(ws: ServerConnection):
                             fNameSafe = base64.urlsafe_b64encode(embedName.encode("utf-8")).decode("utf-8")
                             fileType = mimetypes.guess_extension(embed["type"])
 
-                            if fileType == None:
+                            if fileType is None:
                                 fileType = ".bin"
 
                             while True:
@@ -871,7 +870,7 @@ async def wsHandler(ws: ServerConnection):
                         
                         chat = getChatFromCID(decryptedBody["CID"])
 
-                        if chat == None:
+                        if chat is None:
                             await wsSendEncrypted(ws, orjson.dumps({"type": "chatUpdateFailed"}), trackerId)
                             continue
 
@@ -884,12 +883,12 @@ async def wsHandler(ws: ServerConnection):
                         for client in WS_CLIENTS:
                             cAuthToken = getattr(client, "authToken")
 
-                            if cAuthToken == None:
+                            if cAuthToken is None:
                                 continue
                             
                             userInfo = getUserInfoFromToken(cAuthToken)
 
-                            if userInfo == None:
+                            if userInfo is None:
                                 continue
                             
                             if decryptedBody["CID"] in userInfo["Chats"]:
@@ -912,7 +911,7 @@ async def wsHandler(ws: ServerConnection):
                                 chat = cht
                                 break
 
-                        if chat == None or not tokenInChat(authToken, chat["CID"]):
+                        if chat is None or not tokenInChat(authToken, chat["CID"]):
                             await wsSendEncrypted(ws, orjson.dumps({"type": "delMsgFailed"}), trackerId)
                             continue
                         
@@ -923,7 +922,7 @@ async def wsHandler(ws: ServerConnection):
                                 message = msg
                                 break
 
-                        if message == None or message["UID"] != getUserIdFromAuthToken(authToken):
+                        if message is None or message["UID"] != getUserIdFromAuthToken(authToken):
                             await wsSendEncrypted(ws, orjson.dumps({"type": "delMsgFailed"}), trackerId)
                             continue
 
@@ -937,12 +936,12 @@ async def wsHandler(ws: ServerConnection):
                         for client in WS_CLIENTS:
                             cAuthToken = getattr(client, "authToken")
 
-                            if cAuthToken == None:
+                            if cAuthToken is None:
                                 continue
                             
                             userInfo = getUserInfoFromToken(cAuthToken)
 
-                            if userInfo == None:
+                            if userInfo is None:
                                 continue
                             
                             if decryptedBody["CID"] in userInfo["Chats"]:
@@ -963,7 +962,7 @@ async def wsHandler(ws: ServerConnection):
                             if cht["CID"] == decryptedBody["CID"]:
                                 chat = cht
 
-                        if chat == None or not tokenInChat(authToken, chat["CID"]):
+                        if chat is None or not tokenInChat(authToken, chat["CID"]):
                             await wsSendEncrypted(ws, orjson.dumps({"type": "editMsgFailed"}), trackerId)
                             continue
 
@@ -972,7 +971,7 @@ async def wsHandler(ws: ServerConnection):
                             if msg["MSGID"] == decryptedBody["MSGID"]:
                                 message = msg
                         
-                        if message == None or message["UID"] != getUserIdFromAuthToken(authToken):
+                        if message is None or message["UID"] != getUserIdFromAuthToken(authToken):
                             await wsSendEncrypted(ws, orjson.dumps({"type": "editMsgFailed"}), trackerId)
                             continue
 
@@ -985,12 +984,12 @@ async def wsHandler(ws: ServerConnection):
                         for client in WS_CLIENTS:
                             cAuthToken = getattr(client, "authToken")
 
-                            if cAuthToken == None:
+                            if cAuthToken is None:
                                 continue
                             
                             userInfo = getUserInfoFromToken(cAuthToken)
 
-                            if userInfo == None:
+                            if userInfo is None:
                                 continue
                             
                             if decryptedBody["CID"] in userInfo["Chats"]:
@@ -1008,11 +1007,11 @@ async def wsHandler(ws: ServerConnection):
 
                         dn = decryptedBody["displayname"].strip()
 
-                        if (dn == ""):
+                        if dn == "":
                             await wsSendEncrypted(ws, orjson.dumps({"type":"updateDisplaynameFailed"}), trackerId)
                             continue
 
-                        if (len(dn) > 30):
+                        if len(dn) > 30:
                             await wsSendEncrypted(ws, orjson.dumps({"type":"updateDisplaynameFailed"}), trackerId)
                             continue
                         
@@ -1201,7 +1200,7 @@ async def wsHandler(ws: ServerConnection):
 
                         for ws2 in WS_CLIENTS:
                             wsUID = getattr(ws2, "UID", None)
-                            if wsUID != None and wsUID == targetUID:
+                            if wsUID is not None and wsUID == targetUID:
                                 await wsSendEncrypted(ws2, orjson.dumps({"type": "updateFriendReqs", "friendReqs": targetFriendReqs}))
                                 break
                     else:
@@ -1239,7 +1238,7 @@ async def wsHandler(ws: ServerConnection):
 
                         for ws2 in WS_CLIENTS:
                             wsUID = getattr(ws2, "UID", None)
-                            if wsUID != None and wsUID == targetUID:
+                            if wsUID is not None and wsUID == targetUID:
                                 await wsSendEncrypted(ws2, orjson.dumps({"type": "updateFriendReqs", "friendReqs": targetFriendReqs}))
                                 break
                     else:
@@ -1277,7 +1276,7 @@ async def wsHandler(ws: ServerConnection):
 
                         for ws2 in WS_CLIENTS:
                             wsUID = getattr(ws2, "UID", None)
-                            if wsUID != None and wsUID == targetUID:
+                            if wsUID is not None and wsUID == targetUID:
                                 await wsSendEncrypted(ws2, orjson.dumps({"type": "updateFriendReqs", "friendReqs": targetFriendReqs}))
                                 break
                     else:
@@ -1341,7 +1340,7 @@ async def wsHandler(ws: ServerConnection):
 
                         for ws2 in WS_CLIENTS:
                             wsUID = getattr(ws2, "UID", None)
-                            if wsUID != None and wsUID == targetUID:
+                            if wsUID is not None and wsUID == targetUID:
                                 await wsSendEncrypted(ws2, orjson.dumps({"type": "updateFriends", "friendReqs": targetFriendReqs, "friends": targetInfo["Friends"], "chats": targetInfo["Chats"]}))
                                 break
                     else:
@@ -1362,8 +1361,10 @@ async def shutdownWs(shutdownEvent: asyncio.Event, future: Future, shutdownEvent
         try:
             await asyncio.wait_for(ws.close(), 5)
             WS_CLIENTS.remove(ws)
-        except Exception:
+        except TimeoutError:
             pass
+        except Exception:
+            logging.warning("Error when disconnecting client ws!", stack_info=True)
     
     await shutdownEventDone.wait()
 
@@ -1374,9 +1375,9 @@ async def wsListen(ipAddrs: list, context: ssl.SSLContext, shutdownEvent: asynci
 
     for addr in ipAddrs:
         servers.append(serve(wsHandler, addr, WSS_PORT, max_size=(25*1024*1024 * 11), ssl=context, process_request=getAuth))
-        logging.debug(f"[WS] wss://{addr}/{WSS_PORT}")
+        logging.debug("[WS] wss://%s:%i", addr, WSS_PORT)
         servers.append(serve(wsHandler, addr, WS_PORT, max_size=(25*1024*1024 * 11), process_request=getAuth))
-        logging.debug(f"[WS] ws://{addr}/{WS_PORT}")
+        logging.debug("[WS] ws://%s:%i", addr, WS_PORT)
 
     logging.info("[WS] Websockets running")
     
@@ -1396,7 +1397,7 @@ async def autosave(shutdownEvent: asyncio.Event, shutdownEventDone: asyncio.Even
                 await asyncio.wait_for(asyncio.shield(shutdownEvent.wait()), AUTOSAVE_INTERVAL_SEC)
                 break
             except asyncio.TimeoutError:
-                logging.debug(f"[AS] The current time is {datetime.datetime.now().strftime("%b %d, %Y at %I:%M %p")}")
+                logging.debug("[AS] The current time is %s", datetime.datetime.now().strftime("%b %d, %Y at %I:%M %p"))
                 logging.debug("[AS] Autosaving...")
                 saveUsers()
                 saveChats()
@@ -1448,7 +1449,7 @@ if __name__ == "__main__":
         ]
     )
 
-    logging.info(f"[MAIN] Open-LAN v{VER}-{STAGE} {"(DEV)" if DEV else ""} initalizing!")
+    logging.info("[MAIN] Open-LAN v%s-%s %s initalizing!", VER, STAGE, "(DEV)" if DEV else "")
 
     logging.debug("[MAIN] Generating encryption key")
     PRIV_KEY = ec.generate_private_key(ec.SECP256R1())
@@ -1495,7 +1496,7 @@ if __name__ == "__main__":
         sock.listen(SOCKET_BACKLOG_NUM)
 
         socketList.append(sock)
-        logging.info(f"[MAIN] Listening on {addr}:{PORT}")
+        logging.info("[MAIN] Listening on %s:%i", addr, PORT)
     
     logging.debug("[MAIN] It's time to get async")
 
@@ -1519,8 +1520,8 @@ if __name__ == "__main__":
     logging.info("[MAIN] Connect via:")
 
     for addr in ipAddrs:
-        logging.info(f"[MAIN] http://{addr}:{PORT}/")
-        logging.info(f"[MAIN] https://{addr}:{PORT}/")
+        logging.info("[MAIN] http://%s:%i/", addr, PORT)
+        logging.info("[MAIN] https://%s:%i/", addr, PORT)
     
     while True:
         try:
@@ -1539,13 +1540,13 @@ if __name__ == "__main__":
                         with context.wrap_socket(cSocket, server_side=True) as secureSk:
                             handleRequest(secureSk)
                     except ssl.SSLError as e:
-                        logging.warning(f"[MAIN] SSL Handshake failure: {e}")
+                        logging.warning("[MAIN] SSL Handshake failure: %s", e)
                     except Exception as e:
-                        logging.error(f"[MAIN] Error handling connection: {e}")
+                        logging.error("[MAIN] Error handling connection: %s", e)
                 elif peekBytes in (b'GET', b'POS', b'PUT', b'DEL', b'HEA', b'OPT'):
                     handleRequest(cSocket)
                 else:
-                    logging.warning(f"[MAIN] Unknown Protocol. Bytes: {peekBytes}")
+                    logging.warning("[MAIN] Unknown Protocol. Bytes: %s", peekBytes)
                 
                 closeSocket(cSocket)
         except KeyboardInterrupt:
@@ -1559,7 +1560,7 @@ if __name__ == "__main__":
 
             if numErr < MAX_RETRY_ATTEMPTS:
                 numErr += 1
-                logging.warning(f"[MAIN] Attempting to recover ({numErr})")
+                logging.warning("[MAIN] Attempting to recover (%i)", numErr)
             else:
                 logging.fatal("[MAIN] Max Retry Attempts Exceeded")
                 break
