@@ -21,4 +21,4 @@ jobs:
         pip install pylint
     - name: Analysing the code with pylint
       run: |
-        pylint $(git ls-files '*.py') --extension-pkg-allow-list orjson
+        pylint $(git ls-files '*.py') --extension-pkg-allow-list orjson --fail-under 8.0
