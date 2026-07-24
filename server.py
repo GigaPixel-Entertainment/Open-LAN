@@ -83,6 +83,7 @@ def genSaveKey():
         f.close()
 
 def validateImgFile(path: pathlib.Path | BytesIO):
+    """Validates an image file"""
     try:
         with Image.open(path) as img:
             img.verify()
@@ -1362,11 +1363,13 @@ async def shutdownWs(shutdownEvent: asyncio.Event, shutdownEventDone: asyncio.Ev
     for ws in copy.copy(WS_CLIENTS):
         try:
             await asyncio.wait_for(ws.close(), 5)
-            WS_CLIENTS.remove(ws)
+
+            if ws in WS_CLIENTS:
+                WS_CLIENTS.remove(ws)
         except TimeoutError:
             pass
         except:
-            logging.warning("Error when disconnecting client ws!", stack_info=True)
+            logging.warning("Error when disconnecting client ws!")
 
     await shutdownEventDone.wait()
 

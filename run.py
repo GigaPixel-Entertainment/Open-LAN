@@ -28,7 +28,7 @@ import ssl
 import config
 import httphelper
 
-class MaintenancePage:
+class HttpHandler:
     def __init__(self, ipAddrs) -> None:
         self.ipAddrs: list[str] = ipAddrs
         self.socketList: list[socket.socket] = []
@@ -39,11 +39,7 @@ class MaintenancePage:
         self.context.load_cert_chain(certfile=config.CA_CERT_DIR / "server.crt", keyfile=config.CA_CERT_DIR / "server.key")
 
     def handleRequest(self, socket: socket.socket):
-        fContents = None
-        with open(config.CWD / "unavailable.html", "rb") as f:
-            fContents = f.read()
-
-        socket.sendall(httphelper.formatHttpHeaderRaw(503) + fContents)
+        pass
 
     def listener(self) -> None:
         while self.keepListening:
@@ -78,11 +74,11 @@ class MaintenancePage:
         except:
             pass
 
-    def startSocket(self) -> None:
+    def startSocket(self, port) -> None:
         for addr in self.ipAddrs:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            sock.bind((addr, config.PORT))
+            sock.bind((addr, port))
             sock.listen(config.SOCKET_BACKLOG_NUM)
 
             self.socketList.append(sock)
@@ -101,8 +97,32 @@ class MaintenancePage:
             self.closeSocket(sock)
         self.socketList = []
 
+class MaintenancePage(HttpHandler):
+    def __init__(self, ipAddrs) -> None:
+        super().__init__(ipAddrs)
+
+    def handleRequest(self, socket: socket.socket):
+        fContents = None
+        with open(config.CWD / "unavailable.html", "rb") as f:
+            fContents = f.read()
+
+        socket.sendall(httphelper.formatHttpHeaderRaw(503) + fContents)
+
+class Dashboard(HttpHandler):
+    def __init__(self, ipAddrs) -> None:
+        super().__init__(ipAddrs)
+
+    def handleRequest(self, socket: socket.socket):
+        fContents = None
+        with open(config.CWD / "index.html", "rb") as f:
+            fContents = f.read()
+
+        socket.sendall(httphelper.formatHttpHeaderRaw(503) + fContents)
+
 if __name__ == "__main__":
     print("Starting logger")
+    config.RUN_LOG_DIR.mkdir(exist_ok=True)
+
     logging.basicConfig(
         level=config.LOG_LEVEL,
         format="%(asctime)s [%(filename)s] [%(levelname)s]: %(message)s",
@@ -139,7 +159,7 @@ if __name__ == "__main__":
         except:
             logging.error("An exception occured while running the server!", stack_info=True)
 
-        mp.startSocket()
+        mp.startSocket(config.PORT)
         restart = input("Restart the server? [y/n]")
         if restart.lower() != "y":
             break
