@@ -316,7 +316,7 @@ def formatLoginResponse(username: str, cloudflare: bool):
     VALID_TOKENS[username] = {"TOKEN": token, "EXPIRES": time.time() + config.TOKEN_EXPIRES_SEC}
 
     return httphelper.formatHttpHeaderRaw(308, {
-        "Set-Cookie": f"authToken={token}; HttpOnly; SameSite=Strict; {"Domain=gigapixel.cc" if cloudflare else ""} Path=/",
+        "Set-Cookie": f"authToken={token}; HttpOnly; SameSite=Strict; {"Domain=gigapixel.cc;" if cloudflare else ""} Path=/",
         "Location": "/app.html",
         "Connection": "close"
     })
@@ -786,7 +786,7 @@ async def wsHandler(ws: ServerConnection):
                             await wsSendEncrypted(ws, orjson.dumps({"type": "getEmbedFailed"}), trackerId)
                             continue
 
-                        fileType, e = mimetypes.guess_type(filePath)
+                        fileType, e = mimetypes.guess_file_type(filePath)
 
                         fileContents = None
                         with open(filePath, "rb") as f:
