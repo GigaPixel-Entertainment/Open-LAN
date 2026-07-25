@@ -6,9 +6,462 @@
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&display=swap" rel="stylesheet">
+        <link rel="icon" href="Media/LogoSquare.png">
         <title>Open-LAN Dashboard</title>
+
+        <style>
+            :root {
+                --bg: #1a3053;
+                --acc: #113963;
+                --acc2: #145492;
+                --acc3: #3e84c5;
+                --acc4: #0c273f;
+                --acc5: #214685;
+                --acc6: #3e77d7;
+                --text: #FFFFFF;
+                --text2: #cee1f3;
+                --placeholder: #BBBBBB;
+                --button: #a1c3c8;
+                --button-press: #90b2b7;
+                --highlight: #6ea6db;
+                --sendButtonGreen: #92c37c;
+                --rose: #e99898;
+                --highlighted: #f9e1af;
+                --highlighted-transparent: #f9e1af30;
+            }
+
+            html, body {
+                height: 100%;
+            }
+
+            body {
+                background-color: var(--bg);
+                overflow: hidden;
+                margin: 0;
+                display: flex;
+                flex-direction: column;
+            }
+
+            footer {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                color: white;
+                font-family: "Fire Code", monospace;
+                font-size: small;
+                z-index: 99;
+            }
+
+            footer > a {
+                color: white;
+                text-decoration-color: white;
+            }
+
+            #topStats {
+                width: calc(100% - 2em);
+                flex: 0 0 calc(25% - 2em);
+                margin: 1em;
+                display: flex;
+                flex-direction: row;
+            }
+
+            #apiStatus {
+                position: relative;
+                flex: 0 0 calc(25% - .5em);
+                height: 100%;
+                background-color: var(--acc2);
+                margin-right: .5em;
+            }
+
+            #apiStatus > ul > li {
+                font-family: "Fira Code", monospace;
+                color: yellow;
+                font-size: 1.5em;
+            }
+
+            #sysStats {
+                flex: 0 0 calc(50% - 1em);
+                height: 100%;
+                background-color: var(--acc2);
+                margin-left: .5em;
+                margin-right: .5em;
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+            }
+
+            #sysStats > div {
+                margin: .5em;
+                background-color: var(--acc3);
+                flex: 0 0 calc(33.3% - 1em);
+                height: calc(100% - 1em);
+            }
+
+            #sysStats > div > p {
+                font-family: "Fira Code", monospace;
+                text-align: center;
+                font-size: 1.5em;
+            }
+
+            #serverControl {
+                position: relative;
+                flex: 0 0 calc(25% - .5em);
+                height: 100%;
+                background-color: var(--acc2);
+                margin-left: .5em;
+
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+            }
+
+            #serverControl1, #serverControl2 {
+                display: inline-block;
+                width: calc(100% - 1em);
+                height: 40%;
+                background-color: var(--button);
+                border: none;
+                border-radius: 0;
+                font-family: "Fira Code", monospace;
+                font-size: 2em;
+                margin: .5em;
+            }
+
+            #serverControl1:enabled, #serverControl2:enabled {
+                cursor: pointer;
+            }
+
+            #serverControl1:enabled:hover, #serverControl2:enabled:hover {
+                background-color: var(--button-press);
+            }
+
+            #logs {
+                width: calc(100% - 2em);
+                flex: 0 0 calc(75% - 2em);
+                margin: 1em;
+                display: flex;
+                flex-direction: column;
+                background-color: var(--acc2);
+            }
+
+            #logsTop {
+                width: calc(100% - 1em);
+                height: 5vh;
+                background-color: var(--acc3);
+                margin: .5em;
+                display: flex;
+                flex-direction: row;
+                justify-content: space-between;
+            }
+
+            #logDropdown {
+                width: 25%;
+                height: calc(100% - 1em);
+                margin: .5em;
+                font-family: "Fira Code", monospace;
+                border: none;
+                outline: none;
+                cursor: pointer;
+
+                background-color: var(--acc4);
+                color: white;
+            }
+
+            #purgeBtn {
+                width: 25%;
+                height: calc(100% - 1em);
+                margin: .5em;
+                font-family: "Fira Code", monospace;
+                border: none;
+                outline: none;
+
+                background-color: var(--rose);
+            }
+
+            #purgeBtn:enabled {
+                cursor: pointer;
+            }
+
+            #logsContent {
+                width: calc(100% - 1em);
+                height: 62.5vh;
+                background-color: var(--acc4);
+                margin: .5em;
+                overflow-x: auto;
+                overflow-y: scroll;
+                position: relative;
+            }
+
+            #logsContent > div {
+                position: absolute;
+            }
+
+            #logsSpacer {
+                top: 0;
+                left: 0;
+                right: 0;
+            }
+
+            #logsItems {
+                left: 0;
+                right: 0;
+            }
+
+            #logsItems > p {
+                color: white;
+                margin: 0;
+                font-family: "Fira Code", monospace;
+                white-space: pre;
+                height: 20px;
+            }
+        </style>
     </head>
     <body>
+        <div id="topStats">
+            <div id="apiStatus">
+                <ul>
+                    <li id="serverStatus">
+                        Server - ...
+                    </li>
+                    <li id="httpStatus">
+                        HTTP - ...
+                    </li>
+                    <li id="wsStatus">
+                        WS - ...
+                    </li>
+                </ul>
+            </div>
+            <div id="sysStats">
+                <div id="cpuStat">
+                    <p>CPU</p>
+                    <p id="cpuStatContent">...</p>
+                </div>
+                <div id="ramStat">
+                    <p>RAM</p>
+                    <p id="ramStatContent">...</p>
+                </div>
+                <div id="diskStat">
+                    <p>DISK</p>
+                    <p id="diskStatContent">...</p>
+                </div>
+            </div>
+            <div id="serverControl">
+                <button id="serverControl1" disabled>...</button>
+                <button id="serverControl2" disabled>...</button>
+            </div>
+        </div>
 
+        <div id="logs">
+            <div id="logsTop">
+                <select id="logDropdown">
+                    <option value="live">Live</option>
+
+                    <optgroup id="logDropdownGroup"></optgroup>
+                </select>
+
+                <button id="purgeBtn" disabled>Purge Logs</button>
+            </div>
+            <div id="logsContent">
+                <div id="logsSpacer"></div>
+                <div id="logsItems"></div>
+            </div>
+        </div>
+
+        <script>
+            const API_URL = "https://" + window.location.host + "/api/"
+
+            const cpuStatContent = document.getElementById("cpuStatContent")
+            const ramStatContent = document.getElementById("ramStatContent")
+            const diskStatContent = document.getElementById("diskStatContent")
+
+            const logDropdown = document.getElementById("logDropdown")
+            const logDropdownGroup = document.getElementById("logDropdownGroup")
+
+            const purgeBtn = document.getElementById("purgeBtn")
+
+            const logsContent = document.getElementById("logsContent")
+            const logsSpacer = document.getElementById("logsSpacer")
+            const logsItems = document.getElementById("logsItems")
+
+            const control1 = document.getElementById("serverControl1")
+            const control2 = document.getElementById("serverControl2")
+
+            var lastR = null
+            var logfile = "live";
+
+            (function listener() {
+                setTimeout(() => {
+                    fetch(API_URL + "reqInfo", {
+                        "method": "GET",
+                        "headers": {
+                            "Log-File": logfile
+                        }
+                    }).then((r) => r.json()).then((r) => {
+                        cpuStatContent.textContent = r["CPU"] + "%"
+                        ramStatContent.textContent = r["MEM"] + "GB/" + r["MEM_TOTAL"] + "GB"
+                        diskStatContent.textContent = r["DISK"] + "GB/" + r["DISK_TOTAL"] + "GB"
+
+                        serverStatus.textContent = "Server - " + (r["ONLINE"] ? "OK" : "FAIL")
+                        serverStatus.style.color = r["ONLINE"] ? "lime" : "red"
+
+                        if (r["ONLINE"]) {
+                            control1.textContent = "Restart"
+                            control1.disabled = false
+                            control2.textContent = "Stop"
+                            control2.disabled = false
+                        } else {
+                            control1.textContent = "Start"
+                            control1.disabled = false
+                            control2.textContent = "Exit"
+                            control2.disabled = false
+                        }
+
+                        const atBottom = logsContent.scrollTop + logsContent.offsetHeight >= logsSpacer.offsetHeight - 20 || lastR == null
+                        logsSpacer.style.height = (r["LOGS"].length * 20) + "px"
+
+                        if (atBottom) {
+                            logsContent.scrollTo({
+                                "top": r["LOGS"].length * 20
+                            })
+                        }
+
+                        let currLogF = logDropdown.value
+                        r["LOG_FILES"].sort()
+                        logDropdownGroup.replaceChildren()
+
+                        for (let i = 0; i < r["LOG_FILES"].length; i++) {
+                            const logFile = r["LOG_FILES"][i];
+                            const opt = document.createElement("option")
+                            opt.value = logFile
+                            opt.textContent = logFile
+
+                            logDropdownGroup.appendChild(opt)
+                        }
+                        logDropdown.value = currLogF
+
+                        if (r["LOG_FILES"].length > 0) {
+                            purgeBtn.disabled = false
+                        }
+
+                        lastR = r
+                        renderLogs()
+                    }).catch((r) => {
+                        console.warn("Fetch failed!")
+                    })
+                    listener()
+                }, 1000)
+            })();
+
+            logDropdown.addEventListener("change", (e) => {
+                logfile = logDropdown.value
+            })
+
+            purgeBtn.addEventListener("click", () => {
+                logDropdown.value = "live"
+                logfile = "live"
+
+                fetch(API_URL + "purgeLogs", {
+                    "method": "POST"
+                })
+
+                purgeBtn.disabled = true
+            })
+        </script>
+        <script>
+            function renderLogs() {
+                let min = Math.floor(logsContent.scrollTop / 20) - 1
+                let max = Math.ceil((logsContent.scrollTop + logsContent.offsetHeight) / 20) + 1
+
+                logsItems.replaceChildren()
+                for (let i = min; i < max; i++) {
+                    const logLine = lastR["LOGS"][i];
+
+                    if (logLine) {
+                        const logLineE = document.createElement("p")
+                        logLineE.textContent = logLine
+                        logsItems.appendChild(logLineE)
+                    }
+                }
+
+                logsItems.style.top = ((logsContent.scrollTop + logsContent.clientHeight) - ((max - min) * 20)) + "px"
+            }
+
+            logsContent.addEventListener("scroll", renderLogs)
+        </script>
+        <script>
+            control1.addEventListener("click", () => {
+                fetch(API_URL + "restart", {
+                    "method": "POST"
+                })
+
+                control1.textContent = "..."
+                control1.disabled = true
+                control2.textContent = "..."
+                control2.disabled = true
+            })
+
+            control2.addEventListener("click", () => {
+                fetch(API_URL + "exit", {
+                    "method": "POST"
+                })
+
+                control1.textContent = "..."
+                control1.disabled = true
+                control2.textContent = "..."
+                control2.disabled = true
+            })
+        </script>
+        <script>
+            const serverStatus = document.getElementById("serverStatus")
+            const httpStatus = document.getElementById("httpStatus")
+            const wsStatus = document.getElementById("wsStatus")
+
+            function refreshApiStatus() {
+                httpStatus.textContent = "HTTP - ..."
+                httpStatus.style.color = "yellow"
+                wsStatus.textContent = "WS - ..."
+                wsStatus.style.color = "yellow"
+
+                if (lastR) {
+                    let httpUrl = "https://" + window.location.hostname + ":" + lastR["HTTP_PORT"] + "/"
+                    let wsUrl = "wss://" + window.location.hostname + ":" + lastR["WSS_PORT"] + "/"
+
+                    fetch(httpUrl, {
+                        "method": "HEAD"
+                    }).then((r) => {
+                        if (r.status == 200) {
+                            httpStatus.textContent = "HTTP - OK"
+                            httpStatus.style.color = "lime"
+                        } else {
+                            httpStatus.textContent = "HTTP - FAIL"
+                            httpStatus.style.color = "red"
+                        }
+                    }).catch((r) => {
+                        httpStatus.textContent = "HTTP - FAIL"
+                        httpStatus.style.color = "red"
+                    })
+
+                    let ws = new WebSocket(wsUrl)
+                    ws.addEventListener("open", (e) => {
+                        wsStatus.textContent = "WS - OK"
+                        wsStatus.style.color = "lime"
+                        ws.close()
+                    })
+
+                    ws.addEventListener("error", (e) => {
+                        wsStatus.textContent = "WS - FAIL"
+                        wsStatus.style.color = "red"
+                        ws.close()
+                    })
+                }
+            }
+
+            setInterval(() => {
+                refreshApiStatus()
+            }, 5000);
+        </script>
     </body>
+    <footer>
+        Open-LAN is open-source under the <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank">GNU General Public License</a> and available on <a href="https://github.com/GigaPixel-Entertainment/GPE-Open-LAN" target="_blank">Github</a>
+    </footer>
 </html>

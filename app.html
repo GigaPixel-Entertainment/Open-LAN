@@ -1537,13 +1537,7 @@
             return msgP
         }
 
-        async function genFullMsg(userInfoList, message) {
-            let messageDate = null
-
-            if (message["time"]) {
-                messageDate = new Date(message["time"] * 1000)
-            }
-
+        async function genFullMsg(userInfoList, message, messageDate) {
             const usrInfo = await reqUsrInfo(message["UID"])
 
             const messageDiv = document.createElement("div")
@@ -1677,13 +1671,7 @@
             return messageDiv
         }
 
-        async function genSmallMsg(userInfoList, message) {
-            let messageDate = null
-
-            if (message["time"]) {
-                messageDate = new Date(message["time"] * 1000)
-            }
-
+        async function genSmallMsg(userInfoList, message, messageDate) {
             const messageDiv = document.createElement("div")
             messageDiv.classList = "messageDiv"
             messageDiv.style.padding = "0"
@@ -1739,9 +1727,20 @@
                 return
             }
 
+            messageDate = null
+            lastMessageDate = null
+
+            if (message["time"]) {
+                messageDate = new Date(message["time"] * 1000)
+            }
+
+            if (lastMsg && lastMsg["time"]) {
+                lastMessageDate = new Date(lastMsg["time"] * 1000)
+            }
+
             if (lastMsg && message["time"] && lastMsg["time"]) {
-                currDate = new Date(message["time"] * 1000).toLocaleDateString("en-US", {year: "numeric", month:"long", day:"numeric"})
-                lastDate = new Date(lastMsg["time"] * 1000).toLocaleDateString("en-US", {year: "numeric", month:"long", day:"numeric"})
+                currDate = messageDate.toLocaleDateString("en-US", {year: "numeric", month:"long", day:"numeric"})
+                lastDate = lastMessageDate.toLocaleDateString("en-US", {year: "numeric", month:"long", day:"numeric"})
 
                 if (currDate != lastDate) {
                     const seperatorWrapper = document.createElement("div")
@@ -1775,18 +1774,12 @@
 
             let messageDiv = null
 
-            if (lastMsg) {
-                if (message["UID"] == lastMsg["UID"] && message["time"] - lastMsg["time"] < 10*60 && lastMsg["time"] % 24*60*60 <= message["time"] % 24*60*60) {
-                    if (message["replyTo"] && message["replyTo"] != -1) {
-                        messageDiv = await genFullMsg(userInfos, message)
-                    } else {
-                        messageDiv = await genSmallMsg(userInfos, message)
-                    }
-                } else {
-                    messageDiv = await genFullMsg(userInfos, message)
-                }
+            let isShortMsg = lastMsg && message["UID"] == lastMsg["UID"] && message["time"] - lastMsg["time"] < 10*60 && !(message["replyTo"] && message["replyTo"] != -1) && messageDate.getDate() == lastMessageDate.getDate()
+
+            if (isShortMsg) {
+                messageDiv = await genSmallMsg(userInfos, message, messageDate)
             } else {
-                messageDiv = await genFullMsg(userInfos, message)
+                messageDiv = await genFullMsg(userInfos, message, messageDate)
             }
 
             messageDiv.dataset.msgid = "MSGID" + message["MSGID"]
@@ -2443,7 +2436,7 @@
                     } catch {
                         console.log("Websocket Connection Failed!")
                         console.log("Attempting reconnect...")
-                        window.location.reload()
+                        setTimeout(() => window.location.reload(), 5000)
                     }
                 })
             })

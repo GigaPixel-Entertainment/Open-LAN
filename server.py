@@ -55,6 +55,8 @@ import config
 import httphelper
 
 print("""
+
+
 ####################
 #                  #
 #     Open-LAN     #
@@ -66,7 +68,7 @@ Open-LAN  Copyright (C) 2026  GigaPixel Entertainment
 This program comes with ABSOLUTELY NO WARRANTY.
 This is free software, and you are welcome to redistribute it
 under certain conditions; See <https://www.gnu.org/licenses/>.
-""")
+""", flush=True)
 
 WS_CLIENTS: set[ServerConnection] = set()
 VALID_TOKENS = {}
@@ -359,12 +361,12 @@ def handleRequest(sk: socket.socket):
 
             if currUrl and "openlan.gigapixel.cc" in currUrl:
                 # POV: Cloudflare
-                sk.sendall(httphelper.formatHttpHeaderRaw(200, {
+                sk.sendall(httphelper.formatHttpHeaderRaw(204, {
                     "Url": "ws://openlanws.gigapixel.cc",
                     "Connection": "close"
                 }))
             else:
-                sk.sendall(httphelper.formatHttpHeaderRaw(200, {
+                sk.sendall(httphelper.formatHttpHeaderRaw(204, {
                     "Url": f"ws://{currUrl}:{config.WS_PORT}",
                     "Connection": "close"
                 }))
@@ -373,12 +375,12 @@ def handleRequest(sk: socket.socket):
 
             if currUrl and "openlan.gigapixel.cc" in currUrl:
                 # POV: Cloudflare
-                sk.sendall(httphelper.formatHttpHeaderRaw(200, {
+                sk.sendall(httphelper.formatHttpHeaderRaw(204, {
                     "Url": "wss://openlanws.gigapixel.cc",
                     "Connection": "close"
                 }))
             else:
-                sk.sendall(httphelper.formatHttpHeaderRaw(200, {
+                sk.sendall(httphelper.formatHttpHeaderRaw(204, {
                     "Url": f"wss://{currUrl}:{config.WSS_PORT}",
                     "Connection": "close"
                 }))
@@ -1369,7 +1371,7 @@ async def shutdownWs(shutdownEvent: asyncio.Event, shutdownEventDone: asyncio.Ev
         except TimeoutError:
             pass
         except:
-            logging.warning("Error when disconnecting client ws!")
+            logging.warning("Error when disconnecting client ws!", stack_info=True)
 
     await shutdownEventDone.wait()
 
@@ -1402,7 +1404,6 @@ async def autosave(shutdownEvent: asyncio.Event, shutdownEventDone: asyncio.Even
                 await asyncio.wait_for(asyncio.shield(shutdownEvent.wait()), config.AUTOSAVE_INTERVAL_SEC)
                 break
             except asyncio.TimeoutError:
-                logging.debug("[AS] The current time is %s", datetime.datetime.now().strftime("%b %d, %Y at %I:%M %p"))
                 logging.debug("[AS] Autosaving...")
                 saveUsers()
                 saveChats()
@@ -1427,12 +1428,12 @@ def autosaveBootstrap(loop: asyncio.AbstractEventLoop):
     loop.run_forever()
 
 if __name__ == "__main__":
-    print("[MAIN] Hello, world!")
+    print("[MAIN] Hello, world!", flush=True)
 
     numErr = 0
     lastErr = time.time()
 
-    print("[IO] Generating missing directories")
+    print("[IO] Generating missing directories", flush=True)
     config.CA_CERT_DIR.mkdir(exist_ok=True)
     config.CDN_DIR.mkdir(exist_ok=True)
     config.CHATS_DIR.mkdir(exist_ok=True)
@@ -1444,7 +1445,7 @@ if __name__ == "__main__":
     config.SECURITY_DIR.mkdir(exist_ok=True)
     config.USERS_DIR.mkdir(exist_ok=True)
 
-    print("Starting logger")
+    print("[MAIN] Starting logger", flush=True)
     logging.basicConfig(
         level=config.LOG_LEVEL,
         format="%(asctime)s [%(filename)s] [%(levelname)s]: %(message)s",
@@ -1454,7 +1455,7 @@ if __name__ == "__main__":
         ]
     )
 
-    logging.info("[MAIN] Open-LAN v%s-%s %s initalizing!", config.VER, config.STAGE, "(DEV)" if config.DEV else "")
+    logging.info("[MAIN] Open-LAN v%s-%s %sinitalizing!", config.VER, config.STAGE, "(DEV) " if config.DEV else "")
 
     logging.debug("[MAIN] Generating encryption key")
     PRIV_KEY = ec.generate_private_key(ec.SECP256R1())
@@ -1555,7 +1556,7 @@ if __name__ == "__main__":
 
                 closeSocket(cSocket)
         except KeyboardInterrupt:
-            print("opythat!")
+            print("opythat!", flush=True)
             break
         except:
             traceback.print_exc()

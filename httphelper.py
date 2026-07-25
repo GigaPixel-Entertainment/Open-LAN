@@ -68,25 +68,28 @@ def formatHEADResponse(filePath: pathlib.Path, acceptEncoding: list):
         elif "gzip" in acceptEncoding:
             encoding = "gzip"
 
-    header = {"Content-Type": mime, "Connection": "close"}
+    header = {"Content-Type": mime, "Connection": "close", "Access-Control-Allow-Origin": "*"}
 
     if encoding is not None:
         header["Content-Encoding"] = encoding
 
     return formatHttpHeaderRaw(200, header)
 
-def formatHttpResponse(filePath: pathlib.Path, acceptEncoding: list, fernet: Fernet | None = None):
+def formatHttpResponse(filePath: pathlib.Path, acceptEncoding: list, fernet: Fernet | None = None, extraHeaders: dict | None = None):
     if not filePath.is_file():
         logging.warning("[MAIN] Invalid fetch %s!", filePath)
 
         return formatErrorResponse(404)
+
+    if extraHeaders is None:
+        extraHeaders = {}
 
     fileContents = bytes()
     with open(filePath, "rb") as f:
         fileContents = f.read()
         f.close()
 
-    if config.CDN_DIR.resolve() in filePath.resolve().parents and fernet:
+    if fernet and config.CDN_DIR.resolve() in filePath.resolve().parents:
         fileContents = fernet.decrypt(fileContents)
 
     mime = mimetypes.guess_file_type(filePath)[0] or "application/octet-stream"
@@ -108,13 +111,12 @@ def formatHttpResponse(filePath: pathlib.Path, acceptEncoding: list, fernet: Fer
         elif encoding == "gzip":
             fileContents = gzip.compress(fileContents, compresslevel=config.GZIP_COMPRESSION_LEVEL)
 
-
     header = {"Content-Type": mime, "Content-Length": len(fileContents), "Connection": "close"}
 
     if encoding is not None:
         header["Content-Encoding"] = encoding
 
-    return formatHttpHeaderRaw(200, header) + fileContents
+    return formatHttpHeaderRaw(200, header | extraHeaders) + fileContents
 
 def isSafePath(path: pathlib.Path) -> bool:
     reqPath = path.resolve()

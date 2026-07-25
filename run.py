@@ -16,17 +16,32 @@
 #
 # GigaPixel Entertainment <the_mrjune@gigapixel.cc>
 
+from http import cookies
 import subprocess
 import threading
 import datetime
 import logging
+import secrets
+import base64
 import socket
 import select
+import signal
+import time
 import sys
 import ssl
+import os
+
+import bcrypt
+import orjson
+import psutil # type: ignore
 
 import config
 import httphelper
+
+VALID_TOKENS = []
+serverProc = None
+restart = False
+endProc = False
 
 class HttpHandler:
     def __init__(self, ipAddrs) -> None:
@@ -40,6 +55,9 @@ class HttpHandler:
 
     def handleRequest(self, socket: socket.socket):
         pass
+
+    def handleRequestHttp(self, socket: socket.socket):
+        self.handleRequest(socket)
 
     def listener(self) -> None:
         while self.keepListening:
@@ -62,7 +80,7 @@ class HttpHandler:
                     except Exception as e:
                         logging.error("Error handling connection: %s", e)
                 elif peekBytes in (b'GET', b'POS', b'PUT', b'DEL', b'HEA', b'OPT'):
-                    self.handleRequest(cSocket)
+                    self.handleRequestHttp(cSocket)
                 else:
                     logging.warning("Unknown Protocol. Bytes: %s", peekBytes)
 
@@ -98,26 +116,136 @@ class HttpHandler:
         self.socketList = []
 
 class MaintenancePage(HttpHandler):
-    def __init__(self, ipAddrs) -> None:
-        super().__init__(ipAddrs)
-
     def handleRequest(self, socket: socket.socket):
         fContents = None
         with open(config.CWD / "unavailable.html", "rb") as f:
             fContents = f.read()
 
-        socket.sendall(httphelper.formatHttpHeaderRaw(503) + fContents)
+        socket.sendall(httphelper.formatHttpHeaderRaw(503, {
+            "Connection": "close"
+        }) + fContents)
 
 class Dashboard(HttpHandler):
     def __init__(self, ipAddrs) -> None:
+        self.serverOnline = False
+        self.liveLogs = []
         super().__init__(ipAddrs)
 
     def handleRequest(self, socket: socket.socket):
-        fContents = None
-        with open(config.CWD / "index.html", "rb") as f:
-            fContents = f.read()
+        global restart
+        global endProc
 
-        socket.sendall(httphelper.formatHttpHeaderRaw(503) + fContents)
+        request = socket.recv(4096)
+        parsed = httphelper.HTTPRequestParser(request)
+
+        if parsed.error_code:
+            logging.error("[MAIN] Failed to parse %s", request)
+            self.closeSocket(socket)
+            return
+
+        isValid = False
+        path = parsed.path
+        pathSplit = path.split("?")
+        page = pathSplit[0]
+
+        cookieHeader = parsed.headers.get("Cookie")
+
+        if cookieHeader:
+            parser = cookies.SimpleCookie()
+            parser.load(cookieHeader)
+
+            parsedCookies = {key: morsel.value for key, morsel in parser.items()}
+            dashboardToken = parsedCookies.get("dashboardToken")
+
+            if dashboardToken and dashboardToken in VALID_TOKENS:
+                isValid = True
+
+        authHeader = parsed.headers.get("Authorization")
+
+        if authHeader and not isValid:
+            authHeaderSplit = authHeader.split(" ")
+
+            if authHeaderSplit[0] == "Basic":
+                authSplit = base64.b64decode(authHeaderSplit[1]).decode("utf-8").split(":")
+                username = authSplit[0]
+                pwd = authSplit[1]
+
+                if username == config.DASHBOARD_USERNAME:
+                    if bcrypt.checkpw(pwd.encode("utf-8"), config.DASHBOARD_HASHED_PWD.encode("utf-8")):
+                        isValid = True
+                else:
+                    bcrypt.checkpw(pwd.encode("utf-8"), DUMMY_HASH)
+
+        acceptEncoding = [s.strip() for s in parsed.headers.get("Accept-Encoding", "").split(",")]
+
+        if isValid:
+            if page == "/api/reqInfo":
+                logfile = parsed.headers.get("Log-File")
+                logs = []
+
+                if not logfile or logfile == "live":
+                    logs = self.liveLogs
+                else:
+                    logfilePath = config.LOG_DIR / logfile
+
+                    if (logfilePath.exists() and config.LOG_DIR.resolve() in logfilePath.resolve().parents):
+                        with open(logfilePath, "r") as f:
+                            logs = f.read().split("\n")
+                            f.close()
+                    else:
+                        logs = ["FILE NOT FOUND!"]
+
+                mem = psutil.virtual_memory()
+                disk = psutil.disk_usage("/")
+
+                socket.sendall(httphelper.formatHttpHeaderRaw(200, {}) + orjson.dumps({
+                    "CPU": psutil.cpu_percent(interval=None),
+                    "MEM": round(mem.used / (1024**3), 1),
+                    "MEM_TOTAL": round(mem.total / (1024**3), 1),
+                    "DISK": round(disk.used / (1024**3)),
+                    "DISK_TOTAL": round(disk.total / (1024**3)),
+                    "ONLINE": self.serverOnline,
+                    "HTTP_PORT": config.PORT,
+                    "WSS_PORT": config.WSS_PORT,
+                    "LOGS": logs,
+                    "LOG_FILES": [str(f.relative_to(config.LOG_DIR)) for f in config.LOG_DIR.iterdir()]
+                }))
+            elif page == "/api/restart":
+                stopServerProc()
+                restart = True
+            elif page == "/api/exit":
+                if serverProc:
+                    stopServerProc()
+                else:
+                    endProc = True
+            elif page == "/api/purgeLogs":
+                for logF in config.LOG_DIR.iterdir():
+                    logF.unlink(True)
+            else:
+                token = secrets.token_urlsafe(256)
+                VALID_TOKENS.append(token)
+                socket.sendall(httphelper.formatHttpResponse(config.CWD / "dashboard.html", acceptEncoding, extraHeaders={
+                    "Set-Cookie": f"dashboardToken={token}; HttpOnly; SameSite=Strict; Path=/"
+                }))
+        else:
+            socket.sendall(httphelper.formatHttpHeaderRaw(401, {
+                "WWW-Authenticate": "Basic realm=\"Dashboard\", charset=\"UTF-8\"",
+                "Connection": "close"
+            }))
+
+    def handleRequestHttp(self, socket: socket.socket):
+        socket.sendall(httphelper.formatHttpResponse(config.CWD / "httpsRequired.html", []))
+
+def stopServerProc():
+    if serverProc:
+        if os.name == "nt":
+            serverProc.send_signal(signal.CTRL_C_EVENT)
+        elif os.name == "posix":
+            serverProc.send_signal(signal.SIGINT)
+        else:
+            logging.error("What kinda operating system are ya running???")
+            serverProc.terminate()
+        serverProc.wait()
 
 if __name__ == "__main__":
     print("Starting logger")
@@ -134,7 +262,16 @@ if __name__ == "__main__":
 
     ipAddrs = httphelper.getIpAddrs()
 
+    DUMMY_HASH = bcrypt.hashpw(b"DUMMY HASH", bcrypt.gensalt(config.NUM_ENCRYPT_ROUNDS))
+
     mp = MaintenancePage(ipAddrs)
+
+    dashboard = None
+    if config.DASHBOARD_ENABLED:
+        dashboard = Dashboard(ipAddrs)
+        dashboard.startSocket(config.DASHBOARD_PORT)
+
+    logging.info("Dashboard available on port %i", config.DASHBOARD_PORT)
 
     logging.info("Checking files")
 
@@ -152,16 +289,49 @@ if __name__ == "__main__":
         logging.info("Starting server")
         mp.stopSocket()
 
+        if dashboard:
+            dashboard.serverOnline = True
+            dashboard.liveLogs = []
+
         try:
-            subprocess.run([sys.executable, config.CWD / "server.py"], check=False)
+            serverProc = subprocess.Popen([sys.executable, config.CWD / "server.py"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+
+            for line in serverProc.stdout: # pyright: ignore[reportOptionalIterable]
+                print(line, end="", flush=True)
+
+                if dashboard:
+                    dashboard.liveLogs.append(line)
+
+            serverProc.wait()
         except KeyboardInterrupt:
-            pass
+            if serverProc:
+                endProc = True
+                serverProc.send_signal(signal.SIGINT)
+                serverProc.wait()
+                print()
         except:
             logging.error("An exception occured while running the server!", stack_info=True)
+            if serverProc:
+                serverProc.send_signal(signal.SIGINT)
+                serverProc.wait()
+                print()
+
+        serverProc = None
+
+        if dashboard:
+            dashboard.serverOnline = False
 
         mp.startSocket(config.PORT)
-        restart = input("Restart the server? [y/n]")
-        if restart.lower() != "y":
+
+        while not restart and not endProc:
+            time.sleep(1)
+
+        if endProc:
             break
+
+        restart = False
+
+    if dashboard:
+        dashboard.stopSocket()
 
     logging.info("Goodbye, World")
