@@ -9,3 +9,4 @@ orjson
 brotli
 bcrypt
 psutil
+dotenv
