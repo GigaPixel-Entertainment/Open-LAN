@@ -391,7 +391,7 @@ def handleRequest(sk: socket.socket):
                 if username is not None:
                     sk.sendall(formatLoginResponse(username, "gigapixel.cc" in uri["hostname"]))
         elif httphelper.isSafePath(pagePath):
-            sk.sendall(httphelper.formatHttpResponse(pagePath, acceptEncoding, fernet))
+            sk.sendall(httphelper.formatHttpResponse(parsed, pagePath, acceptEncoding, fernet))
         else:
             sk.sendall(httphelper.formatErrorResponse(404))
     elif method == "HEAD":
@@ -788,16 +788,8 @@ async def wsHandler(ws: ServerConnection):
 
                         fileType, e = mimetypes.guess_file_type(filePath)
 
-                        fileContents = None
-                        with open(filePath, "rb") as f:
-                            fileContents = f.read()
-                            f.close()
-
-                        fileContentsDecoded = fernet.decrypt(fileContents)
-                        encodedFile = base64.b64encode(fileContentsDecoded)
                         await wsSendEncrypted(ws, orjson.dumps({
                             "type": "getEmbedSuccess",
-                            "embedContent": encodedFile.decode("utf-8"),
                             "embedType": fileType
                         }), trackerId)
                     else:

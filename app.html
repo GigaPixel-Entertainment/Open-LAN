@@ -51,8 +51,10 @@
                 </div>
                 <button id="toggleFriendsList" class="font white" onclick="hideFriendsList()"><</button>
             </div>
-            <div id="friendsList" class="scroll">
+            <div id="friendsList">
                 <p class="font white">active messages</p>
+
+                <div id="friendsListContent" class="scroll"></div>
             </div>
         </div>
 
@@ -152,7 +154,7 @@
         </div>
 
         <div id="imageOverlay">
-            <img id="imageOverlayImg">
+            <img id="imageOverlayImg" onload="imageOverlay.style.visibility = 'visible'">
         </div>
 
         <div id="textOverlay">
@@ -171,8 +173,8 @@
 
         <div id="genericPopup">
             <div id="popupContents">
-                <h1 id="popupTitle" class="font white">POPUP TITLE</h1>
-                <p id="popupContent" class="font white"> POPUP TEXT AND STUFF</p>
+                <h1 id="popupTitle" class="font white"></h1>
+                <p id="popupContent" class="font white"></p>
                 <button id="popupClose" onclick="closePopup()" class="font">Close</button>
             </div>
         </div>
@@ -238,6 +240,7 @@
 
         const friendCount = document.getElementById("friendCount")
         const friendsList = document.getElementById("friendsList")
+        const friendsListContent = document.getElementById("friendsListContent")
 
         const friendReqScreenBtn = document.getElementById("friendReqSBtn")
         const friendReqScreen = document.getElementById("friendReqScreen")
@@ -654,6 +657,7 @@
         }
 
         var msgRClickMenuMsg = null
+        var lastRClickMenuClose = 0
 
         var selected = null
 
@@ -690,6 +694,8 @@
         document.addEventListener("mousedown", (e) => {
             if (msgRClickMenu.style.visibility == "visible") {
                 msgRClickMenu.style.visibility = "hidden"
+                msgRClickMenuMsg = null
+                lastRClickMenuClose = Date.now()
             }
         })
 
@@ -940,11 +946,7 @@
             }
             settingChatList = true
 
-            amLabel = document.createElement("p")
-            amLabel.classList = "white font"
-            amLabel.textContent = "active messages"
-
-            friendsList2 = [amLabel]
+            friendsList2 = []
 
             for (let chatInd = 0; chatInd < chats.length; chatInd++) {
                 const chatID = chats[chatInd]
@@ -1041,10 +1043,10 @@
                 friendsList2.push(chatDiv)
             }
 
-            friendsList.replaceChildren()
+            friendsListContent.replaceChildren()
 
             friendsList2.forEach((e) => {
-                friendsList.appendChild(e)
+                friendsListContent.appendChild(e)
             })
 
             settingChatList = false
@@ -1227,7 +1229,7 @@
             return null
         }
 
-        const embedCache = []
+        const embedCache = {}
         async function evalEmbeds(message, msgP) {
             const embeds = document.createElement("div")
             embeds.style.width = "100%"
@@ -1238,7 +1240,7 @@
             for (let index = 0; index < message["embed"].length; index++) {
                 const embed = message["embed"][index];
 
-                if (embedCache[embed]) {
+                if (Object.hasOwn(embedCache, embed)) {
                     embedContent = embedCache[embed]
                 } else {
                     embedContent = await request(JSON.stringify({"type": "getEmbed", "embedUrl": embed}))
@@ -1274,10 +1276,9 @@
 
                     img.onclick = () => {
                         imageOverlayImg.src = img.src
-                        imageOverlay.style.visibility = "visible"
                     }
 
-                    img.src = "data:" + embedType + ";base64," + embedContent["embedContent"]
+                    img.src = embed
 
                     embeds.appendChild(img)
                 } else if (embedType.startsWith("audio/")) {
@@ -1289,7 +1290,7 @@
                     audio.style.marginRight = "1em"
                     audio.controls = "true"
                     audio.title = filename
-                    audio.src = "data:" + embedType + ";base64," + embedContent["embedContent"]
+                    audio.src = embed
 
                     embeds.appendChild(audio)
                 } else if (embedType.startsWith("video/")) {
@@ -1302,7 +1303,7 @@
                     video.style.marginBottom = "1em"
                     video.controls = "true"
                     video.title = filename
-                    video.src = "data:" + embedType + ";base64," + embedContent["embedContent"]
+                    video.src = embed
 
                     embeds.appendChild(video)
                 } else if (embedType.startsWith("text/")) {
@@ -1330,14 +1331,16 @@
                     actualText.classList = "font white"
                     actualText.readOnly = true
 
-                    const contentBytes = Uint8Array.fromBase64(embedContent["embedContent"])
-                    const content = textDecode(contentBytes)
 
-                    actualText.textContent = content.slice(0, 1000)
+                    // TODO: FIX using fetch api
+                    //const contentBytes = Uint8Array.fromBase64(embedContent["embedContent"])
+                    //const content = textDecode(contentBytes)
 
-                    if (contentBytes.length > 1000) {
-                        actualText.textContent = actualText.textContent + "...\n(End of preview)"
-                    }
+                    //actualText.textContent = //content.slice(0, 1000)
+
+                    //if (contentBytes.length > 1000) {
+                    //    actualText.textContent = actualText.textContent + "...\n(End of preview)"
+                    //}
 
                     const infoWrapper = document.createElement("div")
                     infoWrapper.style.width = "100%"
@@ -1477,9 +1480,8 @@
 
                     wordE.textContent = word + (index + 1 < words.length ? " " : "")
                     wordE.style.display = "inline-block"
-                    wordE.style.width = "max-content"
-                    wordE.style.overflowWrap = "break-word"
-                    wordE.style.wordWrap = "break-word"
+                    wordE.style.overflowWrap = "anywhere"
+                    wordE.style.wordWrap = "anywhere"
                     wordE.style.margin = "0"
                     wordE.style.whiteSpace = "pre-wrap"
 
@@ -1570,14 +1572,16 @@
                 replyDn.style.color = "lightgray"
                 replyDn.style.fontSize = "1em"
                 replyDn.style.padding = "0"
+                replyDn.style.paddingLeft = ".5em"
                 replyDn.style.margin = "0"
+                replyDn.style.whiteSpace = "pre"
                 replyDn.style.cursor = "pointer"
                 replyDn.textContent = replyUsr["displayname"]
 
                 const replyCont = document.createElement("p")
                 replyCont.classList = "font"
-                replyCont.style.width = "80vw"
                 replyCont.style.color = "transparent"
+                replyCont.style.maxWidth = "70vw"
                 replyCont.style.fontSize = "1em"
                 replyCont.style.padding = "0"
                 replyCont.style.paddingLeft = "1em"
@@ -1785,6 +1789,10 @@
             messageDiv.dataset.msgid = "MSGID" + message["MSGID"]
 
             messageDiv.addEventListener("contextmenu", (e) => {
+                if (Date.now() - lastRClickMenuClose < 10) {
+                    return
+                }
+
                 e.preventDefault()
 
                 if (message["UID"] == currUID) {

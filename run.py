@@ -181,19 +181,15 @@ class Dashboard(HttpHandler):
         if isValid:
             if page == "/api/reqInfo":
                 logfile = parsed.headers.get("Log-File")
-                logs = []
+                logs = self.liveLogs
 
-                if not logfile or logfile == "live":
-                    logs = self.liveLogs
-                else:
+                if logfile and logfile != "live":
                     logfilePath = config.LOG_DIR / logfile
 
                     if (logfilePath.exists() and config.LOG_DIR.resolve() in logfilePath.resolve().parents):
-                        with open(logfilePath, "r") as f:
+                        with open(logfilePath, "r", encoding="utf-8") as f:
                             logs = f.read().split("\n")
                             f.close()
-                    else:
-                        logs = ["FILE NOT FOUND!"]
 
                 mem = psutil.virtual_memory()
                 disk = psutil.disk_usage("/")
@@ -224,7 +220,7 @@ class Dashboard(HttpHandler):
             else:
                 token = secrets.token_urlsafe(256)
                 VALID_TOKENS.append(token)
-                socket.sendall(httphelper.formatHttpResponse(config.CWD / "dashboard.html", acceptEncoding, extraHeaders={
+                socket.sendall(httphelper.formatHttpResponse(parsed, config.CWD / "dashboard.html", acceptEncoding, extraHeaders={
                     "Set-Cookie": f"dashboardToken={token}; HttpOnly; SameSite=Strict; Path=/"
                 }))
         else:
@@ -234,7 +230,7 @@ class Dashboard(HttpHandler):
             }))
 
     def handleRequestHttp(self, socket: socket.socket):
-        socket.sendall(httphelper.formatHttpResponse(config.CWD / "httpsRequired.html", []))
+        socket.sendall(httphelper.formatHttpResponse(None, config.CWD / "httpsRequired.html", []))
 
 def stopServerProc():
     if serverProc:
@@ -294,15 +290,14 @@ if __name__ == "__main__":
             dashboard.liveLogs = []
 
         try:
-            serverProc = subprocess.Popen([sys.executable, config.CWD / "server.py"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+            with subprocess.Popen([sys.executable, config.CWD / "server.py"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1) as serverProc:
+                for line in serverProc.stdout: # pyright: ignore[reportOptionalIterable]
+                    print(line, end="", flush=True)
 
-            for line in serverProc.stdout: # pyright: ignore[reportOptionalIterable]
-                print(line, end="", flush=True)
+                    if dashboard:
+                        dashboard.liveLogs.append(line)
 
-                if dashboard:
-                    dashboard.liveLogs.append(line)
-
-            serverProc.wait()
+                serverProc.wait()
         except KeyboardInterrupt:
             if serverProc:
                 endProc = True

@@ -68,14 +68,14 @@ def formatHEADResponse(filePath: pathlib.Path, acceptEncoding: list):
         elif "gzip" in acceptEncoding:
             encoding = "gzip"
 
-    header = {"Content-Type": mime, "Connection": "close", "Access-Control-Allow-Origin": "*"}
+    header = {"Content-Type": mime, "Connection": "close", "Access-Control-Allow-Origin": "*", "Accept-Ranges": "bytes"}
 
     if encoding is not None:
         header["Content-Encoding"] = encoding
 
     return formatHttpHeaderRaw(200, header)
 
-def formatHttpResponse(filePath: pathlib.Path, acceptEncoding: list, fernet: Fernet | None = None, extraHeaders: dict | None = None):
+def formatHttpResponse(parsed: HTTPRequestParser | None, filePath: pathlib.Path, acceptEncoding: list, fernet: Fernet | None = None, extraHeaders: dict | None = None):
     if not filePath.is_file():
         logging.warning("[MAIN] Invalid fetch %s!", filePath)
 
@@ -111,7 +111,47 @@ def formatHttpResponse(filePath: pathlib.Path, acceptEncoding: list, fernet: Fer
         elif encoding == "gzip":
             fileContents = gzip.compress(fileContents, compresslevel=config.GZIP_COMPRESSION_LEVEL)
 
-    header = {"Content-Type": mime, "Content-Length": len(fileContents), "Connection": "close"}
+    fullFileLen = len(fileContents)
+
+    if parsed and parsed.headers.get("Range"):
+        reqRange = parsed.headers.get("Range")
+
+        if reqRange:
+            if reqRange.startswith("bytes="):
+                rangesNoPrefix = reqRange.split("bytes=", 1)[1]
+                ranges = rangesNoPrefix.split(",")
+
+                if len(ranges) == 1:
+                    contentRange = rangesNoPrefix
+                    rangeSplit = ranges[0].split("-")
+                    firstSplit = rangeSplit[0].strip()
+                    lastSplit = rangeSplit[1].strip()
+
+                    if firstSplit == "":
+                        lastSplit = int(lastSplit)
+                        fileContents = fileContents[:lastSplit + 1]
+                        contentRange = f"0{contentRange}"
+                    elif lastSplit == "":
+                        firstSplit = int(firstSplit)
+                        fileContents = fileContents[firstSplit:]
+                        contentRange = f"{contentRange}{fullFileLen - 1}"
+                    else:
+                        firstSplit = int(firstSplit)
+                        lastSplit = int(lastSplit)
+                        fileContents = fileContents[firstSplit:lastSplit + 1]
+
+                    header = {"Content-Type": mime, "Content-Length": len(fileContents), "Content-Range": f"bytes {contentRange}/{fullFileLen}", "Accept-Ranges": "bytes", "Connection": "close"}
+
+                    if encoding is not None:
+                        header["Content-Encoding"] = encoding
+
+                    return formatHttpHeaderRaw(206, header | extraHeaders) + fileContents
+                else:
+                    # TODO: multipart ranges
+                    pass
+
+
+    header = {"Content-Type": mime, "Content-Length": len(fileContents), "Accept-Ranges": "bytes", "Connection": "close"}
 
     if encoding is not None:
         header["Content-Encoding"] = encoding

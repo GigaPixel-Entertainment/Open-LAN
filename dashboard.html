@@ -286,68 +286,81 @@
             const control1 = document.getElementById("serverControl1")
             const control2 = document.getElementById("serverControl2")
 
+            var pause = false
+
             var lastR = null
             var logfile = "live";
 
+            document.addEventListener("visibilitychange", () => {
+                if (document.visibilityState === "hidden") {
+                    pause = true
+                } else {
+                    pause = false
+                }
+            });
+
             (function listener() {
                 setTimeout(() => {
-                    fetch(API_URL + "reqInfo", {
-                        "method": "GET",
-                        "headers": {
-                            "Log-File": logfile
-                        }
-                    }).then((r) => r.json()).then((r) => {
-                        cpuStatContent.textContent = r["CPU"] + "%"
-                        ramStatContent.textContent = r["MEM"] + "GB/" + r["MEM_TOTAL"] + "GB"
-                        diskStatContent.textContent = r["DISK"] + "GB/" + r["DISK_TOTAL"] + "GB"
+                    if (!pause) {
+                        fetch(API_URL + "reqInfo", {
+                            "method": "GET",
+                            "headers": {
+                                "Log-File": logfile
+                            }
+                        }).then((r) => r.json()).then((r) => {
+                            cpuStatContent.textContent = r["CPU"] + "%"
+                            ramStatContent.textContent = r["MEM"] + "GB/" + r["MEM_TOTAL"] + "GB"
+                            diskStatContent.textContent = r["DISK"] + "GB/" + r["DISK_TOTAL"] + "GB"
 
-                        serverStatus.textContent = "Server - " + (r["ONLINE"] ? "OK" : "FAIL")
-                        serverStatus.style.color = r["ONLINE"] ? "lime" : "red"
+                            serverStatus.textContent = "Server - " + (r["ONLINE"] ? "OK" : "FAIL")
+                            serverStatus.style.color = r["ONLINE"] ? "lime" : "red"
 
-                        if (r["ONLINE"]) {
-                            control1.textContent = "Restart"
-                            control1.disabled = false
-                            control2.textContent = "Stop"
-                            control2.disabled = false
-                        } else {
-                            control1.textContent = "Start"
-                            control1.disabled = false
-                            control2.textContent = "Exit"
-                            control2.disabled = false
-                        }
+                            if (r["ONLINE"]) {
+                                control1.textContent = "Restart"
+                                control1.disabled = false
+                                control2.textContent = "Stop"
+                                control2.disabled = false
+                            } else {
+                                control1.textContent = "Start"
+                                control1.disabled = false
+                                control2.textContent = "Exit"
+                                control2.disabled = false
+                            }
 
-                        const atBottom = logsContent.scrollTop + logsContent.offsetHeight >= logsSpacer.offsetHeight - 20 || lastR == null
-                        logsSpacer.style.height = (r["LOGS"].length * 20) + "px"
+                            const atBottom = logsContent.scrollTop + logsContent.offsetHeight >= logsSpacer.offsetHeight - 20 || lastR == null
+                            logsSpacer.style.height = (r["LOGS"].length * 20) + "px"
 
-                        if (atBottom) {
-                            logsContent.scrollTo({
-                                "top": r["LOGS"].length * 20
-                            })
-                        }
+                            if (atBottom) {
+                                logsContent.scrollTo({
+                                    "top": r["LOGS"].length * 20
+                                })
+                            }
 
-                        let currLogF = logDropdown.value
-                        r["LOG_FILES"].sort()
-                        logDropdownGroup.replaceChildren()
+                            let currLogF = logDropdown.value
+                            r["LOG_FILES"].sort()
+                            logDropdownGroup.replaceChildren()
 
-                        for (let i = 0; i < r["LOG_FILES"].length; i++) {
-                            const logFile = r["LOG_FILES"][i];
-                            const opt = document.createElement("option")
-                            opt.value = logFile
-                            opt.textContent = logFile
+                            for (let i = 0; i < r["LOG_FILES"].length; i++) {
+                                const logFile = r["LOG_FILES"][i];
+                                const opt = document.createElement("option")
+                                opt.value = logFile
+                                opt.textContent = logFile
 
-                            logDropdownGroup.appendChild(opt)
-                        }
-                        logDropdown.value = currLogF
+                                logDropdownGroup.appendChild(opt)
+                            }
+                            logDropdown.value = currLogF
 
-                        if (r["LOG_FILES"].length > 0) {
-                            purgeBtn.disabled = false
-                        }
+                            if (r["LOG_FILES"].length > 0) {
+                                purgeBtn.disabled = false
+                            }
 
-                        lastR = r
-                        renderLogs()
-                    }).catch((r) => {
-                        console.warn("Fetch failed!")
-                    })
+                            lastR = r
+                            renderLogs()
+                        }).catch((r) => {
+                            console.warn("Fetch failed!")
+                        })
+                    }
+
                     listener()
                 }, 1000)
             })();
@@ -457,7 +470,9 @@
             }
 
             setInterval(() => {
-                refreshApiStatus()
+                if (!pause) {
+                    refreshApiStatus()
+                }
             }, 5000);
         </script>
     </body>
