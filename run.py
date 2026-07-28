@@ -16,6 +16,8 @@
 #
 # GigaPixel Entertainment <the_mrjune@gigapixel.cc>
 
+"""The dedicated run script that opens both the server & dashboard"""
+
 from http import cookies
 import subprocess
 import threading
@@ -44,8 +46,8 @@ restart = False
 endProc = False
 
 class HttpHandler:
-    def __init__(self, ipAddrs) -> None:
-        self.ipAddrs: list[str] = ipAddrs
+    def __init__(self, addrs) -> None:
+        self.ipAddrs: list[str] = addrs
         self.socketList: list[socket.socket] = []
         self.listenerThread: threading.Thread | None = None
         self.keepListening: bool = False
@@ -53,11 +55,33 @@ class HttpHandler:
         self.context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         self.context.load_cert_chain(certfile=config.CA_CERT_DIR / "server.crt", keyfile=config.CA_CERT_DIR / "server.key")
 
-    def handleRequest(self, socket: socket.socket):
+    def handleRequest(self, sk: socket.socket):
         pass
 
-    def handleRequestHttp(self, socket: socket.socket):
-        self.handleRequest(socket)
+    def handleRequestHttp(self, sk: socket.socket):
+        self.handleRequest(sk)
+
+    def httpThread(self, sk: socket.socket):
+        peekBytes = sk.recv(3, socket.MSG_PEEK)
+
+        if len(peekBytes) < 3:
+            self.closeSocket(sk)
+            return
+
+        if peekBytes[0] == 0x16:
+            try:
+                with self.context.wrap_socket(sk, server_side=True) as secureSk:
+                    self.handleRequest(secureSk)
+            except ssl.SSLError as e:
+                logging.warning("SSL Handshake failure: %s", e)
+            except Exception as e:
+                logging.error("Error handling connection: %s", e)
+        elif peekBytes in (b'GET', b'POS', b'PUT', b'DEL', b'HEA', b'OPT'):
+            self.handleRequestHttp(sk)
+        else:
+            logging.warning("Unknown Protocol. Bytes: %s", peekBytes)
+
+        self.closeSocket(sk)
 
     def listener(self) -> None:
         while self.keepListening:
@@ -65,30 +89,11 @@ class HttpHandler:
 
             for notifiedSocket in readSockets:
                 cSocket, _ = notifiedSocket.accept()
-                peekBytes = cSocket.recv(3, socket.MSG_PEEK)
+                threading.Thread(target=self.httpThread, args=(cSocket,), daemon=True).start()
 
-                if len(peekBytes) < 3:
-                    self.closeSocket(cSocket)
-                    continue
-
-                if peekBytes[0] == 0x16:
-                    try:
-                        with self.context.wrap_socket(cSocket, server_side=True) as secureSk:
-                            self.handleRequest(secureSk)
-                    except ssl.SSLError as e:
-                        logging.warning("SSL Handshake failure: %s", e)
-                    except Exception as e:
-                        logging.error("Error handling connection: %s", e)
-                elif peekBytes in (b'GET', b'POS', b'PUT', b'DEL', b'HEA', b'OPT'):
-                    self.handleRequestHttp(cSocket)
-                else:
-                    logging.warning("Unknown Protocol. Bytes: %s", peekBytes)
-
-                self.closeSocket(cSocket)
-
-    def closeSocket(self, socket: socket.socket):
+    def closeSocket(self, sk: socket.socket):
         try:
-            socket.close()
+            sk.close()
         except:
             pass
 
@@ -116,12 +121,12 @@ class HttpHandler:
         self.socketList = []
 
 class MaintenancePage(HttpHandler):
-    def handleRequest(self, socket: socket.socket):
+    def handleRequest(self, sk: socket.socket):
         fContents = None
         with open(config.CWD / "unavailable.html", "rb") as f:
             fContents = f.read()
 
-        socket.sendall(httphelper.formatHttpHeader(503, {
+        sk.sendall(httphelper.formatHttpHeader(503, {
             "Connection": "close"
         }) + fContents)
 
@@ -131,16 +136,16 @@ class Dashboard(HttpHandler):
         self.liveLogs = []
         super().__init__(ipAddrs)
 
-    def handleRequest(self, socket: socket.socket):
+    def handleRequest(self, sk: socket.socket):
         global restart
         global endProc
 
-        request = socket.recv(4096)
+        request = sk.recv(4096)
         parsed = httphelper.HTTPRequestParser(request)
 
         if parsed.error_code:
             logging.error("[MAIN] Failed to parse %s", request)
-            self.closeSocket(socket)
+            self.closeSocket(sk)
             return
 
         isValid = False
@@ -176,8 +181,6 @@ class Dashboard(HttpHandler):
                 else:
                     bcrypt.checkpw(pwd.encode("utf-8"), DUMMY_HASH)
 
-        acceptEncoding = [s.strip() for s in parsed.headers.get("Accept-Encoding", "").split(",")]
-
         if isValid:
             if page == "/api/reqInfo":
                 logfile = parsed.headers.get("Log-File")
@@ -194,7 +197,7 @@ class Dashboard(HttpHandler):
                 mem = psutil.virtual_memory()
                 disk = psutil.disk_usage("/")
 
-                socket.sendall(httphelper.formatHttpHeader(200, {}) + orjson.dumps({
+                sk.sendall(httphelper.formatHttpHeader(200, {}) + orjson.dumps({
                     "CPU": psutil.cpu_percent(interval=None),
                     "MEM": round(mem.used / (1024**3), 1),
                     "MEM_TOTAL": round(mem.total / (1024**3), 1),
@@ -209,31 +212,31 @@ class Dashboard(HttpHandler):
             elif page == "/api/restart":
                 stopServerProc()
                 restart = True
-                socket.sendall(httphelper.formatHttpHeader(200))
+                sk.sendall(httphelper.formatHttpHeader(200))
             elif page == "/api/exit":
                 if serverProc:
                     stopServerProc()
                 else:
                     endProc = True
-                socket.sendall(httphelper.formatHttpHeader(200))
+                sk.sendall(httphelper.formatHttpHeader(200))
             elif page == "/api/purgeLogs":
                 for logF in config.LOG_DIR.iterdir():
                     logF.unlink(True)
-                socket.sendall(httphelper.formatHttpHeader(200))
+                sk.sendall(httphelper.formatHttpHeader(200))
             else:
                 token = secrets.token_urlsafe(256)
                 VALID_TOKENS.append(token)
-                socket.sendall(httphelper.formatHttpResponse(parsed, config.CWD / "dashboard.html", extraHeaders={
+                sk.sendall(httphelper.formatHttpResponse(parsed, config.CWD / "dashboard.html", extraHeaders={
                     "Set-Cookie": f"dashboardToken={token}; HttpOnly; SameSite=Strict; Path=/"
                 }))
         else:
-            socket.sendall(httphelper.formatHttpHeader(401, {
+            sk.sendall(httphelper.formatHttpHeader(401, {
                 "WWW-Authenticate": "Basic realm=\"Dashboard\", charset=\"UTF-8\"",
                 "Connection": "close"
             }))
 
-    def handleRequestHttp(self, socket: socket.socket):
-        socket.sendall(httphelper.formatHttpResponse(None, config.CWD / "httpsRequired.html"))
+    def handleRequestHttp(self, sk: socket.socket):
+        sk.sendall(httphelper.formatHttpResponse(None, config.CWD / "httpsRequired.html"))
 
 def stopServerProc():
     if serverProc:

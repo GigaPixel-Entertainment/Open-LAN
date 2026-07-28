@@ -66,6 +66,7 @@ footer > a {
     margin-top: 1em;
     margin-bottom: 1em;
     width: 85%;
+    white-space: pre;
 }
 
 #msgBoxHeader > button {
@@ -112,12 +113,54 @@ footer > a {
 
 #msgBox {
     position: absolute;
-    width: 95%;
+    width: calc(85% * 0.95 + 3px);
     height: calc(100% - 40px - 1.25em);
     bottom: 0;
     left: 5%;
     background-color: var(--bg);
     overflow-x: hidden;
+}
+
+#userList {
+    position: absolute;
+    width: calc(15% * 0.95 - 3px);
+    height: calc(100% - 40px - 1.25em);
+    right: 0;
+    bottom: 0;
+    background-color: var(--acc);
+    overflow-x: hidden;
+
+    display: flex;
+    flex-direction: column;
+}
+
+#userListCounter {
+    padding-left: 1em;
+    margin-top: 20%;
+    margin-bottom: 0;
+}
+
+#userListContent {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+}
+
+.userDiv {
+    width: 100%;
+    height: 40px;
+    padding-top: .5em;
+    padding-bottom: .5em;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    background-color: transparent;
+    cursor: pointer;
+}
+
+.userDiv:hover {
+    background-color: var(--acc2);
 }
 
 #friendsHeader {
@@ -154,19 +197,94 @@ footer > a {
     background-color: var(--acc3);
     right: 0;
     top: 10%;
+
+    display: flex;
+    flex-direction: column;
 }
 
 #friendsList > p {
-    margin-left: 1em;
+    margin-left: 5%;
+}
+
+#friendsListNewGC {
+    width: 90%;
+    font-size: 1.5em;
+    margin-left: 5%;
+    margin-right: 5%;
+    margin-top: .5em;
+    border: none;
+    border-radius: 0;
+    background-color: var(--button);
+    cursor: pointer;
+}
+
+#friendsListNewGC:hover {
+    background-color: var(--button-press);
+}
+
+#newGCFriendsList {
+    position: absolute;
+    width: 90%;
+    left: 5%;
+    height: 20%;
+    background-color: var(--acc4);
+    visibility: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    align-items: center;
+    cursor: auto;
+}
+
+#newGCSearch {
+    width: 95%;
+    height: 15%;
+    outline: none;
+    background-color: var(--acc3);
+    border: none;
+    border-radius: 0;
+}
+
+#newGCSearch::placeholder {
+    font-family: "Fira Code", monospace;
+    color: var(--placeholder);
+}
+
+#newGCSearchRes {
+    width: 95%;
+    height: 60%;
+    background-color: var(--acc3);
+}
+
+#newGCCreate {
+    width: 95%;
+    height: 15%;
+    background-color: var(--button);
+    border: none;
+    border-radius: 0;
+}
+
+#newGCCreate:enabled {
+    cursor: pointer;
+}
+
+#newGCCreate:enabled:hover {
+    background-color: var(--button-press);
+}
+
+#friendsListContent {
+    width: 100%;
+    height: 100%;
+    overflow-x: hidden;
 }
 
 #textEntryWrapper {
     position: absolute;
-    width: 80%;
+    width: 75%;
     height: fit-content;
     background-color: var(--acc);
     bottom: 2.5%;
-    right: 7.5%;
+    left: 7.5%;
     padding: 0;
     display: flex;
     flex-direction: row;
@@ -215,7 +333,7 @@ footer > a {
     color: var(--sendButtonGreen);
     font-weight: bolder;
     cursor: pointer;
-    
+
     justify-content: center;
     align-items: center;
 }
@@ -297,7 +415,7 @@ footer > a {
     width: 100%;
     margin: 0;
     margin-top: .8em;
-    font-size: .65em;
+    font-size: .55em;
     color: darkgray;
     visibility: hidden;
 }
@@ -305,6 +423,7 @@ footer > a {
 #textEntry::placeholder {
     color: var(--acc4);
     font-style: italic;
+    font-family: "Fira Code", monospace;
 }
 
 #friendsListWrapper {
@@ -774,6 +893,7 @@ footer > a {
 
 #friendSearchbar::placeholder {
     color: var(--placeholder);
+    font-family: "Fira Code", monospace;
 }
 
 #friendSearchResult {
@@ -997,7 +1117,7 @@ footer > a {
     background-color: var(--acc);
 }
 
-.invis { 
+.invis {
     opacity: 0;
 }
 
@@ -1053,7 +1173,7 @@ footer > a {
 }
 
 ::-webkit-scrollbar-track {
-    background: rgb(0, 0, 0, 0); 
+    background: rgb(0, 0, 0, 0);
 }
 
 ::-webkit-scrollbar-thumb {

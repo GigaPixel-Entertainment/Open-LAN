@@ -4,6 +4,7 @@
 """Script to edit a saved user"""
 
 import pathlib
+import bcrypt
 import sys
 
 from cryptography.fernet import Fernet
@@ -31,8 +32,7 @@ with open(USERS_DIR / f"{username}.usr", "rb+") as f:
     userData = msgpack.unpackb(fernet.decrypt(f.read()))
 
     print(userData)
-    # EDITING MAGIC
-    # userData["Displayname"] = "Bob"
+    userData["PWD"] = bcrypt.hashpw(b"12367", bcrypt.gensalt(15)).decode("utf-8")
     print(userData)
 
     f.seek(0)

@@ -21,8 +21,10 @@
             <p class="font white">You are looking at older messages</p>
             <button class="font" onclick="jumpToBottom()">Jump to bottom</button>
         </div>
-        <div id="msgBox" class="scroll">
-
+        <div id="msgBox" class="scroll"></div>
+        <div id="userList">
+            <p id="userListCounter" class="font white">Members</p>
+            <div id="userListContent" class="scroll"></div>
         </div>
         <div id="textEntryWrapper">
             <div id="embedList"></div>
@@ -52,8 +54,15 @@
                 <button id="toggleFriendsList" class="font white" onclick="hideFriendsList()"><</button>
             </div>
             <div id="friendsList">
+                <button id="friendsListNewGC" class="font">
+                    new groupchat
+                    <div id="newGCFriendsList">
+                        <input type="search" id="newGCSearch" placeholder="search friends...">
+                        <div id="newGCSearchRes" class="scroll"></div>
+                        <input type="submit" id="newGCCreate" value="Create" disabled class="font">
+                    </div>
+                </button>
                 <p class="font white">active messages</p>
-
                 <div id="friendsListContent" class="scroll"></div>
             </div>
         </div>
@@ -81,7 +90,7 @@
                 </div>
                 <div id="bio">
                     <p id="bioLabel" class="font white">BIO:</p>
-                    <textarea id="bioArea" class="font white"></textarea>
+                    <textarea id="bioArea" class="font white" maxlength="1000"></textarea>
                 </div>
             </div>
 
@@ -120,11 +129,9 @@
             <div id="findFriends">
                 <div id="friendSearch">
                     <img id="friendSearchIcon" src="Media/searchIcon.png">
-                    <input type="text" id="friendSearchbar" class="font white" placeholder="find new friends..." spellcheck="false" maxlength="30">
+                    <input type="search" id="friendSearchbar" class="font white" placeholder="find new friends..." spellcheck="false" maxlength="30">
                 </div>
-                <div id="friendSearchResult" class="scroll">
-
-                </div>
+                <div id="friendSearchResult" class="scroll"></div>
             </div>
 
             <div id="currRequests">
@@ -208,7 +215,17 @@
         const myProfileScreen = document.getElementById("myProfileScreen")
         const chatName = document.getElementById("ChatName")
 
+        const friendsListNewGC = document.getElementById("friendsListNewGC")
+        const newGCFriendsList = document.getElementById("newGCFriendsList")
+        const newGCSearch = document.getElementById("newGCSearch")
+        const newGCSearchRes = document.getElementById("newGCSearchRes")
+        const newGCCreate = document.getElementById("newGCCreate")
+
         const chatDiv = document.getElementById("msgBox")
+
+        const userList = document.getElementById("userList")
+        const userListCounter = document.getElementById("userListCounter")
+        const userListContent = document.getElementById("userListContent")
 
         const lookingAtOldMsgs = document.getElementById("lookingAtOldMsgs")
 
@@ -462,7 +479,6 @@
 
         textOverlayContents.addEventListener("click", (e) => {
             e.stopPropagation()
-            console.log("stopped")
         })
 
         textOverlayMinimize.addEventListener("click", () => {
@@ -1080,6 +1096,7 @@
 
             setFriendReqs()
             setChatList()
+            setCreateGCList()
         }
 
         var editingDisplayname = false
@@ -1264,6 +1281,7 @@
 
                 if (embedType.startsWith("image/")) {
                     const img = document.createElement("img")
+                    img.style.minHeight = "9em"
                     img.style.maxHeight = "9em"
                     img.style.maxWidth = "50vw"
                     img.style.border = "none"
@@ -1278,14 +1296,14 @@
                         imageOverlayImg.src = img.src
                     }
 
-                    imgLoadP = new Promise((r) => {
+                    new Promise((r) => {
                         img.onload = r
                         img.onerror = r
+                    }).then(() => {
+                        img.style.minHeight = "0"
                     })
 
                     img.src = embed
-
-                    await imgLoadP
 
                     embeds.appendChild(img)
                 } else if (embedType.startsWith("audio/")) {
@@ -1415,17 +1433,31 @@
                     generic.style.width = "25vw"
                     generic.style.border = "none"
                     generic.style.borderRadius = "8px"
-                    generic.style.backgroundColor = "var(--acc2)"
+                    generic.style.backgroundColor = "var(--acc5)"
+                    generic.style.display = "flex"
+                    generic.style.flexDirection = "row"
+                    generic.style.overflow = "hidden"
+
+                    const icon = document.createElement("img")
+                    icon.style.width = "5em"
+                    icon.style.height = "5em"
+                    icon.src = "Media/file.png"
 
                     const title = document.createElement("a")
-                    title.style.width = "100%"
-                    title.style.height = "1em"
+                    title.style.width = "calc(100% - 5em - 1em)"
+                    title.style.padding = "0.5em"
+                    title.style.margin = "0"
                     title.style.fontSize = "1.25em"
+                    title.style.whiteSpace = "pre"
+                    title.style.background = "linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%)"
+                    title.style.backgroundClip = "text"
+                    title.style.color = "transparent"
                     title.href = embed
                     title.download = filename
-                    title.classList = "font white"
+                    title.classList = "font"
                     title.textContent = filename
 
+                    generic.appendChild(icon)
                     generic.appendChild(title)
                     embeds.appendChild(generic)
                 }
@@ -1566,7 +1598,7 @@
                 const replyToHead = document.createElement("div")
                 replyToHead.style.position = "absolute"
                 replyToHead.style.width = "calc(100%-6em)"
-                replyToHead.style.paddingLeft = "5em"
+                replyToHead.style.paddingLeft = "3em"
                 replyToHead.style.paddingRight = "1em"
                 replyToHead.style.height = "1em"
                 replyToHead.style.transform = "translateY(-125%)"
@@ -1593,7 +1625,7 @@
                 const replyCont = document.createElement("p")
                 replyCont.classList = "font"
                 replyCont.style.color = "transparent"
-                replyCont.style.maxWidth = "70vw"
+                replyCont.style.width = "50vw"
                 replyCont.style.fontSize = "1em"
                 replyCont.style.padding = "0"
                 replyCont.style.paddingLeft = "1em"
@@ -1610,6 +1642,10 @@
                 messageDiv.appendChild(replyToHead)
 
                 replyToHead.addEventListener("click", () => {
+                    if (message["deleted"]) {
+                        return
+                    }
+
                     const msgE = document.querySelector('[data-msgid="MSGID' + message["replyTo"] + '"]')
 
                     if (msgE) {
@@ -1620,11 +1656,10 @@
 
                         setTimeout(() => msgE.style.backgroundColor = origBg, 2500)
                     } else {
-                        let msgPage = Math.floor(message["replyTo"] / 100)
-                        let currPageFromTop = Math.floor(message["MSGID"] / 100)
+                        let replyToMsgPage = Math.floor((currMsgID - message["replyTo"]) / 100)
 
-                        if (currPageFromTop > msgPage) {
-                            currPage = currPageFromTop - msgPage
+                        if (replyToMsgPage != currPage) {
+                            currPage = replyToMsgPage
                             highlightMsg = message["replyTo"]
                             fetchChatData()
                         }
@@ -1697,7 +1732,7 @@
 
             if (messageDate) {
                 const timeDisplay = document.createElement("p")
-                timeDisplay.textContent = "(" + messageDate.toLocaleTimeString("en-US", {"hour":"2-digit","minute":"2-digit"}) + ")"
+                timeDisplay.textContent = messageDate.toLocaleTimeString("en-US", {"hour":"2-digit","minute":"2-digit"})
                 timeDisplay.style.width = "4%"
                 timeDisplay.classList = "font smallTime"
 
@@ -1737,6 +1772,7 @@
         var highlightMsg = -1
         var currPage = 0
         var maxPage = 0
+        var currMsgID = -1
 
         async function newMsg(message, chatDiv2, lastMsg, userInfos) {
             if (message["deleted"]) {
@@ -1873,6 +1909,144 @@
             }
         }
 
+        async function setMemberList() {
+            const chat = chatCache
+            const currChatName = chat["Name"]
+            const currRecipients = chat["Recipients"]
+            const currChatType = chat["Type"]
+
+            if (currChatType == "forced-gc" || currChatType == "gc") {
+                chatName.textContent = "You are chatting on: " + currChatName
+                const userList2 = []
+                for (let i = 0; i < chat["Recipients"].length; i++) {
+                    const uid = chat["Recipients"][i];
+                    const usrInfo = await reqUsrInfo(uid)
+
+                    const userDiv = document.createElement("div")
+                    userDiv.classList = "userDiv"
+
+                    const pfp = document.createElement("img")
+                    pfp.style.height = "calc(100% - 4px)"
+                    pfp.style.aspectRatio = "1"
+                    pfp.style.borderRadius = "9999px"
+                    pfp.style.border = "2px solid var(--acc4)"
+                    pfp.style.marginRight = ".5em"
+                    pfp.src = usrInfo["pfp"]
+
+                    const displayname = document.createElement("p")
+                    displayname.style.width = "calc(100% - 36px - .5em)"
+                    displayname.style.padding = "0"
+                    displayname.style.margin = "0"
+                    displayname.style.fontSize = "1.25em"
+                    displayname.style.whiteSpace = "pre"
+                    displayname.style.background = "linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%)"
+                    displayname.style.backgroundClip = "text"
+                    displayname.style.color = "transparent"
+                    displayname.classList = "font"
+                    displayname.textContent = usrInfo["displayname"]
+
+                    userDiv.appendChild(pfp)
+                    userDiv.appendChild(displayname)
+                    userList2.push(userDiv)
+                }
+
+                userListCounter.style.position = ""
+                userListCounter.style.visibility = "visible"
+                userListCounter.textContent = "Members-" + userList2.length
+                userListContent.replaceChildren()
+                userList2.forEach((e) => {
+                    userListContent.appendChild(e)
+                })
+            } else if (currChatType == "dm") {
+                const other = currRecipients.filter(item => item != currUID)[0]
+                const usrInfo = await reqUsrInfo(other)
+
+                chatName.textContent = "You are chatting with: " + usrInfo["displayname"]
+
+                userListContent.replaceChildren()
+                userListCounter.style.visibility = "hidden"
+                userListCounter.style.position = "absolute"
+
+                const pfp = document.createElement("img")
+                pfp.style.width = "20%"
+                pfp.style.aspectRatio = "1"
+                pfp.style.borderRadius = "9999px"
+                pfp.style.border = "4px solid var(--acc4)"
+                pfp.style.marginLeft = "5%"
+                pfp.style.marginTop = "2.5em"
+                pfp.style.cursor = "pointer"
+                pfp.src = usrInfo["pfp"]
+                userListContent.appendChild(pfp)
+
+                const dn = document.createElement("p")
+                dn.style.fontSize = "1.25em"
+                dn.style.fontWeight = "bold"
+                dn.style.margin = "0"
+                dn.style.marginLeft = "5%"
+                dn.style.whiteSpace = "pre"
+                dn.style.background = "linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%)"
+                dn.style.backgroundClip = "text"
+                dn.style.color = "transparent"
+                dn.classList = "font"
+                dn.textContent = usrInfo["displayname"]
+                userListContent.appendChild(dn)
+
+                const un = document.createElement("p")
+                un.style.fontSize = ".75em"
+                un.style.margin = "0"
+                un.style.marginLeft = "5%"
+                un.style.whiteSpace = "pre"
+                un.style.background = "linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%)"
+                un.style.backgroundClip = "text"
+                un.style.color = "transparent"
+                un.classList = "font"
+                un.textContent = usrInfo["username"]
+                userListContent.appendChild(un)
+
+                const pro = document.createElement("p")
+                pro.style.fontSize = ".7em"
+                pro.style.margin = "0"
+                pro.style.marginLeft = "5%"
+                pro.style.whiteSpace = "pre"
+                pro.style.background = "linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%)"
+                pro.style.backgroundClip = "text"
+                pro.style.color = "transparent"
+                pro.classList = "font"
+                pro.textContent = usrInfo["pronouns"]
+                userListContent.appendChild(pro)
+
+                const bio = document.createElement("textarea")
+                bio.style.width = "90%"
+                bio.style.minHeight = "3lh"
+                bio.style.maxHeight = "10lh"
+                bio.style.margin = "0"
+                bio.style.marginLeft = "5%"
+                bio.style.marginTop = "1em"
+                bio.style.outline = "none"
+                bio.style.border = "1px solid var(--acc4)"
+                bio.style.backgroundColor = "transparent"
+                bio.style.resize = "none"
+                bio.style.fieldSizing = "content"
+                bio.classList = "font white"
+                bio.value = usrInfo["bio"].slice(0, 100)
+                bio.readOnly = true
+                userListContent.appendChild(bio)
+
+                if (usrInfo["bio"].length > 100) {
+                    bio.value += "..."
+                    const viewFullBio = document.createElement("p")
+                    viewFullBio.style.fontSize = ".6em"
+                    viewFullBio.style.textDecoration = "underline"
+                    viewFullBio.style.margin = "0"
+                    viewFullBio.style.marginLeft = "5%"
+                    viewFullBio.style.cursor = "pointer"
+                    viewFullBio.classList = "font white"
+                    viewFullBio.textContent = "View Full Bio"
+                    userListContent.appendChild(viewFullBio)
+                }
+            }
+        }
+
         async function setChat(chat) {
             if (chat["CID"] != currChat) {
                 return
@@ -1901,26 +2075,11 @@
 
             changedChat = false
 
-            const currChatName = chat["Name"]
-            const currRecipients = chat["Recipients"]
-            const currChatType = chat["Type"]
+            userInfos = await reqMultiUsrInfo(chat["Recipients"])
 
-            if (currChatType == "forced-gc") {
-                chatName.textContent = "You are chatting on: " + currChatName
-            } else if (currChatType == "dm") {
-                const other = currRecipients.filter(item => item != currUID)
+            await setMemberList()
 
-                chatName.textContent = "You are chatting with: " + (await reqUsrInfo(other[0]))["displayname"]
-            }
-
-            chat["messages"].sort((a, b) => a["time"] - b["time"]);
-
-            requiredUIDs = []
-            chat["messages"].forEach(message => {
-                requiredUIDs.push(message["UID"])
-            });
-
-            userInfos = await reqMultiUsrInfo(requiredUIDs)
+            chat["messages"].sort((a, b) => a["time"] - b["time"])
 
             const chatDiv2 = []
 
@@ -1951,6 +2110,7 @@
             let lastMsg = null
             for (let index = 0; index < chat["messages"].length; index++) {
                 const message = chat["messages"][index];
+                currMsgID = message["MSGID"]
 
                 if (message["deleted"]) {
                     continue
@@ -1986,7 +2146,6 @@
                 lookingAtOldMsgs.style.visibility = "hidden"
             }
 
-
             const padding2 = document.createElement("div")
             padding2.style.width = "100%"
             padding2.style.height = "6em"
@@ -2014,53 +2173,150 @@
             fetchChatData()
         }
 
-        function updateCachedDisplayname(resp) {
+        function refreshCachedChat() {
+            if (chatFetchInProgress) {
+                return
+            }
+
+            if (chatCache) {
+                setChat(chatCache)
+            } else {
+                fetchChatData()
+            }
+        }
+
+        function updateCachedProp(resp, prop, respProp, func) {
             updated = false
             for (let cacheIndex = 0; cacheIndex < userInfoCache.length; cacheIndex++) {
                 const cacheItem = userInfoCache[cacheIndex];
 
                 if (cacheItem["UID"] == resp["UID"]) {
-                    cacheItem["displayname"] = resp["Displayname"]
+                    cacheItem[prop] = resp[respProp]
                     updated = true
                 }
             }
 
             if (updated) {
-                if (chatFetchInProgress) {
-                    return
-                }
-
-                if (chatCache) {
-                    setChat(chatCache)
-                } else {
-                    fetchChatData()
-                }
+                func()
             }
         }
 
-        function updateCachedPfp(resp) {
-            updated = false
-            for (let cacheIndex = 0; cacheIndex < userInfoCache.length; cacheIndex++) {
-                const cacheItem = userInfoCache[cacheIndex];
+        const GCFriendsIncluded = []
+        async function setCreateGCList() {
+            searchQuery = newGCSearch.value
+            searchRes = []
 
-                if (cacheItem["UID"] == resp["UID"]) {
-                    cacheItem["pfp"] = resp["PFP"]
-                    updated = true
+            for (let i = 0; i < friends.length; i++) {
+                const f = friends[i];
+                const usrInfo = await reqUsrInfo(f["UID"])
+
+                if (usrInfo["displayname"].toLowerCase().includes(searchQuery.toLowerCase()) || GCFriendsIncluded.includes(usrInfo["UID"])) {
+                    searchRes.push(usrInfo)
                 }
             }
 
-            if (updated) {
-                if (chatFetchInProgress) {
-                    return
-                }
+            searchRes.sort((a, b) => {
+                diffA = compareTwoStrings(a["displayname"], searchQuery)
+                diffB = compareTwoStrings(b["displayname"], searchQuery)
 
-                if (chatCache) {
-                    setChat(chatCache)
-                } else {
-                    fetchChatData()
-                }
+                return diffB - diffA
+            })
+
+            newGCSearchRes.replaceChildren()
+            for (let i = 0; i < searchRes.length; i++) {
+                const usrInfo = searchRes[i]
+
+                const fDiv = document.createElement("div")
+                fDiv.style.width = "100%"
+                fDiv.style.height = "40px"
+                fDiv.style.margin = "0"
+                fDiv.style.marginTop = ".25em"
+                fDiv.style.marginBottom = ".25em"
+                fDiv.style.overflow = "hidden"
+                fDiv.style.display = "flex"
+                fDiv.style.flexDirection = "row"
+                fDiv.style.alignItems = "center"
+
+                const pfp = document.createElement("img")
+                pfp.style.height = "calc(100% - 4px)"
+                pfp.style.aspectRatio = "1"
+                pfp.style.borderRadius = "9999px"
+                pfp.style.border = "2px solid var(--acc4)"
+                pfp.style.marginRight = ".5em"
+                pfp.src = usrInfo["pfp"]
+
+                const dn = document.createElement("p")
+                dn.style.width = "calc(100% - 36px - 20px)"
+                dn.style.margin = "0"
+                dn.style.padding = "0"
+                dn.style.whiteSpace = "pre"
+                dn.style.textAlign = "left"
+                dn.style.overflow = "hidden"
+                dn.style.background = "linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%)"
+                dn.style.backgroundClip = "text"
+                dn.style.color = "transparent"
+                dn.classList = "font"
+                dn.textContent = usrInfo["displayname"]
+
+                const check = document.createElement("input")
+                check.style.height = "50%"
+                check.style.aspectRatio = "1"
+                check.type = "checkbox"
+                check.checked = GCFriendsIncluded.includes(usrInfo["UID"])
+
+                check.addEventListener("change", (e) => {
+                    if (check.value && !GCFriendsIncluded.includes(usrInfo["UID"])) {
+                        GCFriendsIncluded.push(usrInfo["UID"])
+                    } else {
+                        const ind = GCFriendsIncluded.indexOf(usrInfo["UID"])
+
+                        if (ind != -1) {
+                            GCFriendsIncluded.splice(ind, 1)
+                        }
+                    }
+
+                    if (GCFriendsIncluded.length >= 2) {
+                        newGCCreate.disabled = false
+                    } else {
+                        newGCCreate.disabled = true
+                    }
+                })
+
+                fDiv.appendChild(pfp)
+                fDiv.appendChild(dn)
+                fDiv.appendChild(check)
+                newGCSearchRes.appendChild(fDiv)
             }
         }
+
+        newGCSearch.addEventListener("input", () => {
+            setCreateGCList()
+        })
+
+        friendsListNewGC.addEventListener("click", () => {
+            newGCFriendsList.style.visibility = "visible"
+        })
+
+        document.addEventListener("click", (e) => {
+            if (!friendsListNewGC.contains(e.target)) {
+                newGCFriendsList.style.visibility = "hidden"
+            }
+        })
+
+        newGCCreate.addEventListener("click", (e) => {
+            if (GCFriendsIncluded.length < 2) {
+                return
+            }
+
+            let included = [...GCFriendsIncluded]
+
+            newGCFriendsList.style.visibility = "hidden"
+            GCFriendsIncluded.splice(0, GCFriendsIncluded.length)
+
+            e.stopPropagation()
+
+            request(JSON.stringify({"type": "createGC", "include": included}))
+        })
     </script>
 
     <script>
@@ -2327,7 +2583,15 @@
                                         }
 
                                         if (respBody["type"] == "updateCachedPfp") {
-                                            updateCachedPfp(respBody)
+                                            updateCachedProp(respBody, "pfp", "PFP", refreshCachedChat)
+                                        }
+
+                                        if (respBody["type"] == "updateCachedBio") {
+                                            updateCachedProp(respBody, "bio", "Bio", setMemberList)
+                                        }
+
+                                        if (respBody["type"] == "updateCachedPronouns") {
+                                            updateCachedProp(respBody, "pronouns", "Pronouns", setMemberList)
                                         }
 
                                         if (respBody["type"] == "chatUpdate") {
@@ -2370,13 +2634,18 @@
                                                         }
                                                     })
 
+                                                    currMsgID = thisMsg["MSGID"]
+
                                                     let msgList = []
 
                                                     const currScroll = chatDiv.scrollTop
                                                     const atBottom = ((currScroll + chatDiv.offsetHeight >= chatDiv.scrollHeight - 8) || changedChat) && !startAtTop
 
                                                     newMsg(thisMsg, msgList, lastMsg, userInfos).then(() => {
-                                                        const lastMsgE = document.querySelector('[data-msgid="MSGID' + lastMsg["MSGID"] + '"]')
+                                                        let lastMsgE = null
+                                                        if (lastMsg) {
+                                                            lastMsgE = document.querySelector('[data-msgid="MSGID' + lastMsg["MSGID"] + '"]')
+                                                        }
 
                                                         if (lastMsgE) {
                                                             let lastE = lastMsgE
@@ -2385,6 +2654,13 @@
                                                                 lastE = e
                                                             })
 
+                                                            attemptScroll(atBottom, startAtTop, currScroll)
+                                                        } else {
+                                                            let lastE = chatDiv.firstChild
+                                                            msgList.forEach((e) => {
+                                                                lastE.after(e)
+                                                                lastE = e
+                                                            })
                                                             attemptScroll(atBottom, startAtTop, currScroll)
                                                         }
                                                     })
@@ -2403,7 +2679,7 @@
                                         }
 
                                         if (respBody["type"] == "updateCachedDisplayname") {
-                                            updateCachedDisplayname(respBody)
+                                            updateCachedProp(respBody, "displayname", "Displayname", refreshCachedChat)
                                         }
 
                                         if (respBody["type"] == "updateFriendReqs") {
@@ -2416,6 +2692,11 @@
                                             friends = respBody["friends"]
                                             chats = respBody["chats"]
                                             setFriendReqs()
+                                            setChatList()
+                                        }
+
+                                        if (respBody["type"] == "newChat") {
+                                            chats = respBody["chats"]
                                             setChatList()
                                         }
 

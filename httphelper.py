@@ -170,40 +170,41 @@ def formatHttpResponse(parsed: HTTPRequestParser | None, filePath: pathlib.Path,
                     final = formatHttpHeader(206, header | extraHeaders).rstrip(b"\r\n") + b"\r\n"
                     currRng = formatHttpRange(fileContents, ranges[0])
 
-                    if currRng:
-                        final += currRng
-                    else:
+                    if not currRng:
                         return formatHttpHeader(416, {
                             "Content-Range": f"*/{len(fileContents)}"
                         })
 
-                    return final
-                else:
-                    # Boundary must be max 70 characters
-                    boundary = f"Open-LAN-Boundary_{randStrUrlSafe(52)}"
-                    body = f"--{boundary}"
-                    fail = False
-
-                    for currRng in ranges:
-                        currHead = formatHttpRange(fileContents, currRng)
-
-                        if not currHead:
-                            fail = True
-                            break
-
-                        body += f"\r\n{currHead.decode("utf-8")}\r\n--{boundary}"
-
-                    if fail:
-                        return formatHttpHeader(416, {
-                            "Content-Range": f"*/{len(fileContents)}"
-                        })
-
-                    body += "--"
-
-                    header = {"Content-Type": f"multipart/byteranges; boundary={boundary}", "Content-Length": len(body), "Accept-Ranges": "bytes", "Connection": "close"}
-                    final = formatHttpHeader(206, header | extraHeaders) + body.encode("utf-8")
+                    final += currRng
 
                     return final
+
+                # Multipart Ranges
+                # Boundary must be max 70 characters
+                boundary = f"Open-LAN-Boundary_{randStrUrlSafe(52)}"
+                body = f"--{boundary}"
+                fail = False
+
+                for currRng in ranges:
+                    currHead = formatHttpRange(fileContents, currRng)
+
+                    if not currHead:
+                        fail = True
+                        break
+
+                    body += f"\r\n{currHead.decode("utf-8")}\r\n--{boundary}"
+
+                if fail:
+                    return formatHttpHeader(416, {
+                        "Content-Range": f"*/{len(fileContents)}"
+                    })
+
+                body += "--"
+
+                header = {"Content-Type": f"multipart/byteranges; boundary={boundary}", "Content-Length": len(body), "Accept-Ranges": "bytes", "Connection": "close"}
+                final = formatHttpHeader(206, header | extraHeaders) + body.encode("utf-8")
+
+                return final
 
     encoding = None
 
