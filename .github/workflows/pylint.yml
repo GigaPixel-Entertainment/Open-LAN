@@ -1,6 +1,15 @@
 name: Pylint
 
-on: [push]
+on:
+  push:
+    paths-ignore:
+      - 'CSS/**'
+      - 'JS/**'
+      - 'Media/**'
+      - 'pfps/**'
+      - '*.html'
+      - '*.md'
+      - 'robots.txt'
 
 jobs:
   build:
