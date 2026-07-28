@@ -310,12 +310,12 @@ def tokenInChat(token: str | None, CID: int) -> bool:
 
 def formatLoginResponse(username: str, cloudflare: bool):
     if not username:
-        return httphelper.formatErrorResponse(500)
+        return httphelper.formatHttpHeader(500)
 
     token = secrets.token_urlsafe(256)
     VALID_TOKENS[username] = {"TOKEN": token, "EXPIRES": time.time() + config.TOKEN_EXPIRES_SEC}
 
-    return httphelper.formatHttpHeaderRaw(308, {
+    return httphelper.formatHttpHeader(308, {
         "Set-Cookie": f"authToken={token}; HttpOnly; SameSite=Strict; {"Domain=gigapixel.cc;" if cloudflare else ""} Path=/",
         "Location": "/app.html",
         "Connection": "close"
@@ -343,8 +343,6 @@ def handleRequest(sk: socket.socket):
     page = pathSplit[0]
     uri = {}
 
-    acceptEncoding = [s.strip() for s in parsed.headers.get("Accept-Encoding", "").split(",")]
-
     if len(pathSplit) > 1:
         for pair in pathSplit[1].split("&"):
             if len(pair.split("=")) > 1:
@@ -361,12 +359,12 @@ def handleRequest(sk: socket.socket):
 
             if currUrl and "openlan.gigapixel.cc" in currUrl:
                 # POV: Cloudflare
-                sk.sendall(httphelper.formatHttpHeaderRaw(204, {
+                sk.sendall(httphelper.formatHttpHeader(204, {
                     "Url": "ws://openlanws.gigapixel.cc",
                     "Connection": "close"
                 }))
             else:
-                sk.sendall(httphelper.formatHttpHeaderRaw(204, {
+                sk.sendall(httphelper.formatHttpHeader(204, {
                     "Url": f"ws://{currUrl}:{config.WS_PORT}",
                     "Connection": "close"
                 }))
@@ -375,12 +373,12 @@ def handleRequest(sk: socket.socket):
 
             if currUrl and "openlan.gigapixel.cc" in currUrl:
                 # POV: Cloudflare
-                sk.sendall(httphelper.formatHttpHeaderRaw(204, {
+                sk.sendall(httphelper.formatHttpHeader(204, {
                     "Url": "wss://openlanws.gigapixel.cc",
                     "Connection": "close"
                 }))
             else:
-                sk.sendall(httphelper.formatHttpHeaderRaw(204, {
+                sk.sendall(httphelper.formatHttpHeader(204, {
                     "Url": f"wss://{currUrl}:{config.WSS_PORT}",
                     "Connection": "close"
                 }))
@@ -391,9 +389,9 @@ def handleRequest(sk: socket.socket):
                 if username is not None:
                     sk.sendall(formatLoginResponse(username, "gigapixel.cc" in uri["hostname"]))
         elif httphelper.isSafePath(pagePath):
-            sk.sendall(httphelper.formatHttpResponse(parsed, pagePath, acceptEncoding, fernet))
+            sk.sendall(httphelper.formatHttpResponse(parsed, pagePath, fernet))
         else:
-            sk.sendall(httphelper.formatErrorResponse(404))
+            sk.sendall(httphelper.formatHttpHeader(404))
     elif method == "HEAD":
         if page == "/":
             page = "/index.html"
@@ -401,9 +399,9 @@ def handleRequest(sk: socket.socket):
         pagePath = config.CWD / page.removeprefix("/")
 
         if httphelper.isSafePath(pagePath):
-            sk.sendall(httphelper.formatHEADResponse(pagePath, acceptEncoding))
+            sk.sendall(httphelper.formatHEADResponse(parsed, pagePath))
         else:
-            sk.sendall(httphelper.formatErrorResponse(statusCode=404))
+            sk.sendall(httphelper.formatHttpHeader(statusCode=404))
 
     closeSocket(sk)
 

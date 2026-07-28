@@ -109,7 +109,7 @@ class HttpHandler:
         self.keepListening = False
 
         if self.listenerThread:
-            self.listenerThread.join()
+            self.listenerThread.join(10)
 
         for sock in self.socketList:
             self.closeSocket(sock)
@@ -121,7 +121,7 @@ class MaintenancePage(HttpHandler):
         with open(config.CWD / "unavailable.html", "rb") as f:
             fContents = f.read()
 
-        socket.sendall(httphelper.formatHttpHeaderRaw(503, {
+        socket.sendall(httphelper.formatHttpHeader(503, {
             "Connection": "close"
         }) + fContents)
 
@@ -194,7 +194,7 @@ class Dashboard(HttpHandler):
                 mem = psutil.virtual_memory()
                 disk = psutil.disk_usage("/")
 
-                socket.sendall(httphelper.formatHttpHeaderRaw(200, {}) + orjson.dumps({
+                socket.sendall(httphelper.formatHttpHeader(200, {}) + orjson.dumps({
                     "CPU": psutil.cpu_percent(interval=None),
                     "MEM": round(mem.used / (1024**3), 1),
                     "MEM_TOTAL": round(mem.total / (1024**3), 1),
@@ -209,28 +209,31 @@ class Dashboard(HttpHandler):
             elif page == "/api/restart":
                 stopServerProc()
                 restart = True
+                socket.sendall(httphelper.formatHttpHeader(200))
             elif page == "/api/exit":
                 if serverProc:
                     stopServerProc()
                 else:
                     endProc = True
+                socket.sendall(httphelper.formatHttpHeader(200))
             elif page == "/api/purgeLogs":
                 for logF in config.LOG_DIR.iterdir():
                     logF.unlink(True)
+                socket.sendall(httphelper.formatHttpHeader(200))
             else:
                 token = secrets.token_urlsafe(256)
                 VALID_TOKENS.append(token)
-                socket.sendall(httphelper.formatHttpResponse(parsed, config.CWD / "dashboard.html", acceptEncoding, extraHeaders={
+                socket.sendall(httphelper.formatHttpResponse(parsed, config.CWD / "dashboard.html", extraHeaders={
                     "Set-Cookie": f"dashboardToken={token}; HttpOnly; SameSite=Strict; Path=/"
                 }))
         else:
-            socket.sendall(httphelper.formatHttpHeaderRaw(401, {
+            socket.sendall(httphelper.formatHttpHeader(401, {
                 "WWW-Authenticate": "Basic realm=\"Dashboard\", charset=\"UTF-8\"",
                 "Connection": "close"
             }))
 
     def handleRequestHttp(self, socket: socket.socket):
-        socket.sendall(httphelper.formatHttpResponse(None, config.CWD / "httpsRequired.html", []))
+        socket.sendall(httphelper.formatHttpResponse(None, config.CWD / "httpsRequired.html"))
 
 def stopServerProc():
     if serverProc:

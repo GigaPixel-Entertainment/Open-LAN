@@ -1278,7 +1278,14 @@
                         imageOverlayImg.src = img.src
                     }
 
+                    imgLoadP = new Promise((r) => {
+                        img.onload = r
+                        img.onerror = r
+                    })
+
                     img.src = embed
+
+                    await imgLoadP
 
                     embeds.appendChild(img)
                 } else if (embedType.startsWith("audio/")) {
@@ -1307,9 +1314,14 @@
 
                     embeds.appendChild(video)
                 } else if (embedType.startsWith("text/")) {
+                    const textContResp = await fetch(embed, {
+                        "method": "GET"
+                    })
+                    const textCont = await textContResp.text()
+
                     const text = document.createElement("div")
                     text.style.height = "9em"
-                    text.style.maxWidth = "25vw"
+                    text.style.maxWidth = "20vw"
                     text.style.border = "none"
                     text.style.borderRadius = "8px"
                     text.style.marginRight = "1em"
@@ -1320,9 +1332,9 @@
 
                     const actualText = document.createElement("textarea")
                     actualText.style.resize = "none"
-                    actualText.style.width = "100%"
-                    actualText.style.height = "80%"
-                    actualText.style.padding = "0"
+                    actualText.style.width = "calc(100% - 1em)"
+                    actualText.style.height = "calc(80% - 1em)"
+                    actualText.style.padding = ".5em"
                     actualText.style.backgroundColor = "var(--acc4)"
                     actualText.style.border = "none"
                     actualText.style.borderTopLeftRadius = "8px"
@@ -1331,16 +1343,11 @@
                     actualText.classList = "font white"
                     actualText.readOnly = true
 
+                    actualText.textContent = textCont.substring(0, 1000)
 
-                    // TODO: FIX using fetch api
-                    //const contentBytes = Uint8Array.fromBase64(embedContent["embedContent"])
-                    //const content = textDecode(contentBytes)
-
-                    //actualText.textContent = //content.slice(0, 1000)
-
-                    //if (contentBytes.length > 1000) {
-                    //    actualText.textContent = actualText.textContent + "...\n(End of preview)"
-                    //}
+                    if (textCont.length > 1000) {
+                        actualText.textContent += "...\n(END OF PREVIEW)"
+                    }
 
                     const infoWrapper = document.createElement("div")
                     infoWrapper.style.width = "100%"
@@ -1372,7 +1379,12 @@
                     copy.src = "Media/Copy.png"
 
                     maximize.onclick = () => {
-                        textOverlayContent.textContent = content
+                        textOverlayContent.textContent = textCont.substring(0, 50000)
+
+                        if (textCont.length > 50000) {
+                            textOverlayContent.textContent += "...\n(END OF PREVIEW)"
+                        }
+
                         textOverlayFilename.textContent = filename
                         textOverlayDownload.download = filename
                         textOverlayDownload.href = embed
@@ -1381,7 +1393,7 @@
 
                     copy.onclick = () => {
                         try {
-                            window.navigator.clipboard.writeText(content)
+                            window.navigator.clipboard.writeText(textCont)
                         } catch {
                             console.warn("Failed to copy to clipboard!")
                         }

@@ -9,6 +9,8 @@ from io import BytesIO
 import mimetypes
 import logging
 import pathlib
+import string
+import random
 import socket
 import gzip
 
@@ -32,7 +34,18 @@ class HTTPRequestParser(BaseHTTPRequestHandler):
         self.error_code = code
         self.error_message = message
 
-def formatHttpHeaderRaw(statusCode: int, headerDict: dict | None = None):
+def randStrUrlSafe(length: int) -> str:
+    pool = string.ascii_letters + string.digits + "-_"
+    return ''.join(random.choices(pool, k=length))
+
+def formatHttpHeaderRaw(headerDict: dict) -> str:
+    header = ""
+    for k, v in headerDict.items():
+        header = header + f"{k}: {v}\r\n"
+
+    return header
+
+def formatHttpHeader(statusCode: int, headerDict: dict | None = None) -> bytes:
     respPhrase = ""
 
     try:
@@ -43,19 +56,19 @@ def formatHttpHeaderRaw(statusCode: int, headerDict: dict | None = None):
     header = f"HTTP/1.1 {statusCode} {respPhrase}\r\n"
 
     if headerDict:
-        for k, v in headerDict.items():
-            header = header + f"{k}: {v}\r\n"
+        header += formatHttpHeaderRaw(headerDict)
 
     return (header + "\r\n").encode("utf-8")
 
-def formatErrorResponse(statusCode: int):
-    return formatHttpHeaderRaw(statusCode, {"Connection": "close"})
-
-def formatHEADResponse(filePath: pathlib.Path, acceptEncoding: list):
+def formatHEADResponse(parsed: HTTPRequestParser, filePath: pathlib.Path) -> bytes:
     if not filePath.is_file():
         logging.warning("[MAIN] Invalid fetch %s!", filePath)
 
-        return formatErrorResponse(404)
+        return formatHttpHeader(404)
+
+    acceptEncoding = []
+    if parsed:
+        acceptEncoding = [s.strip() for s in parsed.headers.get("Accept-Encoding", "").split(",")]
 
     mime = mimetypes.guess_file_type(filePath)[0] or "application/octet-stream"
 
@@ -73,13 +86,62 @@ def formatHEADResponse(filePath: pathlib.Path, acceptEncoding: list):
     if encoding is not None:
         header["Content-Encoding"] = encoding
 
-    return formatHttpHeaderRaw(200, header)
+    return formatHttpHeader(200, header)
 
-def formatHttpResponse(parsed: HTTPRequestParser | None, filePath: pathlib.Path, acceptEncoding: list, fernet: Fernet | None = None, extraHeaders: dict | None = None):
+def formatHttpRange(fileContents: bytes, rangeStr: str) -> bytes | None:
+    fullFileLen = len(fileContents)
+    rangeSplit = rangeStr.split("-")
+
+    if len(rangeSplit) != 2:
+        return None
+
+    firstSplit = rangeSplit[0].strip()
+    lastSplit = rangeSplit[1].strip()
+    contentRange = f"{firstSplit if firstSplit != "" else 0}-{lastSplit if lastSplit != "" else fullFileLen - 1}"
+
+    if firstSplit == "":
+        lastSplit = int(lastSplit)
+
+        if lastSplit >= fullFileLen or lastSplit < 0:
+            return None
+
+        fileContents = fileContents[:lastSplit + 1]
+    elif lastSplit == "":
+        firstSplit = int(firstSplit)
+
+        if firstSplit >= fullFileLen or firstSplit < 0:
+            return None
+
+        fileContents = fileContents[firstSplit:]
+    else:
+        firstSplit = int(firstSplit)
+        lastSplit = int(lastSplit)
+
+        if firstSplit >= fullFileLen or firstSplit < 0:
+            return None
+
+        if lastSplit >= fullFileLen or lastSplit < 0:
+            return None
+
+        if lastSplit < firstSplit:
+            return None
+
+        fileContents = fileContents[firstSplit:lastSplit + 1]
+
+    return formatHttpHeaderRaw({
+        "Content-Length": len(fileContents),
+        "Content-Range": f"bytes {contentRange}/{fullFileLen}"
+    }).encode("utf-8") + b"\r\n" + fileContents
+
+def formatHttpResponse(parsed: HTTPRequestParser | None, filePath: pathlib.Path, fernet: Fernet | None = None, extraHeaders: dict | None = None) -> bytes:
     if not filePath.is_file():
         logging.warning("[MAIN] Invalid fetch %s!", filePath)
 
-        return formatErrorResponse(404)
+        return formatHttpHeader(404)
+
+    acceptEncoding = []
+    if parsed:
+        acceptEncoding = [s.strip() for s in parsed.headers.get("Accept-Encoding", "").split(",")]
 
     if extraHeaders is None:
         extraHeaders = {}
@@ -93,6 +155,55 @@ def formatHttpResponse(parsed: HTTPRequestParser | None, filePath: pathlib.Path,
         fileContents = fernet.decrypt(fileContents)
 
     mime = mimetypes.guess_file_type(filePath)[0] or "application/octet-stream"
+
+    if parsed and parsed.headers.get("Range"):
+        reqRange = parsed.headers.get("Range")
+
+        if reqRange:
+            if reqRange.startswith("bytes="):
+                rangesNoPrefix = reqRange.split("bytes=", 1)[1]
+                ranges = rangesNoPrefix.split(",")
+
+                if len(ranges) == 1:
+                    header = {"Content-Type": mime, "Accept-Ranges": "bytes", "Connection": "close"}
+
+                    final = formatHttpHeader(206, header | extraHeaders).rstrip(b"\r\n") + b"\r\n"
+                    currRng = formatHttpRange(fileContents, ranges[0])
+
+                    if currRng:
+                        final += currRng
+                    else:
+                        return formatHttpHeader(416, {
+                            "Content-Range": f"*/{len(fileContents)}"
+                        })
+
+                    return final
+                else:
+                    # Boundary must be max 70 characters
+                    boundary = f"Open-LAN-Boundary_{randStrUrlSafe(52)}"
+                    body = f"--{boundary}"
+                    fail = False
+
+                    for currRng in ranges:
+                        currHead = formatHttpRange(fileContents, currRng)
+
+                        if not currHead:
+                            fail = True
+                            break
+
+                        body += f"\r\n{currHead.decode("utf-8")}\r\n--{boundary}"
+
+                    if fail:
+                        return formatHttpHeader(416, {
+                            "Content-Range": f"*/{len(fileContents)}"
+                        })
+
+                    body += "--"
+
+                    header = {"Content-Type": f"multipart/byteranges; boundary={boundary}", "Content-Length": len(body), "Accept-Ranges": "bytes", "Connection": "close"}
+                    final = formatHttpHeader(206, header | extraHeaders) + body.encode("utf-8")
+
+                    return final
 
     encoding = None
 
@@ -111,44 +222,6 @@ def formatHttpResponse(parsed: HTTPRequestParser | None, filePath: pathlib.Path,
         elif encoding == "gzip":
             fileContents = gzip.compress(fileContents, compresslevel=config.GZIP_COMPRESSION_LEVEL)
 
-    fullFileLen = len(fileContents)
-
-    if parsed and parsed.headers.get("Range"):
-        reqRange = parsed.headers.get("Range")
-
-        if reqRange:
-            if reqRange.startswith("bytes="):
-                rangesNoPrefix = reqRange.split("bytes=", 1)[1]
-                ranges = rangesNoPrefix.split(",")
-
-                if len(ranges) == 1:
-                    contentRange = rangesNoPrefix
-                    rangeSplit = ranges[0].split("-")
-                    firstSplit = rangeSplit[0].strip()
-                    lastSplit = rangeSplit[1].strip()
-
-                    if firstSplit == "":
-                        lastSplit = int(lastSplit)
-                        fileContents = fileContents[:lastSplit + 1]
-                        contentRange = f"0{contentRange}"
-                    elif lastSplit == "":
-                        firstSplit = int(firstSplit)
-                        fileContents = fileContents[firstSplit:]
-                        contentRange = f"{contentRange}{fullFileLen - 1}"
-                    else:
-                        firstSplit = int(firstSplit)
-                        lastSplit = int(lastSplit)
-                        fileContents = fileContents[firstSplit:lastSplit + 1]
-
-                    header = {"Content-Type": mime, "Content-Length": len(fileContents), "Content-Range": f"bytes {contentRange}/{fullFileLen}", "Accept-Ranges": "bytes", "Connection": "close"}
-
-                    if encoding is not None:
-                        header["Content-Encoding"] = encoding
-
-                    return formatHttpHeaderRaw(206, header | extraHeaders) + fileContents
-                else:
-                    # TODO: multipart ranges
-                    pass
 
 
     header = {"Content-Type": mime, "Content-Length": len(fileContents), "Accept-Ranges": "bytes", "Connection": "close"}
@@ -156,7 +229,7 @@ def formatHttpResponse(parsed: HTTPRequestParser | None, filePath: pathlib.Path,
     if encoding is not None:
         header["Content-Encoding"] = encoding
 
-    return formatHttpHeaderRaw(200, header | extraHeaders) + fileContents
+    return formatHttpHeader(200, header | extraHeaders) + fileContents
 
 def isSafePath(path: pathlib.Path) -> bool:
     reqPath = path.resolve()
@@ -170,7 +243,7 @@ def isSafePath(path: pathlib.Path) -> bool:
 
     return False
 
-def getIpAddrs():
+def getIpAddrs() -> list[str]:
     ipList = []
     interfaces = psutil.net_if_addrs()
 
