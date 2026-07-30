@@ -9,12 +9,12 @@
         <link rel="stylesheet" href="CSS/app.css">
         <link rel="icon" href="Media/LogoSquare.png">
         <title>Open-LAN</title>
-
     </head>
     <body>
         <div id="serverList"></div>
         <div id="msgBoxHeader">
-            <p class="font white" id="ChatName">You are chatting with: The Void</p>
+            <img id="ChatIcon" src="Media/Copy.png">
+            <p class="font white" id="ChatName">The Void</p>
             <button class="font white" onclick="showMyProfileScreen()">my profile ↓</button>
         </div>
         <div id="lookingAtOldMsgs">
@@ -32,7 +32,7 @@
                 <img id="replyingPFP">
                 <h1 class="font white" id="replyingUsername"></h1>
                 <p class="font white" id="replyingMsg"></p>
-                <button class="font white" id="replyingCancel" onclick="cancelReply()">x</button>
+                <button class="font" id="replyingCancel" onclick="cancelReply()">x</button>
             </div>
             <label id="addFile" class="font" for="addFileInput">+</label>
             <input type="file" id="addFileInput" multiple>
@@ -59,14 +59,13 @@
                     <div id="newGCFriendsList">
                         <input type="search" id="newGCSearch" placeholder="search friends...">
                         <div id="newGCSearchRes" class="scroll"></div>
-                        <input type="submit" id="newGCCreate" value="Create" disabled class="font">
+                        <input type="submit" id="newGCCreate" value="Create" class="font">
                     </div>
                 </button>
                 <p class="font white">active messages</p>
                 <div id="friendsListContent" class="scroll"></div>
             </div>
         </div>
-
         <div id="myProfileScreen">
             <div id="myProfileHeader">
                 <p class="font white" id="ChatName">my profile settings</p>
@@ -150,7 +149,7 @@
             </div>
         </div>
 
-        <div id="pfpScalingWrapper">
+        <div id="pfpScalingWrapper" class="overlay">
             <div id="pfpScaling">
                 <img id="pfpPreview">
                 <div id="pfpPreviewActions">
@@ -160,11 +159,33 @@
             </div>
         </div>
 
-        <div id="imageOverlay">
+        <div id="editGcWrapper" class="overlay">
+            <div id="editGc">
+                <img id="editGcIcon">
+                <input type="file" id="editGcIconFile" name="editGcIconFile" accept="image/*">
+                <div id="editGcIconOverlay"></div>
+                <input type="text" maxlength="100" class="font white" id="editGcName" placeholder="groupchat name">
+                <div id="editGcActions">
+                    <button class="font" id="editGcActionsCancel">Cancel</button>
+                    <button class="font" id="editGcActionsSet">Set</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="addUserWrapper" class="overlay">
+            <div id="addUserFriendsList">
+                <input type="search" id="addUserSearch" placeholder="search friends..." class="font white">
+                <div id="addUserSearchRes" class="scroll"></div>
+                <input type="submit" id="addUserAdd" value="Add" class="font" class="font" disabled>
+                <input type="submit" id="addUserCancel" value="Cancel" class="font" class="font">
+            </div>
+        </div>
+
+        <div id="imageOverlay" class="overlay" style="opacity: 1;">
             <img id="imageOverlayImg" onload="imageOverlay.style.visibility = 'visible'">
         </div>
 
-        <div id="textOverlay">
+        <div id="textOverlay" class="overlay" style="opacity: 1;">
             <div id="textOverlayContents">
                 <textarea id="textOverlayText" class="font white" readonly>TEXT</textarea>
                 <div id="textOverlayInfoWrapper">
@@ -178,7 +199,7 @@
             </div>
         </div>
 
-        <div id="genericPopup">
+        <div id="genericPopup" class="overlay">
             <div id="popupContents">
                 <h1 id="popupTitle" class="font white"></h1>
                 <p id="popupContent" class="font white"></p>
@@ -197,6 +218,11 @@
             <button id="msgEditTxt" class="rClickMenuOption font white">edit</button>
             <button id="msgDeleteTxt" class="rClickMenuOption font white">delete</button>
         </div>
+
+        <div id="usrListRClickMenu" class="rClickMenu">
+            <button id="usrListProfile" class="rClickMenuOption font white">see profile</button>
+            <button id="usrListRemove" class="rClickMenuOption font white">remove from chat</button>
+        </div>
     </body>
     <footer>
         Open-LAN is open-source under the <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank">GNU General Public License</a> and available on <a href="https://github.com/GigaPixel-Entertainment/GPE-Open-LAN" target="_blank">Github</a>
@@ -213,6 +239,7 @@
         const friendsListWrapper = document.getElementById("friendsListWrapper")
         const toggleFriendsList = document.getElementById("toggleFriendsList")
         const myProfileScreen = document.getElementById("myProfileScreen")
+        const chatIcon = document.getElementById("ChatIcon")
         const chatName = document.getElementById("ChatName")
 
         const friendsListNewGC = document.getElementById("friendsListNewGC")
@@ -246,6 +273,23 @@
         const pfpPreview = document.getElementById("pfpPreview")
         const pfpCancel = document.getElementById("pfpPreviewActionsCancel")
         const pfpSet = document.getElementById("pfpPreviewActionsSet")
+
+        const editGcWrapper = document.getElementById("editGcWrapper")
+        const editGc = document.getElementById("editGc")
+        const editGcIcon = document.getElementById("editGcIcon")
+        const editGcIconFile = document.getElementById("editGcIconFile")
+        const editGcIconOverlay = document.getElementById("editGcIconOverlay")
+        const editGcName = document.getElementById("editGcName")
+        const editGcActions = document.getElementById("editGcActions")
+        const editGcActionsCancel = document.getElementById("editGcActionsCancel")
+        const editGcActionsSet = document.getElementById("editGcActionsSet")
+
+        const addUserWrapper = document.getElementById("addUserWrapper")
+        const addUserFriendsList = document.getElementById("addUserFriendsList")
+        const addUserSearch = document.getElementById("addUserSearch")
+        const addUserSearchRes = document.getElementById("addUserSearchRes")
+        const addUserAdd = document.getElementById("addUserAdd")
+        const addUserCancel = document.getElementById("addUserCancel")
 
         const currUsernameI = document.getElementById("currUsername")
         const currDisplaynameI = document.getElementById("currDisplayname")
@@ -291,6 +335,10 @@
         const rplyTxt = document.getElementById("msgReplyTxt")
         const editTxt = document.getElementById("msgEditTxt")
         const delTxt = document.getElementById("msgDeleteTxt")
+
+        const usrListRClickMenu = document.getElementById("usrListRClickMenu")
+        const usrListProfile = document.getElementById("usrListProfile")
+        const usrListRemove = document.getElementById("usrListRemove")
 
         const embedList = document.getElementById("embedList")
         const textEntry = document.getElementById("textEntry")
@@ -430,7 +478,10 @@
     </script>
     <script>
         // Misc UI
-        window.scrollTo(0, 0)
+        setInterval(() => {
+            // Fix scrolling
+            window.scrollTo(0, 0)
+        }, 100);
 
         var currChat = 0
         var currUID = -1
@@ -673,6 +724,7 @@
         }
 
         var msgRClickMenuMsg = null
+        var usrListRClickMenuUsr = null
         var lastRClickMenuClose = 0
 
         var selected = null
@@ -713,12 +765,18 @@
                 msgRClickMenuMsg = null
                 lastRClickMenuClose = Date.now()
             }
+
+            if (usrListRClickMenu.style.visibility == "visible") {
+                usrListRClickMenu.style.visibility = "hidden"
+                usrListRClickMenuUsr = null
+                lastRClickMenuClose = Date.now()
+            }
         })
 
         cpyTxt.addEventListener("mousedown", (e) => {
             if (msgRClickMenuMsg) {
                 try {
-                    window.navigator.clipboard.writeText(msgRClickMenuMsg["content"])
+                    window.navigator.clipboard.writeText(msgRClickMenuMsg["content"] || "")
                 } catch {
                     console.log("Failed to copy to clipboard!")
                 }
@@ -728,6 +786,10 @@
         rplyTxt.addEventListener("mousedown", (e) => {
             if (msgRClickMenuMsg) {
                 replyingMsgId = msgRClickMenuMsg["MSGID"]
+
+                if (!msgRClickMenuMsg["UID"]) {
+                    return
+                }
 
                 reqUsrInfo(msgRClickMenuMsg["UID"]).then((usrInfo) => {
                     replyingPFP.src = usrInfo["pfp"]
@@ -760,6 +822,12 @@
         delTxt.addEventListener("mousedown", (e) => {
             if (msgRClickMenuMsg && msgRClickMenuMsg["UID"] == currUID) {
                 request(JSON.stringify({"type": "delMsg", "CID": currChat, "MSGID": msgRClickMenuMsg["MSGID"]}))
+            }
+        })
+
+        usrListRemove.addEventListener("mousedown", (e) => {
+            if (usrListRClickMenu && usrListRClickMenuUsr && usrListRClickMenuUsr != currUID && currUID == chatCache["Owner"] && currChat != 0) {
+                request(JSON.stringify({"type": "rmUsrFromChat", "CID": currChat, "UID": usrListRClickMenuUsr}))
             }
         })
 
@@ -1032,6 +1100,7 @@
                 chatName.style.color = "transparent"
                 chatName.style.whiteSpace = "nowrap"
                 chatName.classList = "font"
+                chatName.textContent = chat["name"]
 
                 if (chat["type"] == "dm") {
                     const other = chat["recipients"].filter(item => item != currUID)
@@ -1043,12 +1112,11 @@
                         chatImgPic.src = otherInfo["pfp"]
                     } else {
                         // Fallback
-
-                        chatName.textContent = chat["name"]
                         chatImgPic.src = "Media/LogoSquare.png"
                     }
+                } else if (chat["type"] == "gc" || chat["type"] == "forced-gc") {
+                    chatImgPic.src = chat["icon"] || "Media/LogoSquare.png"
                 } else {
-                    chatName.textContent = chat["name"]
                     chatImgPic.src = "Media/LogoSquare.png"
                 }
 
@@ -1261,10 +1329,13 @@
                     embedContent = embedCache[embed]
                 } else {
                     embedContent = await request(JSON.stringify({"type": "getEmbed", "embedUrl": embed}))
-                    embedCache[embed] = embedContent
+
+                    if (embedContent["type"] == "getEmbedSuccess") {
+                        embedCache[embed] = embedContent
+                    }
                 }
 
-                if (!embedContent) {
+                if (!embedContent || embedContent["type"] == "getEmbedFailed") {
                     continue
                 }
 
@@ -1331,7 +1402,7 @@
                     video.src = embed
 
                     embeds.appendChild(video)
-                } else if (embedType.startsWith("text/")) {
+                } else if (embedType.startsWith("text/") || ["application/json", "application/x-sh", "application/shellscript"].includes(embedType)) {
                     const textContResp = await fetch(embed, {
                         "method": "GET"
                     })
@@ -1441,7 +1512,18 @@
                     const icon = document.createElement("img")
                     icon.style.width = "5em"
                     icon.style.height = "5em"
-                    icon.src = "Media/file.png"
+
+                    if (embedType == "application/pdf") {
+                        icon.src = "Media/pdf.png"
+                    } else if (embedType == "application/java-archive") {
+                        icon.src = "Media/jar.png"
+                    } else if (["application/json", "application/x-httpd-php", "application/x-sh", "application/xhtml+xml"].includes(embedType)) {
+                        icon.src = "Media/code.png"
+                    } else if (["application/x-freearc", "application/x-bzip", "application/x-bzip2", "application/gzip", "application/x-gzip", "application/vnd.rar", "application/x-tar", "application/zip", "application/x-zip-compressed", "application/x-7z-compressed"].includes(embedType)) {
+                        icon.src = "Media/compress.png"
+                    } else {
+                        icon.src = "Media/generic.png"
+                    }
 
                     const title = document.createElement("a")
                     title.style.width = "calc(100% - 5em - 1em)"
@@ -1765,6 +1847,84 @@
             return messageDiv
         }
 
+        async function genSysMsg(message, messageDate) {
+            const messageDiv = document.createElement("div")
+            messageDiv.classList = "messageDiv"
+            messageDiv.style.padding = "0"
+            messageDiv.style.marginTop = "1em"
+            messageDiv.style.marginBottom = "1em"
+            messageDiv.style.backgroundColor = "var(--highlighted-transparent)"
+
+            const padArea = document.createElement("div")
+            padArea.style.width = "4%"
+
+            if (messageDate) {
+                const timeDisplay = document.createElement("p")
+                timeDisplay.textContent = messageDate.toLocaleTimeString("en-US", {"hour":"2-digit","minute":"2-digit"})
+                timeDisplay.style.width = "4%"
+                timeDisplay.classList = "font smallTime"
+
+                messageDiv.addEventListener("mouseenter", (e) => {
+                    timeDisplay.style.visibility = "visible"
+                })
+
+                messageDiv.addEventListener("mouseleave", (e) => {
+                    timeDisplay.style.visibility = "hidden"
+                })
+
+                padArea.append(timeDisplay)
+            }
+
+            const textarea = document.createElement("div")
+            textarea.style.width = "96%"
+            textarea.style.background = "none"
+
+            const msgP = document.createElement("p")
+            msgP.classList = "font white"
+            msgP.style.margin = ".1em"
+            msgP.style.overflowWrap = "break-word"
+            msgP.style.wordWrap = "break-word"
+
+            if (message["TYPE"] == "editGcInfo") {
+                targetInfo = await reqUsrInfo(message["TARGET"])
+
+                if (targetInfo) {
+                    msgP.innerHTML = "<b>" + targetInfo["displayname"] + "</b> changed the group name/icon"
+                }
+            } else if (message["TYPE"] == "addUsrToGc") {
+                targetInfo = await reqUsrInfo(message["TARGET"])
+
+                if (targetInfo) {
+                    if (message["TARGETS"].length == 1) {
+                        otherInfo = await reqUsrInfo(message["TARGETS"][0])
+                        msgP.innerHTML = "<span class='green'>-></span> <b>" + targetInfo["displayname"] + "</b> added <b>" + otherInfo["displayname"] + "</b> to this chat"
+                    } else {
+                        msgP.innerHTML = "<span class='green'>-></span> <b>" + targetInfo["displayname"] + "</b> added <b>" + message["TARGETS"].length + "</b> people to this chat"
+                    }
+                }
+            } else if (message["TYPE"] == "usrLeaveGc") {
+                targetInfo = await reqUsrInfo(message["TARGET"])
+
+                if (targetInfo) {
+                    msgP.innerHTML = "<span class='red'><-</span> <b>" + targetInfo["displayname"] + "</b> left the chat"
+                }
+            } else if (message["TYPE"] == "usrRemovedGc") {
+                infos = await reqMultiUsrInfo([message["TARGET"], message["TARGET2"]])
+
+                if (infos) {
+                    owner = infos[0]
+                    victim = infos[1]
+                    msgP.innerHTML = "<span class='red'><-</span> <b>" + victim["displayname"] + "</b> was removed by <b>" + owner["displayname"] + "</b>"
+                }
+            }
+
+            textarea.append(msgP)
+            messageDiv.append(padArea)
+            messageDiv.append(textarea)
+
+            return messageDiv
+        }
+
         var chatCache = null
         var chatFetchInProgress = false
         var changedChat = true
@@ -1824,14 +1984,20 @@
                 }
             }
 
+
             let messageDiv = null
 
-            let isShortMsg = lastMsg && message["UID"] == lastMsg["UID"] && message["time"] - lastMsg["time"] < 10*60 && !(message["replyTo"] && message["replyTo"] != -1) && messageDate.getDate() == lastMessageDate.getDate()
 
-            if (isShortMsg) {
-                messageDiv = await genSmallMsg(userInfos, message, messageDate)
+            if (message["SYSMSG"]) {
+                messageDiv = await genSysMsg(message, messageDate)
             } else {
-                messageDiv = await genFullMsg(userInfos, message, messageDate)
+                let isShortMsg = lastMsg && !lastMsg["SYSMSG"] && message["UID"] == lastMsg["UID"] && message["time"] - lastMsg["time"] < 10*60 && !(message["replyTo"] && message["replyTo"] != -1) && messageDate.getDate() == lastMessageDate.getDate()
+
+                if (isShortMsg) {
+                    messageDiv = await genSmallMsg(userInfos, message, messageDate)
+                } else {
+                    messageDiv = await genFullMsg(userInfos, message, messageDate)
+                }
             }
 
             messageDiv.dataset.msgid = "MSGID" + message["MSGID"]
@@ -1849,7 +2015,6 @@
                 } else {
                     editTxt.disabled = true
                     delTxt.disabled = true
-
                 }
 
                 msgRClickMenu.style.visibility = "visible"
@@ -1913,10 +2078,13 @@
             const chat = chatCache
             const currChatName = chat["Name"]
             const currRecipients = chat["Recipients"]
+            const currOwner = chat["Owner"]
             const currChatType = chat["Type"]
 
             if (currChatType == "forced-gc" || currChatType == "gc") {
-                chatName.textContent = "You are chatting on: " + currChatName
+                chatName.textContent = currChatName
+                chatIcon.src = chat["Icon"] || "Media/LogoSquare.png"
+
                 const userList2 = []
                 for (let i = 0; i < chat["Recipients"].length; i++) {
                     const uid = chat["Recipients"][i];
@@ -1933,6 +2101,21 @@
                     pfp.style.marginRight = ".5em"
                     pfp.src = usrInfo["pfp"]
 
+                    if (currOwner == uid) {
+                        const crown = document.createElement("img")
+                        crown.style.position = "absolute"
+                        crown.style.left = "30px"
+                        crown.style.top = "30px"
+                        crown.style.height = "50%"
+                        crown.style.transform = "translateX(-50%)"
+                        crown.src = "Media/ribbon.png"
+
+                        userDiv.style.backgroundColor = "var(--highlighted-transparent)"
+                        userDiv.style.borderLeft = "2px solid var(--highlighted)"
+
+                        userDiv.appendChild(crown)
+                    }
+
                     const displayname = document.createElement("p")
                     displayname.style.width = "calc(100% - 36px - .5em)"
                     displayname.style.padding = "0"
@@ -1948,11 +2131,85 @@
                     userDiv.appendChild(pfp)
                     userDiv.appendChild(displayname)
                     userList2.push(userDiv)
+
+                    userDiv.addEventListener("contextmenu", (e) => {
+                        if (Date.now() - lastRClickMenuClose < 10) {
+                            return
+                        }
+
+                        e.preventDefault()
+
+                        if (currUID == chatCache["Owner"] && currUID != uid && currChat != 0) {
+                            usrListRemove.disabled = false
+                        } else {
+                            usrListRemove.disabled = true
+                        }
+
+                        usrListRClickMenu.style.visibility = "visible"
+                        if (e.pageX + usrListRClickMenu.offsetWidth > window.innerWidth) {
+                            usrListRClickMenu.style.left = e.pageX - usrListRClickMenu.offsetWidth + "px"
+                        } else {
+                            usrListRClickMenu.style.left = e.pageX + "px"
+                        }
+
+                        if (e.pageY + usrListRClickMenu.offsetHeight > window.innerHeight) {
+                            usrListRClickMenu.style.top = e.pageY - usrListRClickMenu.offsetHeight + "px"
+                        } else {
+                            usrListRClickMenu.style.top = e.pageY + "px"
+                        }
+                        usrListRClickMenuUsr = uid
+                    })
                 }
+
+                const addUsr = document.createElement("button")
+                addUsr.style.width = "90%"
+                addUsr.style.marginLeft = "5%"
+                addUsr.style.fontSize = "1.5em"
+                addUsr.style.backgroundColor = "var(--acc3)"
+                addUsr.style.border = "none"
+                addUsr.style.borderRadius = "0"
+                addUsr.style.marginTop = "1em"
+                addUsr.classList = "font white"
+                addUsr.textContent = "add user"
+
+                addUsr.addEventListener("click", openAddUser)
+
+                const leaveGc = document.createElement("button")
+                leaveGc.style.width = "90%"
+                leaveGc.style.marginLeft = "5%"
+                leaveGc.style.fontSize = "1.5em"
+                leaveGc.style.background = "none"
+                leaveGc.style.border = "2px solid var(--rose)"
+                leaveGc.style.borderRadius = "0"
+                leaveGc.style.marginTop = "1em"
+                leaveGc.style.color = "var(--rose)"
+                leaveGc.classList = "font"
+                leaveGc.textContent = "leave gc"
+
+                leaveGc.addEventListener("click", () => {
+                    request(JSON.stringify({
+                        "type": "leaveGc",
+                        "CID": currChat
+                    }))
+                })
+
+                if (chatCache["Type"] == "forced-gc") {
+                    addUsr.style.backgroundColor = "var(--placeholder)"
+                    leaveGc.style.color = "var(--placeholder)"
+                    leaveGc.style.border = "2px solid var(--placeholder)"
+                    addUsr.disabled = true
+                    leaveGc.disabled = true
+                } else {
+                    addUsr.style.cursor = "pointer"
+                    leaveGc.style.cursor = "pointer"
+                }
+
+                userList2.push(addUsr)
+                userList2.push(leaveGc)
 
                 userListCounter.style.position = ""
                 userListCounter.style.visibility = "visible"
-                userListCounter.textContent = "Members-" + userList2.length
+                userListCounter.textContent = "Members-" + currRecipients.length
                 userListContent.replaceChildren()
                 userList2.forEach((e) => {
                     userListContent.appendChild(e)
@@ -1961,7 +2218,8 @@
                 const other = currRecipients.filter(item => item != currUID)[0]
                 const usrInfo = await reqUsrInfo(other)
 
-                chatName.textContent = "You are chatting with: " + usrInfo["displayname"]
+                chatName.textContent = usrInfo["displayname"]
+                chatIcon.src = usrInfo["pfp"]
 
                 userListContent.replaceChildren()
                 userListCounter.style.visibility = "hidden"
@@ -2203,8 +2461,8 @@
 
         const GCFriendsIncluded = []
         async function setCreateGCList() {
-            searchQuery = newGCSearch.value
-            searchRes = []
+            const searchQuery = newGCSearch.value
+            const searchRes = []
 
             for (let i = 0; i < friends.length; i++) {
                 const f = friends[i];
@@ -2274,12 +2532,6 @@
                             GCFriendsIncluded.splice(ind, 1)
                         }
                     }
-
-                    if (GCFriendsIncluded.length >= 2) {
-                        newGCCreate.disabled = false
-                    } else {
-                        newGCCreate.disabled = true
-                    }
                 })
 
                 fDiv.appendChild(pfp)
@@ -2289,9 +2541,7 @@
             }
         }
 
-        newGCSearch.addEventListener("input", () => {
-            setCreateGCList()
-        })
+        newGCSearch.addEventListener("input", setCreateGCList)
 
         friendsListNewGC.addEventListener("click", () => {
             newGCFriendsList.style.visibility = "visible"
@@ -2304,10 +2554,6 @@
         })
 
         newGCCreate.addEventListener("click", (e) => {
-            if (GCFriendsIncluded.length < 2) {
-                return
-            }
-
             let included = [...GCFriendsIncluded]
 
             newGCFriendsList.style.visibility = "hidden"
@@ -2316,6 +2562,197 @@
             e.stopPropagation()
 
             request(JSON.stringify({"type": "createGC", "include": included}))
+        })
+
+        function openEditGc() {
+            const isGC = chatCache["Type"] == "gc" || chatCache["Type"] == "forced-gc"
+            if (!isGC) {
+                return
+            }
+
+            editGcIconFile.value = ""
+            editGcIcon.src = chatCache["Icon"] || "Media/LogoSquare.png"
+            editGcName.value = chatCache["Name"]
+            editGcWrapper.style.visibility = "visible"
+            editGcWrapper.style.opacity = "1"
+        }
+
+        function closeEditGc() {
+            editGcWrapper.style.opacity = "0"
+            setTimeout(() => {
+                editGcWrapper.style.visibility = "hidden"
+            }, 250)
+        }
+
+        chatName.addEventListener("click", openEditGc)
+        chatIcon.addEventListener("click", openEditGc)
+
+        editGcActionsCancel.addEventListener("click", () => {
+            closeEditGc()
+        })
+
+        editGcActionsSet.addEventListener("click", () => {
+            request(JSON.stringify({
+                "type": "updateGcInfo",
+                "CID": currChat,
+                "icon": editGcIcon.src,
+                "name": editGcName.value
+            }))
+            closeEditGc()
+        })
+
+        editGcIconFile.addEventListener("mouseenter", () => {
+            editGcIconOverlay.style.visibility = "visible"
+        })
+
+        editGcIconFile.addEventListener("mouseleave", () => {
+            editGcIconOverlay.style.visibility = "hidden"
+        })
+
+        editGcIconFile.addEventListener("change", (e) => {
+            const files = e.target.files
+
+            if (files && files.length == 1) {
+                const file = files[0]
+                convertFileToBase64(file).then((b64) => {
+                    editGcIcon.src = b64
+                })
+            }
+        })
+
+        const usersToAdd = []
+        async function setAddUsrSearchResults() {
+            const currChatRecipients = chatCache["Recipients"]
+            const searchQuery = addUserSearch.value
+            const searchRes = []
+
+            for (let i = 0; i < friends.length; i++) {
+                const f = friends[i];
+                const usrInfo = await reqUsrInfo(f["UID"])
+
+                if (usrInfo["displayname"].toLowerCase().includes(searchQuery.toLowerCase()) || usersToAdd.includes(usrInfo["UID"])) {
+                    searchRes.push(usrInfo)
+                }
+            }
+
+            searchRes.sort((a, b) => {
+                diffA = compareTwoStrings(a["displayname"], searchQuery)
+                diffB = compareTwoStrings(b["displayname"], searchQuery)
+
+                return diffB - diffA
+            })
+
+            addUserSearchRes.replaceChildren()
+            for (let i = 0; i < searchRes.length; i++) {
+                const usrInfo = searchRes[i]
+
+                const fDiv = document.createElement("div")
+                fDiv.style.width = "100%"
+                fDiv.style.height = "60px"
+                fDiv.style.margin = "0"
+                fDiv.style.marginTop = ".25em"
+                fDiv.style.marginBottom = ".25em"
+                fDiv.style.overflow = "hidden"
+                fDiv.style.display = "flex"
+                fDiv.style.flexDirection = "row"
+                fDiv.style.alignItems = "center"
+
+                const pfp = document.createElement("img")
+                pfp.style.height = "calc(100% - 4px)"
+                pfp.style.aspectRatio = "1"
+                pfp.style.borderRadius = "9999px"
+                pfp.style.border = "2px solid var(--acc4)"
+                pfp.style.marginRight = ".5em"
+                pfp.src = usrInfo["pfp"]
+
+                const dn = document.createElement("p")
+                dn.style.width = "calc(100% - 56px - 30px)"
+                dn.style.margin = "0"
+                dn.style.padding = "0"
+                dn.style.whiteSpace = "pre"
+                dn.style.textAlign = "left"
+                dn.style.overflow = "hidden"
+                dn.style.background = "linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%)"
+                dn.style.backgroundClip = "text"
+                dn.style.color = "transparent"
+                dn.style.fontSize = "1.5em"
+                dn.classList = "font"
+                dn.textContent = usrInfo["displayname"]
+
+                const check = document.createElement("input")
+                check.style.height = "50%"
+                check.style.aspectRatio = "1"
+                check.type = "checkbox"
+                check.checked = usersToAdd.includes(usrInfo["UID"]) || currChatRecipients.includes(usrInfo["UID"])
+                check.disabled = currChatRecipients.includes(usrInfo["UID"])
+
+                check.addEventListener("change", (e) => {
+                    if (currChatRecipients.includes(usrInfo["UID"])) {
+                        check.checked = true
+                        return
+                    }
+
+                    if (check.value && !usersToAdd.includes(usrInfo["UID"])) {
+                        usersToAdd.push(usrInfo["UID"])
+                    } else {
+                        const ind = usersToAdd.indexOf(usrInfo["UID"])
+
+                        if (ind != -1) {
+                            usersToAdd.splice(ind, 1)
+                        }
+                    }
+
+                    if (usersToAdd.length > 0) {
+                        addUserAdd.disabled = false
+                    } else {
+                        addUserAdd.disabled = true
+                    }
+                })
+
+                fDiv.appendChild(pfp)
+                fDiv.appendChild(dn)
+                fDiv.appendChild(check)
+                addUserSearchRes.appendChild(fDiv)
+            }
+        }
+
+        function openAddUser() {
+            addUserSearch.value = ""
+            usersToAdd.splice(0, usersToAdd.length)
+            setAddUsrSearchResults()
+            addUserWrapper.style.visibility = "visible"
+            addUserWrapper.style.opacity = "1"
+        }
+
+        function closeAddUser() {
+            addUserWrapper.style.opacity = "0"
+
+            setTimeout(() => {
+                addUserWrapper.style.visibility = "hidden"
+            }, 250)
+        }
+
+        addUserCancel.addEventListener("click", closeAddUser)
+        addUserSearch.addEventListener("input", setAddUsrSearchResults)
+
+        addUserAdd.addEventListener("click", () => {
+            if (usersToAdd.length == 0) {
+                return
+            }
+
+            request(JSON.stringify({
+                "type": "addUsrToChat",
+                "CID": currChat,
+                "users": usersToAdd
+            }))
+
+            addUserSearch.value = ""
+            usersToAdd.splice(0, usersToAdd.length)
+            addUserWrapper.style.opacity = "0"
+            setAddUsrSearchResults()
+            setTimeout(() => {
+                addUserWrapper.style.visibility = "hidden"
+            }, 250)
         })
     </script>
 
@@ -2598,6 +3035,22 @@
                                             setChat(respBody["chat"])
                                         }
 
+                                        if (respBody["type"] == "metaChatUpdate") {
+                                            delete chatMetaCache[respBody["chat"]["CID"].toString()]
+
+                                            setChat(respBody["chat"])
+                                            setChatList()
+                                        }
+
+                                        if (respBody["type"] == "chatGone") {
+                                            chats = respBody["chats"]
+                                            currChat = 0
+                                            currPage = 0
+                                            changedChat = true
+                                            fetchChatData()
+                                            setChatList()
+                                        }
+
                                         if (respBody["type"] == "newMsg") {
                                             if (currChat == respBody["CID"]) {
                                                 if (currPage == 0) {
@@ -2621,7 +3074,9 @@
 
                                                 requiredUIDs = []
                                                 chatCache["messages"].forEach(message => {
-                                                    requiredUIDs.push(message["UID"])
+                                                    if (message["UID"]) {
+                                                        requiredUIDs.push(message["UID"])
+                                                    }
                                                 });
 
                                                 userInfos = reqMultiUsrInfo(requiredUIDs).then((userInfos) => {
@@ -2819,16 +3274,27 @@
                         updateEmbeds()
                     }
 
-                    if (file.type.startsWith("image/")) {
+                    if (file.type == "application/pdf") {
+                        embedImg.src = "Media/pdf.png"
+                    } else if (file.type == "application/java-archive") {
+                        embedImg.src = "Media/jar.png"
+                    } else if (["text/css", "text/html", "application/json", "text/javascript", "application/x-httpd-php", "application/x-sh", "application/shellscript", "application/xhtml+xml", "text/x-python"].includes(file.type)) {
+                        embedImg.src = "Media/code.png"
+                    } else if (["application/x-freearc", "application/x-bzip", "application/x-bzip2", "application/gzip", "application/x-gzip", "application/vnd.rar", "application/x-tar", "application/zip", "application/x-zip-compressed", "application/x-7z-compressed"].includes(file.type)) {
+                        embedImg.src = "Media/compress.png"
+                    } else if (file.type.startsWith("image/")) {
                         convertFileToBase64(file).then((b64) => {
                             embedImg.src = b64
                         })
                     } else if (file.type.startsWith("audio/")) {
-                        embedImg.src = "Media/music.png"
+                        embedImg.src = "Media/audio.png"
                     } else if (file.type.startsWith("video/")) {
                         embedImg.src = "Media/video.png"
+                    } else if (file.type.startsWith("text/")) {
+                        console.log(file.type)
+                        embedImg.src = "Media/text.png"
                     } else {
-                        embedImg.src = "Media/file.png"
+                        embedImg.src = "Media/generic.png"
                     }
 
                     embedList.appendChild(embedImgWrapper)

@@ -45,6 +45,10 @@ class WS():
             format=serialization.PublicFormat.UncompressedPoint
         )
 
+        mimetypes.add_type("application/java-archive", ".jar")
+        mimetypes.add_type("text/plain", ".log")
+        mimetypes.add_type("application/x-sh", ".sh")
+
     def isValidToken(self, authToken: str | None, username=None):
         if authToken is None:
             return False
@@ -249,10 +253,7 @@ class WS():
                 if "encryption" in msgDecoded and msgDecoded["encryption"] == "AES":
                     decryptedBody, trackerId = await self.decrypt(ws, msgDecoded)
 
-                    if decryptedBody is None:
-                        break
-
-                    if not "type" in decryptedBody:
+                    if decryptedBody is None or not self.checkFields(decryptedBody, ["type"]):
                         await self.wsSendEncrypted(ws, orjson.dumps({"type": "unknownRequest"}), trackerId)
                         continue
 
@@ -333,7 +334,7 @@ class WS():
 
                         targetChat = None
                         for cht in self.chats:
-                            if cht["CID"] == 0:
+                            if cht["Type"] == "forced-gc":
                                 cht["Recipients"] = list(range(len(self.users)))
                                 targetChat = cht
 
@@ -387,6 +388,7 @@ class WS():
                                 "CID": chat["CID"],
                                 "type": chat["Type"],
                                 "name": chat["Name"],
+                                "icon": chat["Icon"] if "Icon" in chat else secrets.choice(self.DEFAULT_PFPS),
                                 "recipients": chat["Recipients"]
                             }}), trackerId)
                         else:
@@ -461,7 +463,7 @@ class WS():
                                 await self.wsSendEncrypted(ws, orjson.dumps({"type": "getEmbedFailed"}), trackerId)
                                 continue
 
-                            fileType, _ = mimetypes.guess_file_type(filePath)
+                            fileType, _ = mimetypes.guess_file_type(filePath, strict=False)
 
                             await self.wsSendEncrypted(ws, orjson.dumps({
                                 "type": "getEmbedSuccess",
@@ -501,11 +503,7 @@ class WS():
                                 await self.wsSendEncrypted(ws, orjson.dumps({"type": "chatUpdateFailed"}), trackerId)
                                 continue
 
-                            if len(decryptedBody["msg"]) > 4000:
-                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "chatUpdateFailed"}), trackerId)
-                                continue
-
-                            if len(decryptedBody["embed"]) > 10:
+                            if not self.tokenInChat(authToken, decryptedBody["CID"]) or len(decryptedBody["msg"]) > 4000 or len(decryptedBody["embed"]) > 10:
                                 await self.wsSendEncrypted(ws, orjson.dumps({"type": "chatUpdateFailed"}), trackerId)
                                 continue
 
@@ -523,7 +521,7 @@ class WS():
                                 embedBytes = base64.b64decode(embedC)
                                 uuid = ""
                                 fNameSafe = base64.urlsafe_b64encode(embedName.encode("utf-8")).decode("utf-8")
-                                fileType = mimetypes.guess_extension(embed["type"])
+                                fileType = mimetypes.guess_extension(embed["type"], strict=False)
 
                                 if fileType is None:
                                     fileType = ".bin"
@@ -567,7 +565,6 @@ class WS():
 
                                 if decryptedBody["CID"] in userInfo["Chats"]:
                                     broadcastClients.append(client)
-
 
                             await self.wsBroadcastEncrypted(broadcastClients, orjson.dumps({"type":"newMsg", "CID": chat["CID"], "message": msgObj}))
                         else:
@@ -771,10 +768,10 @@ class WS():
                             break
 
                     if decryptedBody["type"] == "logout":
-                        usr = self.getUserIdFromAuthToken(authToken)
+                        usrName = self.getUsernameFromAuthToken(authToken)
 
-                        if usr:
-                            self.VALID_TOKENS.pop(usr, None)
+                        if usrName:
+                            self.VALID_TOKENS.pop(usrName, None)
 
                         await self.wsSendEncrypted(ws, orjson.dumps({"type": "logoutSuccess"}))
                         await ws.close()
@@ -1063,7 +1060,7 @@ class WS():
                                 await self.wsSendEncrypted(ws, orjson.dumps({"type": "createGCFailed"}), trackerId)
                                 continue
 
-                            included = decryptedBody["include"] + [selfUID]
+                            included = [selfUID] + decryptedBody["include"]
 
                             cid = len(self.chats)
                             chatName = ""
@@ -1087,7 +1084,7 @@ class WS():
                             if len(chatName) > 100:
                                 chatName = f"{len(included)} people"
 
-                            self.chats.append({"CID": cid, "Type": "gc", "Name": chatName, "Recipients": included, "messages": []})
+                            self.chats.append({"CID": cid, "Type": "gc", "Name": chatName, "Recipients": included, "Owner": selfUID, "Icon": secrets.choice(self.DEFAULT_PFPS), "messages": []})
 
                             for ws2 in self.WS_CLIENTS:
                                 wsUID = getattr(ws2, "UID", None)
@@ -1095,6 +1092,218 @@ class WS():
 
                                 if wsUID is not None and targetInfo is not None and wsUID in included:
                                     await self.wsSendEncrypted(ws2, orjson.dumps({"type": "newChat", "chats": targetInfo["Chats"]}))
+                        else:
+                            break
+
+                    if decryptedBody["type"] == "updateGcInfo":
+                        if await self.checkAuthTokenEncrypted(ws, authToken):
+                            if not self.checkFields(decryptedBody, ["CID", "icon", "name"]):
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "updateGcInfoFailed"}), trackerId)
+                                continue
+
+                            if not self.tokenInChat(authToken, decryptedBody["CID"]):
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "updateGcInfoFailed"}), trackerId)
+                                continue
+
+                            uid = self.getUserIdFromAuthToken(authToken)
+                            newChatName = decryptedBody["name"].strip()
+                            chat = self.getChatFromCID(decryptedBody["CID"])
+
+                            if not chat or not uid:
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "updateGcInfoFailed"}), trackerId)
+                                continue
+
+                            iconB64 = self.resizePfp(decryptedBody["icon"])
+
+                            chat["Icon"] = iconB64
+
+                            if len(newChatName) <= 100 and len(newChatName) > 0:
+                                chat["Name"] = newChatName
+
+                            chat["messages"].append({
+                                "SYSMSG": True,
+                                "MSGID": len(chat["messages"]),
+                                "TYPE": "editGcInfo",
+                                "TARGET": uid,
+                                "time": time.time()
+                            })
+
+                            for ws2 in self.WS_CLIENTS:
+                                wsUID = getattr(ws2, "UID", None)
+                                targetInfo = self.getUserInfoFromUserId(wsUID)
+
+                                if wsUID is not None and decryptedBody["CID"] in targetInfo["Chats"]:
+                                    await self.wsSendEncrypted(ws2, orjson.dumps({"type": "metaChatUpdate", "chat": chat}))
+                        else:
+                            break
+
+                    if decryptedBody["type"] == "addUsrToChat":
+                        if await self.checkAuthTokenEncrypted(ws, authToken):
+                            if not self.checkFields(decryptedBody, ["CID", "users"]):
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "addUsrFailed"}), trackerId)
+                                continue
+
+                            if not self.tokenInChat(authToken, decryptedBody["CID"]):
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "addUsrFailed"}), trackerId)
+                                continue
+
+                            uid = self.getUserIdFromAuthToken(authToken)
+                            selfInfo = self.getUserInfoFromUserId(uid)
+                            chat = self.getChatFromCID(decryptedBody["CID"])
+
+                            if not chat or not uid or not selfInfo:
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "addUsrFailed"}), trackerId)
+                                continue
+
+                            friendsList: list[int] = [friend["UID"] for friend in selfInfo["Friends"]]
+
+                            success = True
+                            for usr in decryptedBody["users"]:
+                                if not usr in friendsList:
+                                    success = False
+                                    break
+
+                            if not success:
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "addUsrFailed"}), trackerId)
+                                continue
+
+                            for usr in decryptedBody["users"]:
+                                usrInfo = self.getUserInfoFromUserId(usr)
+
+                                if usrInfo is None or decryptedBody["CID"] in usrInfo["Chats"]:
+                                    continue
+
+                                usrInfo["Chats"].append(decryptedBody["CID"])
+                                chat["Recipients"].append(usr)
+
+                            chat["messages"].append({
+                                "SYSMSG": True,
+                                "MSGID": len(chat["messages"]),
+                                "TYPE": "addUsrToGc",
+                                "TARGET": uid,
+                                "TARGETS": decryptedBody["users"],
+                                "time": time.time()
+                            })
+
+                            for ws2 in self.WS_CLIENTS:
+                                wsUID = getattr(ws2, "UID", None)
+                                targetInfo = self.getUserInfoFromUserId(wsUID)
+
+                                if wsUID is not None and decryptedBody["CID"] in targetInfo["Chats"]:
+                                    await self.wsSendEncrypted(ws2, orjson.dumps({"type": "newChat", "chats": targetInfo["Chats"]}))
+                                    await self.wsSendEncrypted(ws2, orjson.dumps({"type": "metaChatUpdate", "chat": chat}))
+                        else:
+                            break
+
+                    if decryptedBody["type"] == "leaveGc":
+                        if await self.checkAuthTokenEncrypted(ws, authToken):
+                            if not self.checkFields(decryptedBody, ["CID"]):
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "leaveGcFailed"}), trackerId)
+                                continue
+
+                            uid = self.getUserIdFromAuthToken(authToken)
+                            cid = decryptedBody["CID"]
+                            usrInfo = self.getUserInfoFromUserId(uid)
+                            chat = self.getChatFromCID(cid)
+
+                            if not uid or not usrInfo or not chat or chat["Type"] == "forced-gc":
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "leaveGcFailed"}), trackerId)
+                                continue
+
+                            failed = False
+                            try:
+                                usrInfo["Chats"].remove(cid)
+                                chat["Recipients"].remove(uid)
+                            except:
+                                failed = True
+                                traceback.print_exc()
+                                logging.warning("Failed to remove user from chat! UID: %i, CID: %i", uid, cid)
+
+                            if failed:
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "leaveGcFailed"}), trackerId)
+                                continue
+
+                            if uid == chat["Owner"] and len(chat["Recipients"]) > 0:
+                                chat["Owner"] = chat["Recipients"][0]
+
+                            if len(chat["Recipients"]) == 0:
+                                chat["messages"] = []
+                                chat["Name"] = "deleted"
+                                chat["Icon"] = secrets.choice(self.DEFAULT_PFPS)
+                                chat["Owner"] = 0
+                                continue
+
+                            chat["messages"].append({
+                                "SYSMSG": True,
+                                "MSGID": len(chat["messages"]),
+                                "TYPE": "usrLeaveGc",
+                                "TARGET": uid,
+                                "time": time.time()
+                            })
+
+                            await self.wsSendEncrypted(ws, orjson.dumps({"type": "chatGone", "chats": usrInfo["Chats"]}), trackerId)
+
+                            for ws2 in self.WS_CLIENTS:
+                                wsUID = getattr(ws2, "UID", None)
+                                targetInfo = self.getUserInfoFromUserId(wsUID)
+
+                                if wsUID is not None and cid in targetInfo["Chats"]:
+                                    await self.wsSendEncrypted(ws2, orjson.dumps({"type": "metaChatUpdate", "chat": chat}))
+                        else:
+                            break
+
+                    if decryptedBody["type"] == "rmUsrFromChat":
+                        if await self.checkAuthTokenEncrypted(ws, authToken):
+                            if not self.checkFields(decryptedBody, ["CID", "UID"]):
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "rmUsrFailed"}), trackerId)
+                                continue
+
+                            targetUID = decryptedBody["UID"]
+                            targetInfo = self.getUserInfoFromUserId(targetUID)
+                            cid = decryptedBody["CID"]
+                            chat = self.getChatFromCID(cid)
+                            selfUID = self.getUserIdFromAuthToken(authToken)
+
+                            if not targetInfo or not chat:
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "rmUsrFailed"}), trackerId)
+                                continue
+
+                            if chat["Type"] == "forced-gc" or chat["Owner"] != selfUID or chat["Owner"] == targetUID:
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "rmUsrFailed"}), trackerId)
+                                continue
+
+                            failed = False
+                            try:
+                                targetInfo["Chats"].remove(cid)
+                                chat["Recipients"].remove(targetUID)
+                            except:
+                                failed = True
+                                traceback.print_exc()
+                                logging.warning("Failed to remove user from chat! UID: %i, CID: %i", uid, cid)
+
+                            if failed:
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "rmUsrFailed"}), trackerId)
+                                continue
+
+                            chat["messages"].append({
+                                "SYSMSG": True,
+                                "MSGID": len(chat["messages"]),
+                                "TYPE": "usrRemovedGc",
+                                "TARGET": selfUID,
+                                "TARGET2": targetUID,
+                                "time": time.time()
+                            })
+
+                            for ws2 in self.WS_CLIENTS:
+                                wsUID = getattr(ws2, "UID", None)
+                                targetInfo = self.getUserInfoFromUserId(wsUID)
+
+                                if wsUID is not None:
+                                    if cid in targetInfo["Chats"]:
+                                        await self.wsSendEncrypted(ws2, orjson.dumps({"type": "metaChatUpdate", "chat": chat}))
+
+                                    if wsUID == targetUID:
+                                        await self.wsSendEncrypted(ws2, orjson.dumps({"type": "chatGone", "chats": usrInfo["Chats"]}), trackerId)
                         else:
                             break
 

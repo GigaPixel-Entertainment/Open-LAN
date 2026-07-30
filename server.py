@@ -158,15 +158,18 @@ def loadChats():
                     metadata = fileContents["meta"]
                     name = fileContents["Name"]
                     recipients = (fileContents["Recipients"] if "Recipients" in fileContents else [])
+                    owner = (fileContents["Owner"] if "Owner" in fileContents else (recipients[0] if len(recipients) > 0 else 0))
+                    icon = (fileContents["Icon"] if "Icon" in fileContents else secrets.choice(DEFAULT_PFPS))
                     messages = fileContents["messages"]
 
                     for msg in messages:
-                        msg["content"] = fernet.decrypt(msg["content"]).decode("utf-16")
+                        if not "SYSMSG" in msg:
+                            msg["content"] = fernet.decrypt(msg["content"]).decode("utf-16")
 
                     if metadata["CID"] == 0:
                         recipients = list(range(len(users)))
 
-                    chats.append({"CID": metadata["CID"], "Type": metadata["Type"], "Name": name, "Recipients": recipients, "messages": messages})
+                    chats.append({"CID": metadata["CID"], "Type": metadata["Type"], "Name": name, "Recipients": recipients, "Owner": owner, "Icon": icon, "messages": messages})
                     f.close()
             except:
                 traceback.print_exc()
@@ -205,10 +208,13 @@ def saveChats():
 
                 for msg in chat["messages"]:
                     messageSaving = copy.deepcopy(msg)
-                    messageSaving["content"] = fernet.encrypt(messageSaving["content"].encode("utf-16"))
+
+                    if not "SYSMSG" in messageSaving:
+                        messageSaving["content"] = fernet.encrypt(messageSaving["content"].encode("utf-16"))
+
                     messages.append(messageSaving)
 
-                packed: bytes | None = msgpack.packb({"meta":metadata,"Name":chat["Name"],"Recipients": chat["Recipients"], "messages":messages})
+                packed: bytes | None = msgpack.packb({"meta":metadata,"Name":chat["Name"],"Recipients": chat["Recipients"], "Owner": chat["Owner"], "Icon": chat["Icon"], "messages":messages})
 
                 if packed:
                     f.write(packed)
@@ -331,7 +337,7 @@ def resizePfpBytes(pfpBytes: bytes):
     pfpStream = BytesIO(pfpBytes)
 
     if not validateImgFile(pfpStream):
-        return DEFAULT_PFPS[secrets.randbelow(len(DEFAULT_PFPS))]
+        return secrets.choice(DEFAULT_PFPS)
 
     img = Image.open(pfpStream)
     imgFormat = img.format if img.format else "JPEG"

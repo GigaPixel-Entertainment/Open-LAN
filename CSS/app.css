@@ -7,7 +7,6 @@
     --acc5: #214685;
     --acc6: #3e77d7;
     --text: #FFFFFF;
-    --text2: #cee1f3;
     --placeholder: #BBBBBB;
     --button: #a1c3c8;
     --button-press: #90b2b7;
@@ -54,19 +53,33 @@ footer > a {
     top: 0;
     left: 5%;
     width: 95%;
+    height: calc(40px + 1.25em);
     background-color: var(--acc4);
+
     display: flex;
+    flex-direction: row;
 }
 
-#msgBoxHeader > p {
+#ChatIcon {
+    margin-top: 0.25em;
+    margin-left: 0.25em;
+    height: calc(100% - 8px - .5em);
+    aspect-ratio: 1;
+    border-radius: 9999px;
+    border: 4px solid var(--acc);
+    cursor: pointer;
+}
+
+#ChatName {
     font-style: italic;
     font-size: 1.25em;
     font-weight: 100;
-    margin-left: 1em;
+    margin-left: .5em;
     margin-top: 1em;
     margin-bottom: 1em;
     width: 85%;
     white-space: pre;
+    cursor: pointer;
 }
 
 #msgBoxHeader > button {
@@ -80,9 +93,9 @@ footer > a {
 
 #lookingAtOldMsgs {
     position: absolute;
-    width: 95%;
+    width: calc(85% * 0.95 + 12px);
     top: 3.75em;
-    right: 0;
+    left: 5%;
     background-color: var(--acc5);
     z-index: 2;
     display: flex;
@@ -113,7 +126,7 @@ footer > a {
 
 #msgBox {
     position: absolute;
-    width: calc(85% * 0.95 + 3px);
+    width: calc(85% * 0.95 + 12px);
     height: calc(100% - 40px - 1.25em);
     bottom: 0;
     left: 5%;
@@ -123,7 +136,7 @@ footer > a {
 
 #userList {
     position: absolute;
-    width: calc(15% * 0.95 - 3px);
+    width: calc(15% * 0.95 - 12px);
     height: calc(100% - 40px - 1.25em);
     right: 0;
     bottom: 0;
@@ -148,6 +161,7 @@ footer > a {
 }
 
 .userDiv {
+    position: relative;
     width: 100%;
     height: 40px;
     padding-top: .5em;
@@ -157,6 +171,7 @@ footer > a {
     align-items: center;
     background-color: transparent;
     cursor: pointer;
+    border-left: 2px solid transparent;
 }
 
 .userDiv:hover {
@@ -399,7 +414,7 @@ footer > a {
     right: 0;
     aspect-ratio: 1;
     height: 100%;
-    color: gray;
+    color: black;
     background-color: var(--button);
     border: none;
     border-radius: 9999px;
@@ -473,6 +488,7 @@ footer > a {
     top: 0;
     left: 0;
     width: 100%;
+    height: calc(40px + 1.25em);
     background-color: var(--acc4);
     display: flex;
 }
@@ -620,20 +636,6 @@ footer > a {
     padding: 0;
 }
 
-#pfpScalingWrapper {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    top: 0;
-    left: 0;
-    background-color: rgba(0, 0, 0, .5);
-    visibility: hidden;
-    z-index: 3;
-    opacity: 0;
-
-    transition: opacity 0.25s linear;
-}
-
 #pfpScaling {
     position: absolute;
     left: 50%;
@@ -691,6 +693,184 @@ footer > a {
 #pfpPreviewActionsCancel:hover {
     border-color: var(--button-press);
     color: var(--button-press);
+}
+
+#editGc {
+    position: absolute;
+    width: 30%;
+    height: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--bg);
+}
+
+#editGcIcon {
+    position: absolute;
+    left: 50%;
+    top: 5%;
+    height: 60%;
+    aspect-ratio: 1;
+    border-radius: 9999px;
+    border: 4px solid var(--acc4);
+
+    transform: translateX(-50%);
+}
+
+#editGcIconFile {
+    position: absolute;
+    left: 50%;
+    top: 5%;
+    height: 60%;
+    aspect-ratio: 1;
+    border-radius: 9999px;
+    border: 4px solid transparent;
+    opacity: 0;
+    cursor: pointer;
+
+    transform: translateX(-50%);
+}
+
+#editGcIconOverlay {
+    position: absolute;
+    left: 50%;
+    top: 5%;
+    height: 60%;
+    aspect-ratio: 1;
+    border-radius: 9999px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border: 4px solid transparent;
+    visibility: hidden;
+
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+
+#editGcName {
+    position: absolute;
+    left: 50%;
+    bottom: 15%;
+    width: 90%;
+    font-size: 2em;
+    outline: none;
+    border: none;
+    border-radius: 0;
+    background-color: var(--acc);
+
+    transform: translateX(-50%);
+}
+
+#editGcName::placeholder {
+    color: var(--placeholder);
+}
+
+#editGcActions {
+    position: absolute;
+    width: 100%;
+    height: 10%;
+    bottom: 1%;
+    display: flex;
+    justify-content: space-evenly;
+}
+
+#editGcActions > button {
+    width: 40%;
+    font-size: 2em;
+    cursor: pointer;
+}
+
+#editGcActionsSet {
+    background-color: var(--button);
+    border: none;
+}
+
+#editGcActionsSet:hover {
+    background-color: var(--button-press);
+}
+
+#editGcActionsCancel {
+    background: none;
+    border: 2px solid var(--button);
+    color: var(--button);
+}
+
+#editGcActionsCancel:hover {
+    border-color: var(--button-press);
+    color: var(--button-press);
+}
+
+#addUserFriendsList {
+    position: absolute;
+    width: 50%;
+    height: 75%;
+    top: 50%;
+    left: 50%;
+    background-color: var(--bg);
+    transform: translate(-50%, -50%);
+
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+
+    align-items: center;
+}
+
+#addUserSearch {
+    font-size: 2em;
+    width: 95%;
+    height: 10%;
+    background-color: var(--acc3);
+    border: none;
+    border-radius: 0;
+    outline: none;
+}
+
+#addUserSearch::placeholder {
+    color: var(--placeholder);
+}
+
+#addUserSearchRes {
+    width: 95%;
+    height: 65%;
+    background-color: var(--acc3);
+
+    display: flex;
+    flex-direction: column;
+}
+
+#addUserAdd {
+    width: 95%;
+    height: 7.5%;
+    background-color: var(--button);
+    border: none;
+    border-radius: 0;
+    outline: none;
+    font-size: 1.5em;
+}
+
+#addUserAdd:enabled {
+    cursor: pointer;
+}
+
+#addUserAdd:enabled:hover {
+    background-color: var(--button-press);
+}
+
+#addUserCancel {
+    width: 95%;
+    height: 7.5%;
+    background: none;
+    border: 2px solid var(--button);
+    border-radius: 0;
+    outline: none;
+    cursor: pointer;
+    font-size: 1.5em;
+    color: var(--button);
+}
+
+#addUserCancel:hover {
+    color: var(--button-press);
+    border: 2px solid var(--button-press);
 }
 
 #accInfo {
@@ -926,16 +1106,6 @@ footer > a {
     margin-top: .5em;
 }
 
-#imageOverlay {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    top: 0;
-    left: 0;
-    background-color: rgba(0, 0, 0, 0.75);
-    visibility: hidden;
-}
-
 #imageOverlayImg {
     position: absolute;
     top: 50%;
@@ -945,20 +1115,10 @@ footer > a {
     transform: translate(-50%, -50%);
 }
 
-#textOverlay {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    top: 0;
-    left: 0;
-    background-color: rgba(0, 0, 0, 0.75);
-    visibility: hidden;
-}
-
 #textOverlayContents {
     position: absolute;
-    width: calc(50% - 2em);
-    height: calc(75% - 2em);
+    width: calc(80% - 2em);
+    height: calc(90% - 2em);
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
@@ -1019,19 +1179,6 @@ footer > a {
     cursor: pointer;
     margin-left: .5em;
     margin-right: .5em;
-}
-
-#genericPopup {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    top: 0;
-    left: 0;
-    background-color: rgba(0, 0, 0, 0.75);
-    visibility: hidden;
-    opacity: 0;
-
-    transition: opacity 250ms linear;
 }
 
 #popupContents {
@@ -1166,6 +1313,30 @@ footer > a {
     width: 15em;
     padding: 1em;
     cursor: pointer;
+}
+
+.overlay {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    background-color: rgba(0, 0, 0, 0.75);
+    visibility: hidden;
+    opacity: 0;
+    z-index: 10;
+
+    transition: opacity 250ms linear;
+}
+
+.green {
+    color: lime;
+    font-weight: bold;
+}
+
+.red {
+    color: red;
+    font-weight: bold;
 }
 
 ::-webkit-scrollbar {
