@@ -9,12 +9,13 @@ import os
 
 from dotenv import load_dotenv
 
-DEV = False
-VER = "0.0.5"
+DEV = True
+VER = "0.0.6"
 STAGE = "alpha"
 
 CWD = pathlib.Path(__file__).resolve().parent
-CA_CERT_DIR = CWD / "CA_CERT"
+BACKUP_DIR = CWD / "Backups/"
+CA_CERT_DIR = CWD / "CA_CERT/"
 CDN_DIR = CWD / "cdn/"
 CHATS_DIR = CWD / "Chats/"
 CSS_DIR = CWD / "CSS/"
@@ -25,7 +26,7 @@ MEDIA_DIR = CWD / "Media/"
 PFP_DIR = CWD / "pfps/"
 RUN_LOG_DIR = CWD / "runLogs/"
 SAVE_KEY = CWD / "meta.key"
-SECURITY_DIR = CWD / "security"
+SECURITY_DIR = CWD / "security/"
 USERS_DIR = CWD / "Users/"
 
 PRIVATE_DIRS = [
@@ -36,7 +37,8 @@ PRIVATE_DIRS = [
     SAVE_KEY,
     LOG_DIR,
     RUN_LOG_DIR,
-    ENV_FILE
+    ENV_FILE,
+    BACKUP_DIR
 ]
 
 IMPORTANT_FILES = [

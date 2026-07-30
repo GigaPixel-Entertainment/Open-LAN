@@ -1008,7 +1008,7 @@ class WS():
                             if cid == -1:
                                 cid = len(self.chats)
 
-                                self.chats.append({"CID": cid, "Type": "dm", "Name": f"{targetInfo["Displayname"]} & {selfInfo["Displayname"]}", "Recipients": [selfUID, targetUID], "messages": []})
+                                self.chats.append({"CID": cid, "Type": "dm", "Name": f"{targetInfo["Displayname"]} & {selfInfo["Displayname"]}", "Recipients": [selfUID, targetUID], "Icon": secrets.choice(self.DEFAULT_PFPS), "Time": int(time.time()), "messages": []})
 
                             for usr in self.users:
                                 if usr["UID"] == targetUID:
@@ -1085,7 +1085,7 @@ class WS():
                             if len(chatName) > 100:
                                 chatName = f"{len(included)} people"
 
-                            self.chats.append({"CID": cid, "Type": "gc", "Name": chatName, "Recipients": included, "Owner": selfUID, "Icon": secrets.choice(self.DEFAULT_PFPS), "messages": []})
+                            self.chats.append({"CID": cid, "Type": "gc", "Name": chatName, "Recipients": included, "Owner": selfUID, "Icon": secrets.choice(self.DEFAULT_PFPS), "Time": int(time.time()), "messages": []})
 
                             for ws2 in self.WS_CLIENTS:
                                 wsUID = getattr(ws2, "UID", None)

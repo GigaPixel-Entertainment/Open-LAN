@@ -138,6 +138,11 @@ def loadUsers():
                 if not "FriendRequests" in userData:
                     userData["FriendRequests"] = []
 
+                chatSet = set()
+                for cht in userData["Chats"]:
+                    chatSet.add(cht)
+                userData["Chats"] = list(chatSet)
+
                 users.append(userData)
                 f.close()
 
@@ -214,7 +219,7 @@ def saveChats():
 
                     messages.append(messageSaving)
 
-                packed: bytes | None = msgpack.packb({"meta":metadata,"Name":chat["Name"],"Recipients": chat["Recipients"], "Owner": chat["Owner"], "Icon": chat["Icon"], "messages":messages})
+                packed: bytes | None = msgpack.packb({"meta":metadata,"Name":chat["Name"],"Recipients": chat["Recipients"], "Owner": chat["Owner"] if "Owner" in chat else (chat["Recipients"][0] if len(chat["Recipients"]) > 0 else 0), "Icon": chat["Icon"], "messages":messages})
 
                 if packed:
                     f.write(packed)
