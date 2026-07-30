@@ -4,11 +4,11 @@
 """Script to edit a saved user"""
 
 import pathlib
-import bcrypt
 import sys
 
 from cryptography.fernet import Fernet
 import msgpack
+import bcrypt
 
 CWD = pathlib.Path(__file__).resolve().parent
 USERS_DIR = CWD / "Users/"

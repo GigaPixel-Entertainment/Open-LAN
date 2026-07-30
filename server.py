@@ -169,7 +169,7 @@ def loadChats():
                     if metadata["CID"] == 0:
                         recipients = list(range(len(users)))
 
-                    chats.append({"CID": metadata["CID"], "Type": metadata["Type"], "Name": name, "Recipients": recipients, "Owner": owner, "Icon": icon, "messages": messages})
+                    chats.append({"CID": metadata["CID"], "Type": metadata["Type"], "Time": metadata["Time"] if "Time" in metadata else int(time.time()), "Name": name, "Recipients": recipients, "Owner": owner, "Icon": icon, "messages": messages})
                     f.close()
             except:
                 traceback.print_exc()
@@ -203,7 +203,7 @@ def saveChats():
         try:
             chatID = chat["CID"]
             with open(config.CHATS_DIR / f"{chatID}.enc", "wb") as f:
-                metadata = {"CID": chatID, "Type": chat["Type"]}
+                metadata = {"CID": chatID, "Type": chat["Type"], "Time": chat["Time"]}
                 messages = []
 
                 for msg in chat["messages"]:

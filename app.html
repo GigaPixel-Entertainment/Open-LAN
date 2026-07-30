@@ -62,7 +62,6 @@
                         <input type="submit" id="newGCCreate" value="Create" class="font">
                     </div>
                 </button>
-                <p class="font white">active messages</p>
                 <div id="friendsListContent" class="scroll"></div>
             </div>
         </div>
@@ -1030,8 +1029,13 @@
             }
             settingChatList = true
 
-            friendsList2 = []
+            const activeMessagesP = document.createElement("p")
+            activeMessagesP.classList = "font white"
+            activeMessagesP.textContent = "active messages"
 
+            friendsList2 = [activeMessagesP]
+
+            activeMsgs = []
             for (let chatInd = 0; chatInd < chats.length; chatInd++) {
                 const chatID = chats[chatInd]
                 let chat = null
@@ -1057,6 +1061,7 @@
                 chatDiv.style.display = "flex"
                 chatDiv.style.flexDirection = "row"
                 chatDiv.style.cursor = "pointer"
+                chatDiv.setAttribute("time", chat["lastMsgTime"])
 
                 if (currChat == chatID) {
                     chatDiv.style.backgroundColor = "var(--acc2)"
@@ -1124,8 +1129,17 @@
                 chatInfo.appendChild(chatName)
                 chatDiv.appendChild(chatImg)
                 chatDiv.appendChild(chatInfo)
-                friendsList2.push(chatDiv)
+                activeMsgs.push(chatDiv)
             }
+
+            activeMsgs.sort((a, b) => {
+                aTime = a.getAttribute("time")
+                bTime = b.getAttribute("time")
+
+                return bTime - aTime
+            })
+
+            friendsList2 = [...friendsList2, ...activeMsgs]
 
             friendsListContent.replaceChildren()
 
@@ -3052,6 +3066,9 @@
                                         }
 
                                         if (respBody["type"] == "newMsg") {
+                                            delete chatMetaCache[respBody["CID"].toString()]
+                                            setChatList()
+
                                             if (currChat == respBody["CID"]) {
                                                 if (currPage == 0) {
                                                     chatCache["messages"].push(respBody["message"])

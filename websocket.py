@@ -389,7 +389,8 @@ class WS():
                                 "type": chat["Type"],
                                 "name": chat["Name"],
                                 "icon": chat["Icon"] if "Icon" in chat else secrets.choice(self.DEFAULT_PFPS),
-                                "recipients": chat["Recipients"]
+                                "recipients": chat["Recipients"],
+                                "lastMsgTime": chat["messages"][-1]["time"] if len(chat["messages"]) > 0 else chat["Time"]
                             }}), trackerId)
                         else:
                             break

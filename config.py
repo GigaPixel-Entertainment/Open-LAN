@@ -9,7 +9,7 @@ import os
 
 from dotenv import load_dotenv
 
-DEV = True
+DEV = False
 VER = "0.0.4"
 STAGE = "alpha"
 

@@ -217,10 +217,6 @@ footer > a {
     flex-direction: column;
 }
 
-#friendsList > p {
-    margin-left: 5%;
-}
-
 #friendsListNewGC {
     width: 90%;
     font-size: 1.5em;
@@ -291,6 +287,10 @@ footer > a {
     width: 100%;
     height: 100%;
     overflow-x: hidden;
+}
+
+#friendsListContent > p {
+    margin-left: 5%;
 }
 
 #textEntryWrapper {
