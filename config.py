@@ -10,7 +10,7 @@ import os
 from dotenv import load_dotenv
 
 DEV = False
-VER = "0.0.4"
+VER = "0.0.5"
 STAGE = "alpha"
 
 CWD = pathlib.Path(__file__).resolve().parent
