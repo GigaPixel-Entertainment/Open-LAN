@@ -105,10 +105,6 @@ def loadUsers():
     if not config.USERS_DIR.exists():
         config.USERS_DIR.mkdir()
 
-    if not config.SAVE_KEY.exists():
-        logging.info("[IO] Generating new save key!")
-        genSaveKey()
-
     for usr in config.USERS_DIR.iterdir():
         if usr.is_file() and usr.suffix == ".usr":
             with open(usr, "rb") as f:
@@ -138,10 +134,7 @@ def loadUsers():
                 if not "FriendRequests" in userData:
                     userData["FriendRequests"] = []
 
-                chatSet = set()
-                for cht in userData["Chats"]:
-                    chatSet.add(cht)
-                userData["Chats"] = list(chatSet)
+                userData["Chats"] = list(set(userData["Chats"]))
 
                 users.append(userData)
                 f.close()
@@ -405,6 +398,14 @@ def httpThread(sk):
 
     closeSocket(sk)
 
+def readSaveKey():
+    logging.debug("[IO] Reading save key")
+    saveKey = None
+    with open(config.SAVE_KEY, "rb") as f:
+        saveKey = f.read()
+        f.close()
+    return saveKey
+
 if __name__ == "__main__":
     print("[MAIN] Hello, world!", flush=True)
 
@@ -438,11 +439,11 @@ if __name__ == "__main__":
     users = []
     chats = []
 
-    logging.debug("[IO] Reading save key")
-    with open(config.SAVE_KEY, "rb") as f:
-        saveKey = f.read()
-        f.close()
+    if not config.SAVE_KEY.exists():
+        logging.info("[IO] Generating new save key!")
+        genSaveKey()
 
+    saveKey = readSaveKey()
     fernet = Fernet(saveKey)
     logging.debug("[IO] Save key loaded")
 

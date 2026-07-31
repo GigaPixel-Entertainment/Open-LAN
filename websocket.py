@@ -301,7 +301,7 @@ class WS():
                                     self.RATELIMITED_IPS.remove(ip)
 
                         if not allowed:
-                            await self.wsSendEncrypted(ws, orjson.dumps({"type": "signupFailed", "reason": f"You have been ratelimited. Please try again in {config.ACC_CREATION_COOLDOWN_SEC} minutes."}))
+                            await self.wsSendEncrypted(ws, orjson.dumps({"type": "signupFailed", "reason": f"You have been ratelimited. Please try again in {int(config.ACC_CREATION_COOLDOWN_SEC / 60)} minutes."}))
                             continue
 
                         name = decryptedBody["realname"].strip()
@@ -1069,7 +1069,7 @@ class WS():
                             for usr in included:
                                 uInfo = self.getUserInfoFromUserId(usr)
 
-                                if not uInfo:
+                                if uInfo is None:
                                     success = False
                                     break
 
@@ -1110,7 +1110,7 @@ class WS():
                             newChatName = decryptedBody["name"].strip()
                             chat = self.getChatFromCID(decryptedBody["CID"])
 
-                            if not chat or not uid:
+                            if chat is None or uid is None:
                                 await self.wsSendEncrypted(ws, orjson.dumps({"type": "updateGcInfoFailed"}), trackerId)
                                 continue
 
@@ -1152,7 +1152,7 @@ class WS():
                             selfInfo = self.getUserInfoFromUserId(uid)
                             chat = self.getChatFromCID(decryptedBody["CID"])
 
-                            if not chat or not uid or not selfInfo:
+                            if chat is None or uid is None or selfInfo is None:
                                 await self.wsSendEncrypted(ws, orjson.dumps({"type": "addUsrFailed"}), trackerId)
                                 continue
 
@@ -1207,7 +1207,7 @@ class WS():
                             usrInfo = self.getUserInfoFromUserId(uid)
                             chat = self.getChatFromCID(cid)
 
-                            if not uid or not usrInfo or not chat or chat["Type"] == "forced-gc":
+                            if uid is None or usrInfo is None or chat is None or chat["Type"] == "forced-gc":
                                 await self.wsSendEncrypted(ws, orjson.dumps({"type": "leaveGcFailed"}), trackerId)
                                 continue
 
@@ -1265,7 +1265,7 @@ class WS():
                             chat = self.getChatFromCID(cid)
                             selfUID = self.getUserIdFromAuthToken(authToken)
 
-                            if not targetInfo or not chat:
+                            if targetInfo is None or chat is None:
                                 await self.wsSendEncrypted(ws, orjson.dumps({"type": "rmUsrFailed"}), trackerId)
                                 continue
 

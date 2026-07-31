@@ -2558,6 +2558,10 @@
         newGCSearch.addEventListener("input", setCreateGCList)
 
         friendsListNewGC.addEventListener("click", () => {
+            if (newGCFriendsList.style.visibility == "hidden") {
+                setCreateGCList()
+            }
+
             newGCFriendsList.style.visibility = "visible"
         })
 
