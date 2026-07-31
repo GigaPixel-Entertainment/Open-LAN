@@ -1022,6 +1022,7 @@
         }
 
         var settingChatList = false
+        var lastMsgId = 0
         const chatMetaCache = []
         async function setChatList() {
             if (settingChatList) {
@@ -1061,10 +1062,11 @@
                 chatDiv.style.display = "flex"
                 chatDiv.style.flexDirection = "row"
                 chatDiv.style.cursor = "pointer"
-                chatDiv.setAttribute("time", chat["lastMsgTime"])
+                chatDiv.setAttribute("time", chat["lastMsg"]["time"])
 
                 if (currChat == chatID) {
                     chatDiv.style.backgroundColor = "var(--acc2)"
+                    lastMsgId = chat["lastMsg"]["MSGID"]
                 }
 
                 chatDiv.onclick = () => {
@@ -1098,7 +1100,7 @@
 
                 const chatName = document.createElement("h2")
                 chatName.style.width = "90%"
-                chatName.style.height = "75%"
+                chatName.style.height = "60%"
                 chatName.style.margin = "0"
                 chatName.style.background = "linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%)"
                 chatName.style.backgroundClip = "text"
@@ -1106,6 +1108,23 @@
                 chatName.style.whiteSpace = "nowrap"
                 chatName.classList = "font"
                 chatName.textContent = chat["name"]
+
+                const chatExtInfo = document.createElement("p")
+                chatExtInfo.style.width = "90%"
+                chatExtInfo.style.height = "40%"
+                chatExtInfo.style.margin = "0"
+                chatExtInfo.style.background = "linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%)"
+                chatExtInfo.style.backgroundClip = "text"
+                chatExtInfo.style.color = "transparent"
+                chatExtInfo.style.whiteSpace = "nowrap"
+                chatExtInfo.classList = "font"
+
+                let unreadMsgs = chat["lastMsg"]["MSGID"] - readMsgs[chatID.toString()]
+                if (unreadMsgs == 0) {
+                    chatExtInfo.textContent = chat["lastMsg"]["content"]
+                } else {
+                    chatExtInfo.textContent = unreadMsgs + " unread message" + (unreadMsgs > 1 ? "s" : "")
+                }
 
                 if (chat["type"] == "dm") {
                     const other = chat["recipients"].filter(item => item != currUID)
@@ -1127,6 +1146,7 @@
 
                 chatImg.appendChild(chatImgPic)
                 chatInfo.appendChild(chatName)
+                chatInfo.appendChild(chatExtInfo)
                 chatDiv.appendChild(chatImg)
                 chatDiv.appendChild(chatInfo)
                 activeMsgs.push(chatDiv)
@@ -1150,12 +1170,15 @@
             settingChatList = false
         }
 
+        var readMsgs = {}
         function popUserInfo(resp) {
             currUID = resp["UID"]
 
             chats = resp["chats"]
             friends = resp["friends"]
             friendReqs = resp["friendReq"]
+
+            readMsgs = resp["readMsgs"]
 
             friendCount.textContent = "friends (" + friends.length + ")"
 
@@ -1327,6 +1350,26 @@
 
             return null
         }
+
+        function onScroll() {
+            const currScroll = chatDiv.scrollTop
+            const atBottom = ((currScroll + chatDiv.offsetHeight >= chatDiv.scrollHeight - 8) || changedChat) && !startAtTop
+
+            if (atBottom) {
+                if (readMsgs[currChat.toString()] == lastMsgId) {
+                    return
+                }
+
+                readMsgs[currChat.toString()] = lastMsgId
+                request(JSON.stringify({
+                    "type": "setRead",
+                    "CID": currChat,
+                    "MSGID": lastMsgId
+                }))
+            }
+        }
+
+        document.addEventListener("scroll", onScroll)
 
         const embedCache = {}
         async function evalEmbeds(message, msgP) {
@@ -2086,6 +2129,8 @@
                     chatDiv.scrollTop = chatDiv.scrollHeight
                 }
             }
+
+            onScroll()
         }
 
         async function setMemberList() {
@@ -3074,6 +3119,8 @@
                                             setChatList()
 
                                             if (currChat == respBody["CID"]) {
+                                                lastMsgId = respBody["message"]["MSGID"]
+
                                                 if (currPage == 0) {
                                                     chatCache["messages"].push(respBody["message"])
                                                 } else {
@@ -3188,6 +3235,12 @@
                                             window.location.assign(protocol + "//" + domainURL + "/login.html")
                                         }
 
+                                        if (respBody["type"] == "setReadSuccess") {
+                                            readMsgs = respBody["readMsgs"]
+                                            delete chatMetaCache[currChat.toString()]
+                                            setChatList()
+                                        }
+
                                         if (trackerId && trackerIds.includes(trackerId)) {
                                             trackerHit(trackerId, respBody)
                                         }
@@ -3200,7 +3253,6 @@
 
                         ws.onerror = (error) => {
                             console.error("WebSocket Error: " + error);
-
                         };
 
                         ws.onclose = (event) => {

@@ -363,7 +363,8 @@ class WS():
                                 "accCreated": userinfo["AccCreated"],
                                 "bio": userinfo["Bio"],
                                 "pronouns": userinfo["Pronouns"],
-                                "friendReq": userinfo["FriendRequests"]
+                                "friendReq": userinfo["FriendRequests"],
+                                "readMsgs": userinfo["ReadMsgs"]
                             }), trackerId)
                         else:
                             break
@@ -384,13 +385,23 @@ class WS():
                                 await self.wsSendEncrypted(ws, orjson.dumps({"type":"reqChatMetaFailed","message":"Chat not found!"}), trackerId)
                                 continue
 
+                            lastMsg = chat["messages"][-1] if len(chat["messages"]) > 0 else None
+                            lastRealMsg = None
+                            for msg in chat["messages"]:
+                                if not "SYSMSG" in msg:
+                                    lastRealMsg = msg
+
                             await self.wsSendEncrypted(ws, orjson.dumps({"type":"reqChatMetaSuccess", "chat": {
                                 "CID": chat["CID"],
                                 "type": chat["Type"],
                                 "name": chat["Name"],
                                 "icon": chat["Icon"] if "Icon" in chat else secrets.choice(self.DEFAULT_PFPS),
                                 "recipients": chat["Recipients"],
-                                "lastMsgTime": chat["messages"][-1]["time"] if len(chat["messages"]) > 0 else chat["Time"]
+                                "lastMsg": {
+                                    "time": lastRealMsg["time"] if lastRealMsg else chat["Time"],
+                                    "MSGID": lastMsg["MSGID"] if lastMsg else 0,
+                                    "content": lastRealMsg["content"] if lastRealMsg else ""
+                                }
                             }}), trackerId)
                         else:
                             break
@@ -1305,6 +1316,22 @@ class WS():
 
                                     if wsUID == targetUID:
                                         await self.wsSendEncrypted(ws2, orjson.dumps({"type": "chatGone", "chats": usrInfo["Chats"]}), trackerId)
+                        else:
+                            break
+
+                    if decryptedBody["type"] == "setRead":
+                        if await self.checkAuthTokenEncrypted(ws, authToken):
+                            if not self.checkFields(decryptedBody, ["CID", "MSGID"]):
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "setReadFailed"}), trackerId)
+                                continue
+
+                            usrInfo = self.getUserInfoFromToken(authToken)
+                            usrInfo["ReadMsgs"][str(decryptedBody["CID"])] = decryptedBody["MSGID"]
+
+                            await self.wsSendEncrypted(ws, orjson.dumps({
+                                "type": "setReadSuccess",
+                                "readMsgs": usrInfo["ReadMsgs"]
+                            }), trackerId)
                         else:
                             break
 

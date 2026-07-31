@@ -134,6 +134,11 @@ def loadUsers():
                 if not "FriendRequests" in userData:
                     userData["FriendRequests"] = []
 
+                if not "ReadMsgs" in userData:
+                    userData["ReadMsgs"] = {}
+                    for cht in userData["Chats"]:
+                        userData["ReadMsgs"][str(cht)] = 0
+
                 userData["Chats"] = list(set(userData["Chats"]))
 
                 users.append(userData)
