@@ -3,13 +3,10 @@ name: Pylint
 on:
   push:
     paths-ignore:
-      - 'CSS/**'
-      - 'JS/**'
-      - 'Media/**'
+      - 'Web/**'
       - 'pfps/**'
-      - '*.html'
-      - '*.md'
-      - 'robots.txt'
+    paths:
+      - "**/*.py"
 
 jobs:
   build:
