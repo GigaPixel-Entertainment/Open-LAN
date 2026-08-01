@@ -275,7 +275,7 @@ def handleRequest(sk: socket.socket):
         if page == "/":
             page = "/index.html"
 
-        pagePath = config.CWD / page.removeprefix("/")
+        pagePath = config.WEB_DIR / page.removeprefix("/")
 
         if page == "/api/wsurl":
             currUrl = parsed.headers.get("Domain-Url")
@@ -319,7 +319,7 @@ def handleRequest(sk: socket.socket):
         if page == "/":
             page = "/index.html"
 
-        pagePath = config.CWD / page.removeprefix("/")
+        pagePath = config.WEB_DIR / page.removeprefix("/")
 
         if httphelper.isSafePath(pagePath):
             sk.sendall(httphelper.formatHEADResponse(parsed, pagePath))

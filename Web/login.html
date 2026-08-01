@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="CSS/userIdent.css">
+        <link rel="icon" href="Media/LogoSquare.png">
+        <title>Open-LAN Login</title>
+    </head>
+    <body>
+        <a href="index.html"><img src="Media/Logo.png" id="smallTopLogo"></a>
+        <h1 class="title center text font">LOGIN</h1>
+
+        <form id="loginForm" spellcheck="false">
+            <input type="text" placeholder="username" class="font largeEntry" id="username" required>
+            <div id="pwdWrapper">
+                <input type="password" placeholder="password" class="font largeEntry" id="password" required>
+                <button class="showPwd" id="showPwd" type="button" onclick="togglePwd()"><img src="Media/eyeOpen.png" class="showPwdImg" id="showPwdImg"></button>
+            </div>
+            <a id="forgetPwd" class="font text" href="https://forms.gle/AoFebgPKb3v8n57Z9" target="_blank">Forget password?</a>
+            <div id="submitWrapper">
+                <input type="submit" value="login" class="font" id="submitBtn">
+            </div>
+        </form>
+
+        <div id="errorMsg">
+            <h2 class="font text">ERROR TITLE</h2>
+            <p class="font text">Error Content</p>
+        </div>
+
+        <div id="signUpWrapper">
+            <p class="font text" id="signUpLabel">If you don't have an account</p>
+            <a href="signup.html"><button class="font" id="signUp">sign up</button></a>
+        </div>
+
+        <div id="httpNotice">
+            <div id="noticeBox">
+                <h1 class="font text center">Notice</h1>
+                <p class="font text">You are currently using HTTP and not HTTPS! This is not recommended as using HTTP will not guarantee security! Please switch over to HTTPS if possible.</p>
+                <div>
+                    <button class="font text recommended" onclick="switchHTTPS()">Switch to HTTPS</button>
+                    <button class="font text notrecommended" onclick="document.getElementById('httpNotice').remove()">Continue using HTTP</button>
+                </div>
+            </div>
+        </div>
+
+
+        <script src="JS/stop.js"></script>
+
+        <script>
+            // Toggle password visibility
+            const pwdEntry = document.getElementById("password")
+            const showPwdImg = document.getElementById("showPwdImg")
+
+            function togglePwd() {
+                if (pwdEntry.type == "password") {
+                    pwdEntry.type = "text"
+                    showPwdImg.src = "Media/eyeClose.png"
+                } else {
+                    pwdEntry.type = "password"
+                    showPwdImg.src = "Media/eyeOpen.png"
+                }
+            }
+        </script>
+        <script src="https://cdn.jsdelivr.net/npm/jsencrypt/bin/jsencrypt.min.js"></script>
+        <script>
+            // Error Message
+            const errBox = document.getElementById("errorMsg")
+            const url = new URL(window.location.href)
+
+            function setError(title, content) {
+                errBox.querySelector(":scope > h2").textContent = title
+                errBox.querySelector(":scope > p").textContent = content
+
+                if (title == "" && content == "") {
+                    errBox.style.visibility = "hidden"
+                } else {
+                    errBox.style.visibility = "visible"
+                }
+
+            }
+
+            if (url.searchParams.get("errT") && url.searchParams.get("errC")) {
+                setError(url.searchParams.get("errT"), url.searchParams.get("errC"))
+            }
+        </script>
+
+        <script>
+            // No-cache
+            window.addEventListener('pageshow', function (event) {
+                if (event.persisted) {
+                    window.location.reload();
+                }
+            });
+        </script>
+
+        <script>
+            // Login
+            const loginForm = document.getElementById("loginForm")
+            const submitBtn = document.getElementById("submitBtn")
+            const username = document.getElementById("username")
+            const password = document.getElementById("password")
+
+            const protocol = window.location.protocol
+            const domainURL = window.location.host
+            const WsProtocol = protocol == "http:" ? "ws:" : "wss:"
+
+            if (protocol == "http:") {
+                document.getElementById("httpNotice").style.visibility = "visible"
+            }
+
+            function switchHTTPS() {
+                window.location.assign("https://" + domainURL + "/login.html")
+            }
+
+            var wsURL = WsProtocol + "//" + window.location.hostname + ":" + (WsProtocol == "ws:" ? 33334 : 33335)
+            var wsUrlReady = new Promise((res) => {
+                try {
+                    const resp = fetch(protocol + "//" + domainURL + "/api/" + WsProtocol.split(":")[0] + "url", {
+                            method: "GET",
+                            cache: 'no-store',
+                            headers: {
+                                "Content-Type": "text/plain",
+                                "Domain-Url": window.location.hostname
+                            }
+                        }).then((r) => {
+                            wsURL = r.headers.get("Url")
+                            res(wsURL)
+                        }).catch((r) => {
+                            console.log("Failed to fetch websocket port! Using default")
+                            res(wsURL)
+                        })
+                } catch {
+                    console.log("Failed to fetch websocket port! Using default")
+                    res(wsURL)
+                }
+            })
+
+            var sharedSecretKey = null
+            var encrypted = false
+
+            console.log("Connecting to websocket via " + WsProtocol + "//")
+
+            const hexToBytes = hex => Uint8Array.from(hex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+            const bytesToHex = bytes => Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+            const textEncode = (text) => new TextEncoder().encode(text);
+            const textDecode = (text) => new TextDecoder().decode(text);
+            var keyPair = null
+
+            async function generatePubKey() {
+                keyPair = await crypto.subtle.generateKey(
+                    { name: "ECDH", namedCurve: "P-256" },
+                    false,
+                    ["deriveKey", "deriveBits"]
+                );
+                const pubBuffer = await crypto.subtle.exportKey("raw", keyPair.publicKey);
+                const pubBytes = new Uint8Array(pubBuffer);
+
+                return pubBytes
+            }
+
+            async function serverKeyRecieved(serverKey) {
+                const serverPubBytes = hexToBytes(serverKey);
+                const serverPublicKey = await crypto.subtle.importKey(
+                    "raw",
+                    serverPubBytes,
+                    { name: "ECDH", namedCurve: "P-256" },
+                    true,
+                    []
+                );
+
+                const sharedSecretBuffer = await crypto.subtle.deriveBits(
+                    { name: "ECDH", public: serverPublicKey },
+                    keyPair.privateKey,
+                    256
+                );
+
+                var sharedSecretBytes = new Uint8Array(sharedSecretBuffer);
+
+                sharedSecretKey = await crypto.subtle.importKey(
+                    "raw",
+                    sharedSecretBytes,
+                    { name: "AES-GCM" },
+                    false,
+                    ["encrypt", "decrypt"]
+                )
+
+                sharedSecretBytes.fill(0)
+                sharedSecretBytes = null
+            }
+
+            async function encryptAES(text, rawKey) {
+                const iv = window.crypto.getRandomValues(new Uint8Array(12));
+                const encodedText = textEncode(text);
+
+                const ciphertext = await window.crypto.subtle.encrypt(
+                    { name: "AES-GCM", iv: iv }, sharedSecretKey, encodedText
+                );
+
+                return {
+                    iv: bytesToHex(iv),
+                    ciphertext: bytesToHex(new Uint8Array(ciphertext))
+                };
+            }
+
+            async function decryptAES(ivHex, ciphertextHex) {
+                const iv = hexToBytes(ivHex);
+                const ciphertext = hexToBytes(ciphertextHex);
+
+                const decryptedBuffer = await window.crypto.subtle.decrypt(
+                    { name: "AES-GCM", iv: iv }, sharedSecretKey, ciphertext
+                );
+
+                return textDecode(decryptedBuffer);
+            }
+
+            wsUrlReady.then((wsURL) => {
+                generatePubKey().then((pubBytes) => {
+                    try {
+                        const ws = new WebSocket(wsURL);
+
+                        ws.onopen = (ev) => {
+                            console.log("Websocket Connected!")
+                            ws.send(JSON.stringify({"type":"encrypt-key-xch", "publicKey": bytesToHex(pubBytes)}))
+                        }
+
+                        ws.onmessage = (event) => {
+                            const resp = JSON.parse(event.data)
+
+                            if (resp["type"] == "encrypt-key-xch") {
+                                serverKeyRecieved(resp["publicKey"]).then(() => {
+                                    encrypted = true
+
+                                    const origSend = ws.send
+                                    ws.send = function(data) {
+                                        encryptAES(data).then((encryptionResults) => {
+                                            origSend.call(ws, JSON.stringify({"encryption": "AES", "iv": encryptionResults["iv"],"body":encryptionResults["ciphertext"]}))
+                                        })
+                                    }
+                                    console.log("Encrypted with AES!")
+                                })
+                            }
+
+                            if (resp["encryption"] == "AES") {
+                                if (encrypted) {
+                                    decryptAES(resp["iv"], resp["body"]).then((data) => {
+                                        respBody = JSON.parse(data)
+
+                                        if (respBody["type"] == "loginSuccess") {
+                                            window.location.assign(protocol + "//" + domainURL + respBody["redirect"] + "&hostname=" + window.location.hostname)
+                                        } else if (respBody["type"] == "loginFailed") {
+                                            submitBtn.value = "login"
+                                            submitBtn.disabled = false
+                                            setError("Login Failed", "Incorrect username or password. Please try again.")
+                                        }
+                                    })
+                                } else {
+                                    console.log("Recieved encrypted message, but we are not ready!")
+                                }
+                            }
+                        };
+
+                        ws.onerror = (error) => {
+                            console.error("WebSocket Error: " + error);
+                        };
+
+                        ws.onclose = (event) => {
+                            console.log("Connection closed:", event.reason);
+                            console.log("Attempting reconnect...")
+                            setTimeout(() => window.location.reload(), 5000)
+                        };
+
+                        loginForm.addEventListener("submit", (event) => {
+                            event.preventDefault()
+                            setError("", "")
+
+                            submitBtn.value = "working"
+                            submitBtn.disabled = true
+
+                            ws.send(JSON.stringify({"type":"login", "username":username.value, "password": btoa(password.value)}))
+                        })
+                    } catch {
+                        console.log("Websocket Connection Failed!")
+                        setError("Failed to Connect", "Failed to connect to the server. Please try again later.")
+                    }
+                })
+            })
+
+        </script>
+    </body>
+    <footer>
+        Open-LAN is open-source under the <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank">GNU General Public License</a> and available on <a href="https://github.com/GigaPixel-Entertainment/GPE-Open-LAN" target="_blank">Github</a>
+    </footer>
+</html>

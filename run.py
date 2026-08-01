@@ -123,7 +123,7 @@ class HttpHandler:
 class MaintenancePage(HttpHandler):
     def handleRequest(self, sk: socket.socket):
         fContents = None
-        with open(config.CWD / "unavailable.html", "rb") as f:
+        with open(config.WEB_DIR / "unavailable.html", "rb") as f:
             fContents = f.read()
 
         sk.sendall(httphelper.formatHttpHeader(503, {
@@ -226,7 +226,7 @@ class Dashboard(HttpHandler):
             else:
                 token = secrets.token_urlsafe(256)
                 VALID_TOKENS.append(token)
-                sk.sendall(httphelper.formatHttpResponse(parsed, config.CWD / "dashboard.html", extraHeaders={
+                sk.sendall(httphelper.formatHttpResponse(parsed, config.WEB_DIR / "dashboard.html", extraHeaders={
                     "Set-Cookie": f"dashboardToken={token}; HttpOnly; SameSite=Strict; Path=/"
                 }))
         else:

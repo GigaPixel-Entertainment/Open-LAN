@@ -9,13 +9,11 @@ import sys
 from cryptography.fernet import Fernet
 import msgpack
 
-CWD = pathlib.Path(__file__).resolve().parent
-USERS_DIR = CWD / "Users/"
-SAVE_KEY = CWD / "meta.key"
+import config
 
 username = input("Username: ")
 
-if not (USERS_DIR / f"{username}.usr").exists():
+if not (config.USERS_DIR / f"{username}.usr").exists():
     print(f"Invalid user {username}")
     sys.exit(1)
 
@@ -26,13 +24,13 @@ if confirm.lower() != "y":
     sys.exit(1)
 
 key = None
-with open(SAVE_KEY, "rb") as f:
+with open(config.SAVE_KEY, "rb") as f:
     key = f.read()
     f.close()
 
 fernet = Fernet(key)
 
-with open(USERS_DIR / f"{username}.usr", "rb+") as f:
+with open(config.USERS_DIR / f"{username}.usr", "rb+") as f:
     userData = msgpack.unpackb(fernet.decrypt(f.read()))
 
     UID = userData["UID"]

@@ -10,23 +10,21 @@ import sys
 from cryptography.fernet import Fernet
 import msgpack
 
-CWD = pathlib.Path(__file__).resolve().parent
-CHATS_DIR = CWD / "Chats/"
-CDN_DIR = CWD / "cdn/"
+import config
 
-if not (CWD / "meta.key").is_file():
+if not (config.CWD / "meta.key").is_file():
     print("No meta.key file found!")
     sys.exit(-1)
 
 key = None
-with open(CWD / "meta.key", "rb") as f:
+with open(config.CWD / "meta.key", "rb") as f:
     key = f.read()
     f.close()
 
 fernet = Fernet(key)
 
 referencedCDN = set()
-for chat in CHATS_DIR.iterdir():
+for chat in config.CHATS_DIR.iterdir():
     if chat.is_file() and chat.suffix == ".enc":
         try:
             with open(chat, "rb") as chatFile:
@@ -47,14 +45,14 @@ for chat in CHATS_DIR.iterdir():
             sys.exit(-1)
 
 unreferencedCDN = set()
-for cdn in CDN_DIR.iterdir():
-    cdnRel = cdn.relative_to(CWD)
+for cdn in config.CDN_DIR.iterdir():
+    cdnRel = cdn.relative_to(config.CWD)
 
     if not str(cdnRel) in referencedCDN:
         unreferencedCDN.add(cdnRel)
 
 for cdn in unreferencedCDN:
-    path: pathlib.Path = CWD / cdn
+    path: pathlib.Path = config.CWD / cdn
     path.unlink(True)
 
 print("Purged successfully!")

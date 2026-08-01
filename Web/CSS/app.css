@@ -1,0 +1,1361 @@
+:root {
+    --bg: #1a3053;
+    --acc: #113963;
+    --acc2: #145492;
+    --acc3: #3e84c5;
+    --acc4: #0c273f;
+    --acc5: #214685;
+    --acc6: #3e77d7;
+    --text: #FFFFFF;
+    --placeholder: #BBBBBB;
+    --button: #a1c3c8;
+    --button-press: #90b2b7;
+    --highlight: #6ea6db;
+    --sendButtonGreen: #92c37c;
+    --rose: #e99898;
+    --highlighted: #f9e1af;
+    --highlighted-transparent: #f9e1af30;
+}
+
+html, body {
+    height: 100vh;
+    overflow: hidden;
+}
+
+body {
+    background-color: var(--bg);
+    margin: 0;
+}
+
+footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    color: white;
+    font-family: "Fire Code", monospace;
+    font-size: small;
+    z-index: 99;
+}
+
+footer > a {
+    color: white;
+    text-decoration-color: white;
+}
+
+#serverList {
+    width: 5%;
+    height: 100%;
+    background-color: var(--acc2);
+}
+
+#msgBoxHeader {
+    position: absolute;
+    top: 0;
+    left: 5%;
+    width: 95%;
+    height: calc(40px + 1.25em);
+    background-color: var(--acc4);
+
+    display: flex;
+    flex-direction: row;
+}
+
+#ChatIcon {
+    margin-top: 0.25em;
+    margin-left: 0.25em;
+    height: calc(100% - 8px - .5em);
+    aspect-ratio: 1;
+    border-radius: 9999px;
+    border: 4px solid var(--acc);
+    cursor: pointer;
+}
+
+#ChatName {
+    font-style: italic;
+    font-size: 1.25em;
+    font-weight: 100;
+    margin-left: .5em;
+    margin-top: 1em;
+    margin-bottom: 1em;
+    width: 85%;
+    white-space: pre;
+    cursor: pointer;
+}
+
+#msgBoxHeader > button {
+    width: 15%;
+    border: none;
+    border-radius: 0;
+    background-color: var(--acc3);
+    cursor: pointer;
+    font-size: 1.25em;
+}
+
+#lookingAtOldMsgs {
+    position: absolute;
+    width: calc(85% * 0.95 + 12px);
+    top: 3.75em;
+    left: 5%;
+    background-color: var(--acc5);
+    z-index: 2;
+    display: flex;
+    flex-direction: row;
+    height: 2em;
+    justify-content: space-between;
+    visibility: hidden;
+}
+
+#lookingAtOldMsgs > p {
+    padding: 0;
+    margin: 0;
+    font-size: 1.25em;
+    line-height: 1.6em;
+    padding-left: 1em;
+}
+
+#lookingAtOldMsgs > button {
+    background-color: var(--button);
+    border: none;
+    cursor: pointer;
+    margin: .25em;
+}
+
+#lookingAtOldMsgs > button:hover {
+    background-color: var(--button-press);
+}
+
+#msgBox {
+    position: absolute;
+    width: calc(85% * 0.95 + 12px);
+    height: calc(100% - 40px - 1.25em);
+    bottom: 0;
+    left: 5%;
+    background-color: var(--bg);
+    overflow-x: hidden;
+}
+
+#userList {
+    position: absolute;
+    width: calc(15% * 0.95 - 12px);
+    height: calc(100% - 40px - 1.25em);
+    right: 0;
+    bottom: 0;
+    background-color: var(--acc);
+    overflow-x: hidden;
+
+    display: flex;
+    flex-direction: column;
+}
+
+#userListCounter {
+    padding-left: 1em;
+    margin-top: 20%;
+    margin-bottom: 0;
+}
+
+#userListContent {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+}
+
+.userDiv {
+    position: relative;
+    width: 100%;
+    height: 40px;
+    padding-top: .5em;
+    padding-bottom: .5em;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    background-color: transparent;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+}
+
+.userDiv:hover {
+    background-color: var(--acc2);
+}
+
+#friendsHeader {
+    position: absolute;
+    display: flex;
+    top: 0;
+    right: 0;
+    width: 100%;
+    height: 10%;
+    background-color: var(--highlight);
+    justify-content: center;
+    align-items: center;
+    flex-direction: row;
+}
+
+#friendsHeader > img {
+    width: 4em;
+    height: 4em;
+    background-color: var(--acc2);
+    margin: .5em;
+}
+
+#friendsHeader > p {
+    display: block;
+    font-size: 1.5em;
+    margin: auto;
+    margin-left: 0;
+}
+
+#friendsList {
+    position: absolute;
+    width: 100%;
+    height: 90%;
+    background-color: var(--acc3);
+    right: 0;
+    top: 10%;
+
+    display: flex;
+    flex-direction: column;
+}
+
+#friendsListNewGC {
+    width: 90%;
+    font-size: 1.5em;
+    margin-left: 5%;
+    margin-right: 5%;
+    margin-top: .5em;
+    border: none;
+    border-radius: 0;
+    background-color: var(--button);
+    cursor: pointer;
+}
+
+#friendsListNewGC:hover {
+    background-color: var(--button-press);
+}
+
+#newGCFriendsList {
+    position: absolute;
+    width: 90%;
+    left: 5%;
+    height: 20%;
+    background-color: var(--acc4);
+    visibility: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    align-items: center;
+    cursor: auto;
+}
+
+#newGCSearch {
+    width: 95%;
+    height: 15%;
+    outline: none;
+    background-color: var(--acc3);
+    border: none;
+    border-radius: 0;
+}
+
+#newGCSearch::placeholder {
+    font-family: "Fira Code", monospace;
+    color: var(--placeholder);
+}
+
+#newGCSearchRes {
+    width: 95%;
+    height: 60%;
+    background-color: var(--acc3);
+}
+
+#newGCCreate {
+    width: 95%;
+    height: 15%;
+    background-color: var(--button);
+    border: none;
+    border-radius: 0;
+}
+
+#newGCCreate:enabled {
+    cursor: pointer;
+}
+
+#newGCCreate:enabled:hover {
+    background-color: var(--button-press);
+}
+
+#friendsListContent {
+    width: 100%;
+    height: 100%;
+    overflow-x: hidden;
+}
+
+#friendsListContent > p {
+    margin-left: 5%;
+}
+
+#textEntryWrapper {
+    position: absolute;
+    width: 75%;
+    height: fit-content;
+    background-color: var(--acc);
+    bottom: 2.5%;
+    left: 7.5%;
+    padding: 0;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-evenly;
+}
+
+#textEntry {
+    width: calc(85% - 1em);
+    font-size: 1.5em;
+    margin: .25em;
+    padding: .25em;
+    border: none;
+    background-color: var(--acc5);
+    color: var(--text);
+    outline: none;
+    max-height: 16vh;
+    field-sizing: content;
+    resize: none;
+}
+
+#sendMsg {
+    width: 7%;
+    font-size: 1.5em;
+    margin: .25em auto;
+    border: none;
+    border-radius: 0;
+    background-color: var(--acc5);
+    color: var(--sendButtonGreen);
+    font-weight: bolder;
+    cursor: pointer;
+}
+
+#sendMsg:hover {
+    background-color: var(--bg);
+}
+
+#addFile {
+    display: flex;
+
+    width: 7%;
+    font-size: 1.5em;
+    margin: .25em auto;
+    border: none;
+    border-radius: 0;
+    background-color: var(--acc5);
+    color: var(--sendButtonGreen);
+    font-weight: bolder;
+    cursor: pointer;
+
+    justify-content: center;
+    align-items: center;
+}
+
+#addFile:hover {
+    background-color: var(--bg);
+}
+
+#addFileInput {
+    display: none;
+}
+
+#embedList {
+    position: absolute;
+    width: 100%;
+    height: 15vh;
+    background-color: var(--acc);
+    top: 0;
+    transform: translateY(-100%);
+    overflow-y: hidden;
+    overflow-x: scroll;
+    display: flex;
+    flex-direction: row;
+    visibility: hidden;
+}
+
+#replying {
+    position: absolute;
+    width: 100%;
+    height: 2.5vh;
+    background-color: var(--acc);
+    top: 0;
+    transform: translateY(-100%);
+    overflow: hidden;
+    display: flex;
+    flex-direction: row;
+    visibility: hidden;
+}
+
+#replying > img {
+    height: 100%;
+    border-radius: 9999px;
+}
+
+#replying > h1, #replying > p, #replying > button {
+    font-size: 1em;
+    margin: 0;
+    padding: 0;
+    white-space: nowrap;
+}
+
+#replying > p {
+    margin-left: 1em;
+    margin-right: 1em;
+    background: linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%);
+    background-clip: text;
+    color: transparent;
+    width: 100%;
+}
+
+#replying > button {
+    position: absolute;
+    right: 0;
+    aspect-ratio: 1;
+    height: 100%;
+    color: black;
+    background-color: var(--button);
+    border: none;
+    border-radius: 9999px;
+    cursor: pointer;
+}
+
+#replying > button:hover {
+    background-color: var(--button-press);
+}
+
+.smallTime {
+    position: absolute;
+    width: 100%;
+    margin: 0;
+    margin-top: .8em;
+    font-size: .55em;
+    color: darkgray;
+    visibility: hidden;
+}
+
+#textEntry::placeholder {
+    color: var(--acc4);
+    font-style: italic;
+    font-family: "Fira Code", monospace;
+}
+
+#friendsListWrapper {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 25%;
+    height: 100%;
+    box-shadow: 0px 0px 4px 4px rgba(0, 0, 0, .5);
+    transform: translateX(calc(100% + 8px));
+    transition: transform 500ms ease-in-out;
+
+    z-index: 2;
+}
+
+#toggleFriendsList {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    transform: translate(-90%, 100%);
+    width: 20%;
+    font-size: 2em;
+    border: none;
+    border-radius: 0;
+    background-color: var(--acc6);
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+}
+
+#myProfileScreen {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    z-index: 3;
+    background-color: var(--bg);
+    box-shadow: 0px 0px 4px 4px rgba(0, 0, 0, .5);
+    transform: translateY(calc(-100% - 8px));
+
+    transition: transform 0.5s ease-in-out;
+}
+
+#myProfileHeader {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: calc(40px + 1.25em);
+    background-color: var(--acc4);
+    display: flex;
+}
+
+#myProfileHeader > p {
+    font-style: italic;
+    font-size: 1.25em;
+    font-weight: 100;
+    margin-left: 1em;
+    margin-top: 1em;
+    margin-bottom: 1em;
+    width: 85%;
+}
+
+#myProfileHeader > button {
+    width: 15%;
+    border: none;
+    border-radius: 0;
+    background-color: var(--acc3);
+    cursor: pointer;
+    font-size: 1.25em;
+}
+
+#myProfileLeft {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 40%;
+    height: 90%;
+}
+
+#currPFP {
+    width: 25%;
+    aspect-ratio: 1;
+    margin-left: 5%;
+    border-radius: 999999999px;
+    border: 6px solid var(--acc4);
+}
+
+#currPFPOverlay {
+    position: absolute;
+    width: 25%;
+    aspect-ratio: 1;
+    margin-left: 5%;
+    border-radius: 999999999px;
+    border: 6px solid var(--acc4);
+    left: 0;
+    opacity: .5;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+#currPFPFile {
+    position: absolute;
+    width: 25%;
+    aspect-ratio: 1;
+    margin-left: 5%;
+    border-radius: 99999999px;
+    border: 6px solid var(--acc4);
+    left: 0;
+    opacity: .5;
+    pointer-events: all;
+    opacity: 0;
+    cursor: pointer;
+}
+
+#myProfileRight {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 60%;
+    height: 90%;
+}
+
+#myProfileEditingList {
+    display: flex;
+    flex-direction: column;
+}
+
+#myProfileEditingList > div {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    align-items: center;
+    justify-content: end;
+}
+
+#myProfileEditingList > div > p {
+    font-size: 2em;
+    font-weight: 500;
+    width: 10em;
+    text-align: right;
+}
+
+#myProfileEditingList > div > input {
+    font-size: 2em;
+    height: 1em;
+    margin-left: .5em;
+    margin-right: .5em;
+    width: 15em;
+    border: none;
+    border-radius: 0;
+    background-color: var(--acc5);
+    padding: .25em;
+}
+
+.editBtn {
+    font-size: 2em;
+    width: 4em;
+    background-color: var(--rose);
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+    margin-right: .5em;
+}
+
+.saveBtn {
+    font-size: 2em;
+    width: 4em;
+    background-color: var(--sendButtonGreen);
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+    margin-right: .5em;
+}
+
+#rightSideActions {
+    position: absolute;
+    bottom: 1em;
+    right: 1em;
+    width: 100%;
+    height: 10%;
+    display: flex;
+    flex-direction: row-reverse;
+}
+
+#logoutBtn {
+    background-color: black;
+    border: none;
+    font-size: 2em;
+    font-weight: 700;
+    width: 10em;
+    box-shadow: 0px 0px 4px 4px white;
+    cursor: pointer;
+    padding: 0;
+}
+
+#pfpScaling {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 50%;
+    height: 75%;
+    transform: translate(-50%, -50%);
+    background-color: var(--acc2);
+}
+
+#pfpPreview {
+    position: absolute;
+    max-width: 75%;
+    height: 75%;
+    aspect-ratio: 1;
+    left: 50%;
+    top: 0;
+    transform: translateX(-50%);
+    border-radius: 99999px;
+    border: 6px solid var(--acc4);
+    margin-top: 1%;
+}
+
+#pfpPreviewActions {
+    position: absolute;
+    width: 100%;
+    height: 10%;
+    bottom: 1%;
+    display: flex;
+    justify-content: space-evenly;
+
+}
+
+#pfpPreviewActions > button {
+    width: 40%;
+    font-size: 2em;
+    cursor: pointer;
+}
+
+#pfpPreviewActionsSet {
+    background-color: var(--button);
+    border: none;
+}
+
+#pfpPreviewActionsSet:hover {
+    background-color: var(--button-press);
+}
+
+#pfpPreviewActionsCancel {
+    background: none;
+    border: 2px solid var(--button);
+    color: var(--button);
+}
+
+#pfpPreviewActionsCancel:hover {
+    border-color: var(--button-press);
+    color: var(--button-press);
+}
+
+#editGc {
+    position: absolute;
+    width: 30%;
+    height: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--bg);
+}
+
+#editGcIcon {
+    position: absolute;
+    left: 50%;
+    top: 5%;
+    height: 60%;
+    aspect-ratio: 1;
+    border-radius: 9999px;
+    border: 4px solid var(--acc4);
+
+    transform: translateX(-50%);
+}
+
+#editGcIconFile {
+    position: absolute;
+    left: 50%;
+    top: 5%;
+    height: 60%;
+    aspect-ratio: 1;
+    border-radius: 9999px;
+    border: 4px solid transparent;
+    opacity: 0;
+    cursor: pointer;
+
+    transform: translateX(-50%);
+}
+
+#editGcIconOverlay {
+    position: absolute;
+    left: 50%;
+    top: 5%;
+    height: 60%;
+    aspect-ratio: 1;
+    border-radius: 9999px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border: 4px solid transparent;
+    visibility: hidden;
+
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+
+#editGcName {
+    position: absolute;
+    left: 50%;
+    bottom: 15%;
+    width: 90%;
+    font-size: 2em;
+    outline: none;
+    border: none;
+    border-radius: 0;
+    background-color: var(--acc);
+
+    transform: translateX(-50%);
+}
+
+#editGcName::placeholder {
+    color: var(--placeholder);
+}
+
+#editGcActions {
+    position: absolute;
+    width: 100%;
+    height: 10%;
+    bottom: 1%;
+    display: flex;
+    justify-content: space-evenly;
+}
+
+#editGcActions > button {
+    width: 40%;
+    font-size: 2em;
+    cursor: pointer;
+}
+
+#editGcActionsSet {
+    background-color: var(--button);
+    border: none;
+}
+
+#editGcActionsSet:hover {
+    background-color: var(--button-press);
+}
+
+#editGcActionsCancel {
+    background: none;
+    border: 2px solid var(--button);
+    color: var(--button);
+}
+
+#editGcActionsCancel:hover {
+    border-color: var(--button-press);
+    color: var(--button-press);
+}
+
+#addUserFriendsList {
+    position: absolute;
+    width: 50%;
+    height: 75%;
+    top: 50%;
+    left: 50%;
+    background-color: var(--bg);
+    transform: translate(-50%, -50%);
+
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+
+    align-items: center;
+}
+
+#addUserSearch {
+    font-size: 2em;
+    width: 95%;
+    height: 10%;
+    background-color: var(--acc3);
+    border: none;
+    border-radius: 0;
+    outline: none;
+}
+
+#addUserSearch::placeholder {
+    color: var(--placeholder);
+}
+
+#addUserSearchRes {
+    width: 95%;
+    height: 65%;
+    background-color: var(--acc3);
+
+    display: flex;
+    flex-direction: column;
+}
+
+#addUserAdd {
+    width: 95%;
+    height: 7.5%;
+    background-color: var(--button);
+    border: none;
+    border-radius: 0;
+    outline: none;
+    font-size: 1.5em;
+}
+
+#addUserAdd:enabled {
+    cursor: pointer;
+}
+
+#addUserAdd:enabled:hover {
+    background-color: var(--button-press);
+}
+
+#addUserCancel {
+    width: 95%;
+    height: 7.5%;
+    background: none;
+    border: 2px solid var(--button);
+    border-radius: 0;
+    outline: none;
+    cursor: pointer;
+    font-size: 1.5em;
+    color: var(--button);
+}
+
+#addUserCancel:hover {
+    color: var(--button-press);
+    border: 2px solid var(--button-press);
+}
+
+#accInfo {
+    background-color: var(--acc3);
+    margin-left: 5%;
+    margin-right: 5%;
+    width: 90%;
+    margin-top: .5em;
+}
+
+#accInfoDisplayname {
+    font-weight: 400;
+    text-align: center;
+    font-size: 2em;
+    margin-bottom: 0;
+}
+
+#accInfoUsername {
+    font-style: italic;
+    font-weight: 200;
+    text-align: center;
+    font-size: 1.5em;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+#accInfoUID {
+    font-weight: 200;
+    text-align: center;
+    font-size: 1.25em;
+    margin-top: 0;
+}
+
+#accCreated {
+    background-color: var(--acc3);
+    margin-left: 5%;
+    margin-right: calc(45% - 2em);
+    width: 50%;
+    padding: 1em;
+}
+
+#accCreated > p {
+    font-size: 1.25em;
+    margin-bottom: 0;
+    margin-top: 0;
+}
+
+#bio {
+    margin-left: 5%;
+    margin-top: 5%;
+    height: 30%;
+}
+
+#bioLabel {
+    font-size: 1.5em;
+    margin-bottom: 0;
+}
+
+#bioArea {
+    resize: none;
+    width: 90%;
+    height: 75%;
+    background-color: var(--acc3);
+    border: none;
+    outline: none;
+    font-size: 1.5em;
+}
+
+#loadingOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    background-color: var(--bg);
+    width: 100%;
+    height: 100%;
+    z-index: 98;
+    cursor: wait;
+
+    transition: opacity 0.5s linear;
+}
+
+#loadingOverlay > img {
+    position: absolute;
+    max-width: 50%;
+    max-height: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+#loadingOverlay > p {
+    position: absolute;
+    bottom: 10%;
+    width: 100%;
+    text-align: center;
+    font-size: 2em;
+}
+
+#friendNotifWrapper {
+    position: relative;
+    margin: 0;
+    margin-right: 1em;
+    aspect-ratio: 1 / 1;
+    height: auto;
+}
+
+#friendNotifBtn {
+    display: block;
+    font-size: 2em;
+    background: none;
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+
+    font-weight: 700;
+}
+
+#friendNotifNum {
+    position: absolute;
+    top: 0;
+    right: 0;
+    margin: 0;
+    width: 1.75em;
+    height: 1.75em;
+    line-height: 1.75em;
+    border-radius: 9999px;
+    background-color: red;
+    pointer-events: none;
+    text-align: center;
+    transform: translate(40%, -25%);
+    visibility: hidden;
+}
+
+#friendReqBtnWrapper {
+    position: relative;
+    margin: 0;
+    margin-right: .5em;
+    aspect-ratio: 1 / 1;
+    height: auto;
+}
+
+#friendReqSBtn {
+    display: block;
+    font-size: 2em;
+    background: none;
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+
+    font-weight: 700;
+}
+
+#friendReqScreen {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    background-color: var(--bg);
+    z-index: 2;
+    transform: translateX(calc(100% + 8px));
+    box-shadow: 0px 0px 4px 4px rgba(0, 0, 0, .5);
+
+    transition: transform 0.5s ease-in-out;
+}
+
+#findFriends {
+    background-color: var(--acc2);
+    width: 60%;
+    height: calc(100% - 2em);
+    margin: 1em;
+}
+
+#friendSearch {
+    display: flex;
+    background-color: var(--acc3);
+    width: 100%;
+    height: 10%;
+}
+
+#friendSearchIcon {
+    height: 100%;
+    cursor: pointer;
+}
+
+#friendSearchbar {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: none;
+    font-size: 2em;
+    margin-left: 1em;
+    margin-right: 1em;
+
+    outline: none;
+}
+
+#friendSearchbar::placeholder {
+    color: var(--placeholder);
+    font-family: "Fira Code", monospace;
+}
+
+#friendSearchResult {
+    width: 100%;
+}
+
+#currRequests {
+    position: absolute;
+    width: 35%;
+    height: 80%;
+    right: 0;
+    bottom: 0;
+    margin-bottom: 1em;
+    margin-right: 1em;
+    display: flex;
+    flex-direction: column;
+}
+
+#incomingRequests {
+    background-color: var(--acc2);
+    height: 50%;
+    margin: 0;
+    margin-bottom: .5em;
+}
+
+#outgoingRequests {
+    background-color: var(--acc2);
+    height: 50%;
+    margin: 0;
+    margin-top: .5em;
+}
+
+#imageOverlayImg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    max-width: 75%;
+    max-height: 75%;
+    transform: translate(-50%, -50%);
+}
+
+#textOverlayContents {
+    position: absolute;
+    width: calc(80% - 2em);
+    height: calc(90% - 2em);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--acc2);
+    display: flex;
+    flex-direction: column;
+    border-radius: 8px;
+}
+
+#textOverlayText {
+    width: calc(100% - 1em);
+    height: calc(95% - 1em);
+    resize: none;
+    padding: .5em;
+    background-color: var(--acc4);
+    border: none;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    outline: none;
+    font-size: 1.25em;
+}
+
+#textOverlayInfoWrapper {
+    width: 100%;
+    height: 5%;
+    padding: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.textOverlayFilename {
+    flex: 0 0 50%;
+    padding: 0;
+    margin: 0;
+    white-space: nowrap;
+    background: linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%);
+    background-clip: text;
+    color: transparent;
+    overflow: hidden;
+}
+
+.textOverlayControls {
+    flex: 0 0 50%;
+    height: 100%;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: row;
+    justify-content: end;
+}
+
+.textOverlayControls > img, .textOverlayControls > a > img {
+    width: auto;
+    height: 100%;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: .5em;
+    margin-right: .5em;
+}
+
+#popupContents {
+    position: absolute;
+    width: calc(50% - 2em);
+    height: calc(50% - 2em);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--bg);
+    padding: 1em;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#popupTitle {
+    text-align: center;
+    font-size: 2em;
+}
+
+#popupContent {
+    text-align: center;
+    font-size: 1.25em;
+}
+
+#popupClose {
+    position: absolute;
+    width: calc(100% - 2em);
+    font-size: 2em;
+    background-color: var(--button);
+    border: none;
+    cursor: pointer;
+    bottom: 1em;
+}
+
+#popupClose:hover {
+    background-color: var(--button-press);
+}
+
+.header {
+    width: calc(100% - 2em);
+    background-color: var(--acc3);
+    padding: 1em;
+}
+
+.header > p {
+    padding: 0;
+    margin: 0;
+}
+
+.font {
+    font-family: "Fira Code", monospace;
+}
+
+.white {
+    color: var(--text);
+}
+
+.black {
+    color: black;
+}
+
+.gray {
+    color: gray;
+}
+
+.scroll {
+    overflow-y: scroll;
+}
+
+.messageDiv {
+    width: 100%;
+    background-color: var(--bg);
+    display: flex;
+    justify-content: space-between;
+    padding: 0;
+    padding-top: 1em;
+    border-left: 2px solid transparent;
+}
+
+.messageDiv:hover {
+    background-color: var(--acc);
+}
+
+.invis {
+    opacity: 0;
+}
+
+.rClickMenu {
+    position: absolute;
+    width: 224px;
+    padding: 8px;
+    background-color: var(--acc);
+    left: 0;
+    top: 0;
+    border: 2px solid var(--acc2);
+    display: flex;
+    flex-direction: column;
+    visibility: hidden;
+}
+
+.rClickMenuOption {
+    width: 100%;
+    font-size: 1.25em;
+    background-color: var(--acc);
+    border: none;
+    cursor: pointer;
+}
+
+.rClickMenuOption[disabled] {
+    cursor: auto;
+    color: gray;
+}
+
+.rClickMenuOption:hover {
+    background-color: var(--acc4);
+}
+
+.rClickMenuOption[disabled] {
+    background-color: var(--acc);
+}
+
+.backBtn {
+    position: absolute;
+    right: 0;
+    top: 0;
+    background-color: var(--acc3);
+    border: none;
+    border-radius: 0;
+    font-size: 1.5em;
+    width: 15em;
+    padding: 1em;
+    cursor: pointer;
+}
+
+.overlay {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    background-color: rgba(0, 0, 0, 0.75);
+    visibility: hidden;
+    opacity: 0;
+    z-index: 10;
+
+    transition: opacity 250ms linear;
+}
+
+.green {
+    color: lime;
+    font-weight: bold;
+}
+
+.red {
+    color: red;
+    font-weight: bold;
+}
+
+::-webkit-scrollbar {
+    width: 5px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgb(0, 0, 0, 0);
+}
+
+::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 10000px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #111;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+}
