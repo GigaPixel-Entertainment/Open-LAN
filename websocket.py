@@ -326,7 +326,7 @@ class WS():
                             f.write(self.fernet.encrypt(orjson.dumps({"name": name, "username": username, "secQ": securityKey})))
                             f.close()
 
-                        self.users.append({"UID": len(self.users), "USRNAME": username, "PWD": bcrypt.hashpw(password, bcrypt.gensalt(config.NUM_ENCRYPT_ROUNDS)).decode("utf-8"), "Displayname": username, "Birthday": None, "BirthdayV": "PRIVATE", "AccCreated": time.time(), "Pronouns": "", "Bio": "", "PFP": self.DEFAULT_PFPS[secrets.randbelow(len(self.DEFAULT_PFPS))], "Friends": [], "Chats": [0], "FriendRequests": []})
+                        self.users.append({"UID": len(self.users), "USRNAME": username, "PWD": bcrypt.hashpw(password, bcrypt.gensalt(config.NUM_ENCRYPT_ROUNDS)).decode("utf-8"), "Displayname": username, "Birthday": None, "BirthdayV": "PRIVATE", "AccCreated": time.time(), "Pronouns": "", "Bio": "", "PFP": self.DEFAULT_PFPS[secrets.randbelow(len(self.DEFAULT_PFPS))], "Friends": [], "Chats": [0], "FriendRequests": [], "ReadMsgs": {"0": 0}})
 
                         self.RATELIMITED_IPS.append({"ip": ws.remote_address[0], "expire": time.time() + config.ACC_CREATION_COOLDOWN_SEC})
 
@@ -388,7 +388,7 @@ class WS():
                             lastMsg = chat["messages"][-1] if len(chat["messages"]) > 0 else None
                             lastRealMsg = None
                             for msg in chat["messages"]:
-                                if not "SYSMSG" in msg:
+                                if not "SYSMSG" in msg and not "deleted" in msg:
                                     lastRealMsg = msg
 
                             await self.wsSendEncrypted(ws, orjson.dumps({"type":"reqChatMetaSuccess", "chat": {
@@ -398,7 +398,7 @@ class WS():
                                 "icon": chat["Icon"] if "Icon" in chat else secrets.choice(self.DEFAULT_PFPS),
                                 "recipients": chat["Recipients"],
                                 "lastMsg": {
-                                    "time": lastRealMsg["time"] if lastRealMsg else chat["Time"],
+                                    "time": lastMsg["time"] if lastMsg else chat["Time"],
                                     "MSGID": lastMsg["MSGID"] if lastMsg else 0,
                                     "content": lastRealMsg["content"] if lastRealMsg else ""
                                 }
@@ -630,7 +630,7 @@ class WS():
                                 if decryptedBody["CID"] in userInfo["Chats"]:
                                     broadcastClients.append(client)
 
-                            await self.wsBroadcastEncrypted(broadcastClients, orjson.dumps({"type":"chatUpdate", "chat": chat}))
+                            await self.wsBroadcastEncrypted(broadcastClients, orjson.dumps({"type":"metaChatUpdate", "chat": chat}))
                         else:
                             break
 
@@ -678,7 +678,7 @@ class WS():
                                 if decryptedBody["CID"] in userInfo["Chats"]:
                                     broadcastClients.append(client)
 
-                            await self.wsBroadcastEncrypted(broadcastClients, orjson.dumps({"type":"chatUpdate", "chat": chat}))
+                            await self.wsBroadcastEncrypted(broadcastClients, orjson.dumps({"type":"metaChatUpdate", "chat": chat}))
                         else:
                             break
 
@@ -1026,11 +1026,13 @@ class WS():
                                     usr["FriendRequests"].remove({"UID": selfUID, "type": "outgoing"})
                                     usr["Friends"].append({"UID": selfUID, "CID": cid, "timestamp": time.time()})
                                     usr["Chats"].append(cid)
+                                    usr["ReadMsgs"][str(cid)] = 0
 
                                 if usr["UID"] == selfUID:
                                     usr["FriendRequests"].remove({"UID": targetUID, "type": "incoming"})
                                     usr["Friends"].append({"UID": targetUID, "CID": cid, "timestamp": time.time()})
                                     usr["Chats"].append(cid)
+                                    usr["ReadMsgs"][str(cid)] = 0
 
                             await self.wsSendEncrypted(ws, orjson.dumps({"type": "updateFriends", "friendReqs": selfFriendReqs, "friends": selfInfo["Friends"], "chats": selfInfo["Chats"]}), trackerId)
 
@@ -1086,6 +1088,7 @@ class WS():
 
                                 chatName += uInfo["Displayname"] + ", "
                                 uInfo["Chats"].append(cid)
+                                uInfo["ReadMsgs"][str(cid)] = 0
 
                             if not success:
                                 await self.wsSendEncrypted(ws, orjson.dumps({"type": "createGCFailed"}), trackerId)

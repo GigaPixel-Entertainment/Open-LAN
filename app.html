@@ -392,6 +392,10 @@
 
             usr = await request(JSON.stringify({"type": "reqUsersList", "users": [UID]}))
 
+            if (usr["users"].length == 0) {
+                return null
+            }
+
             usr["users"].forEach((userInfo) => {
                 userInfoCache.push(userInfo)
             })
@@ -1021,6 +1025,18 @@
             popSearchResults()
         }
 
+        async function moveChat(newCID) {
+            if (newCID == currChat) {
+                return
+            }
+
+            currChat = newCID
+            changedChat = true
+            currPage = 0
+            await fetchChatData()
+            await setChatList()
+        }
+
         var settingChatList = false
         var lastMsgId = 0
         const chatMetaCache = []
@@ -1030,13 +1046,16 @@
             }
             settingChatList = true
 
+            const unreadMessagesP = document.createElement("p")
+            unreadMessagesP.classList = "font white"
+            unreadMessagesP.textContent = "unread messages"
+
             const activeMessagesP = document.createElement("p")
             activeMessagesP.classList = "font white"
             activeMessagesP.textContent = "active messages"
 
-            friendsList2 = [activeMessagesP]
-
-            activeMsgs = []
+            const unreadMsgs = []
+            const activeMsgs = []
             for (let chatInd = 0; chatInd < chats.length; chatInd++) {
                 const chatID = chats[chatInd]
                 let chat = null
@@ -1074,11 +1093,7 @@
                         return
                     }
 
-                    currChat = chatID
-                    changedChat = true
-                    currPage = 0
-                    fetchChatData()
-                    setChatList()
+                    moveChat(chatID)
                 }
 
                 const chatImg = document.createElement("div")
@@ -1119,11 +1134,13 @@
                 chatExtInfo.style.whiteSpace = "nowrap"
                 chatExtInfo.classList = "font"
 
-                let unreadMsgs = chat["lastMsg"]["MSGID"] - readMsgs[chatID.toString()]
-                if (unreadMsgs == 0) {
+                const numUnreadMsgs = chat["lastMsg"]["MSGID"] - readMsgs[chatID.toString()]
+                const isRead = numUnreadMsgs == 0 || isNaN(numUnreadMsgs)
+
+                if (isRead) {
                     chatExtInfo.textContent = chat["lastMsg"]["content"]
                 } else {
-                    chatExtInfo.textContent = unreadMsgs + " unread message" + (unreadMsgs > 1 ? "s" : "")
+                    chatExtInfo.textContent = numUnreadMsgs + " unread message" + (numUnreadMsgs > 1 ? "s" : "")
                 }
 
                 if (chat["type"] == "dm") {
@@ -1149,17 +1166,29 @@
                 chatInfo.appendChild(chatExtInfo)
                 chatDiv.appendChild(chatImg)
                 chatDiv.appendChild(chatInfo)
-                activeMsgs.push(chatDiv)
+
+                if (isRead) {
+                    activeMsgs.push(chatDiv)
+                } else {
+                    unreadMsgs.push(chatDiv)
+                }
             }
 
-            activeMsgs.sort((a, b) => {
+            function timeSort(a, b) {
                 aTime = a.getAttribute("time")
                 bTime = b.getAttribute("time")
 
                 return bTime - aTime
-            })
+            }
 
-            friendsList2 = [...friendsList2, ...activeMsgs]
+            unreadMsgs.sort(timeSort)
+            activeMsgs.sort(timeSort)
+
+            if (unreadMsgs.length > 0) {
+                friendsList2 = [unreadMessagesP, ...unreadMsgs, activeMessagesP, ...activeMsgs]
+            } else {
+                friendsList2 = [activeMessagesP, ...activeMsgs]
+            }
 
             friendsListContent.replaceChildren()
 
@@ -1351,25 +1380,27 @@
             return null
         }
 
-        function onScroll() {
-            const currScroll = chatDiv.scrollTop
-            const atBottom = ((currScroll + chatDiv.offsetHeight >= chatDiv.scrollHeight - 8) || changedChat) && !startAtTop
-
-            if (atBottom) {
-                if (readMsgs[currChat.toString()] == lastMsgId) {
-                    return
-                }
-
-                readMsgs[currChat.toString()] = lastMsgId
-                request(JSON.stringify({
-                    "type": "setRead",
-                    "CID": currChat,
-                    "MSGID": lastMsgId
-                }))
+        function onScroll(atBottom) {
+            if (!atBottom) {
+                return
             }
+
+            if (readMsgs[currChat.toString()] == lastMsgId) {
+                return
+            }
+
+            readMsgs[currChat.toString()] = lastMsgId
+            request(JSON.stringify({
+                "type": "setRead",
+                "CID": currChat,
+                "MSGID": lastMsgId
+            }))
         }
 
-        document.addEventListener("scroll", onScroll)
+        chatDiv.addEventListener("scroll", () => {
+            const atBottom = ((chatDiv.scrollTop + chatDiv.offsetHeight >= chatDiv.scrollHeight - 8) || changedChat) && !startAtTop
+            onScroll(atBottom)
+        })
 
         const embedCache = {}
         async function evalEmbeds(message, msgP) {
@@ -2007,9 +2038,13 @@
                 lastMessageDate = new Date(lastMsg["time"] * 1000)
             }
 
-            if (lastMsg && message["time"] && lastMsg["time"]) {
-                currDate = messageDate.toLocaleDateString("en-US", {year: "numeric", month:"long", day:"numeric"})
-                lastDate = lastMessageDate.toLocaleDateString("en-US", {year: "numeric", month:"long", day:"numeric"})
+            if (message["time"]) {
+                const currDate = messageDate.toLocaleDateString("en-US", {year: "numeric", month:"long", day:"numeric"})
+                let lastDate = ""
+
+                if (lastMsg && lastMsg["time"]) {
+                    lastDate = lastMessageDate.toLocaleDateString("en-US", {year: "numeric", month:"long", day:"numeric"})
+                }
 
                 if (currDate != lastDate) {
                     const seperatorWrapper = document.createElement("div")
@@ -2130,7 +2165,7 @@
                 }
             }
 
-            onScroll()
+            onScroll(atBottom)
         }
 
         async function setMemberList() {
@@ -3107,11 +3142,7 @@
 
                                         if (respBody["type"] == "chatGone") {
                                             chats = respBody["chats"]
-                                            currChat = 0
-                                            currPage = 0
-                                            changedChat = true
-                                            fetchChatData()
-                                            setChatList()
+                                            moveChat(0)
                                         }
 
                                         if (respBody["type"] == "newMsg") {
