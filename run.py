@@ -236,7 +236,7 @@ class Dashboard(HttpHandler):
             }))
 
     def handleRequestHttp(self, sk: socket.socket):
-        sk.sendall(httphelper.formatHttpResponse(None, config.CWD / "httpsRequired.html"))
+        sk.sendall(httphelper.formatHttpResponse(None, config.WEB_DIR / "httpsRequired.html"))
 
 def stopServerProc():
     if serverProc:

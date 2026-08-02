@@ -276,6 +276,8 @@ def handleRequest(sk: socket.socket):
             page = "/index.html"
 
         pagePath = config.WEB_DIR / page.removeprefix("/")
+        if config.WEB_DIR.resolve() in (config.CWD / page.removeprefix("/")).resolve().parents:
+            pagePath = config.CWD / page.removeprefix("/")
 
         if page == "/api/wsurl":
             currUrl = parsed.headers.get("Domain-Url")
