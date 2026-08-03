@@ -3,7 +3,6 @@
 
 """Script to register a new user"""
 
-import pathlib
 import time
 
 import msgpack

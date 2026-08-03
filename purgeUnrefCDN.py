@@ -52,7 +52,7 @@ for cdn in config.CDN_DIR.iterdir():
         unreferencedCDN.add(cdnRel)
 
 for cdn in unreferencedCDN:
-    path: pathlib.Path = config.CWD / cdn
+    path: pathlib.Path = config.CDN_DIR / cdn
     path.unlink(True)
 
 print("Purged successfully!")

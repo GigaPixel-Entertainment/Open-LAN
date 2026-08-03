@@ -3,7 +3,6 @@
 
 """Script to edit a saved user"""
 
-import pathlib
 import sys
 
 from cryptography.fernet import Fernet

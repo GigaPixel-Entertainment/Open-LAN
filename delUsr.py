@@ -3,7 +3,6 @@
 
 """Script to delete a saved user"""
 
-import pathlib
 import sys
 
 from cryptography.fernet import Fernet

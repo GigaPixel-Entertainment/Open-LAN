@@ -3,7 +3,6 @@
 
 """Script to create a new chat"""
 
-import pathlib
 import time
 import sys
 
