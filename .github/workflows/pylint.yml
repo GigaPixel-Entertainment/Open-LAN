@@ -5,9 +5,7 @@ on:
     paths-ignore:
       - 'Web/**'
       - 'pfps/**'
-    paths:
-      - "**/*.py"
-
+      - '**.md'
 jobs:
   build:
     runs-on: ubuntu-latest
