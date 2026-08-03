@@ -429,6 +429,21 @@
         }
     </script>
     <script>
+        // Validate Url
+        function isValidUrl(url) {
+            try {
+                const parsedUrl = URL.parse(url)
+                const safeProtocols = ["http:", "https:"]
+
+                if (safeProtocols.includes(parsedUrl.protocol)) {
+                    return true
+                }
+            } catch {}
+
+            return false
+        }
+    </script>
+    <script>
         // Userinfo Mgr
         async function reqUsrInfo(UID) {
             for (let index = 0; index < userInfoCache.length; index++) {
@@ -1930,7 +1945,7 @@
                     const word = words[index];
 
                     let wordE = null
-                    if (word.startsWith("http://") || word.startsWith("https://")) {
+                    if (word.startsWith("http") && isValidUrl(word)) {
                         wordE = document.createElement("a")
                         wordE.href = word
                         wordE.target = "_blank"
