@@ -198,6 +198,26 @@
             </div>
         </div>
 
+        <div id="usrProfileScreen" class="overlay" style="opacity: 1;">
+            <div id="usrProfileScreenContent">
+                <div id="usrProfileScreenUsrInfoWrapper">
+                    <img id="usrProfileScreenUsrPfp">
+                    <h1 id="usrProfileScreenUsrDn" class="font"></h1>
+                    <p id="usrProfileScreenUsrUn" class="font"></p>
+                    <p id="usrProfileScreenUsrPro" class="font white"></p>
+                    <div id="usrProfileScreenUsrActions">
+                        <button id="usrProfileScreenUsrActionMsg" class="font">message</button>
+                        <button id="usrProfileScreenUsrActionFri" class="font">add friend</button>
+                    </div>
+                    <textarea id="usrProfileScreenUsrBio" class="font white" placeholder="[no bio]" readonly></textarea>
+                </div>
+                <div id="usrProfileScreenSoon">
+                    <img src="Media/Logo.png">
+                    <h1 class="font white">Coming soon!</h1>
+                </div>
+            </div>
+        </div>
+
         <div id="genericPopup" class="overlay">
             <div id="popupContents">
                 <h1 id="popupTitle" class="font white"></h1>
@@ -221,6 +241,15 @@
         <div id="usrListRClickMenu" class="rClickMenu">
             <button id="usrListProfile" class="rClickMenuOption font white">see profile</button>
             <button id="usrListRemove" class="rClickMenuOption font white">remove from chat</button>
+        </div>
+
+        <div id="usrProfilePopup">
+            <img id="usrProfilePopupPfp" class="usrProfilePopupPfp" style="margin-top: 0;">
+            <p id="usrProfilePopupDn" class="font usrProfilePopupDn"></p>
+            <p id="usrProfilePopupUn" class="font usrProfilePopupUn"></p>
+            <p id="usrProfilePopupPro" class="font usrProfilePopupPro"></p>
+            <textarea id="usrProfilePopupBio" class="font white usrProfilePopupBio" placeholder="[no bio]" readonly></textarea>
+            <p id="usrProfilePopupFullBio" class="font white usrProfilePopupFullBio">View Full Bio</p>
         </div>
     </body>
     <footer>
@@ -324,6 +353,17 @@
         const textOverlayDownload = document.getElementById("textOverlayDownload")
         const textOverlayCopy = document.getElementById("textOverlayCopy")
 
+        const usrProfileScreen = document.getElementById("usrProfileScreen")
+        const usrProfileScreenContent = document.getElementById("usrProfileScreenContent")
+        const usrProfileScreenUsrPfp = document.getElementById("usrProfileScreenUsrPfp")
+        const usrProfileScreenUsrDn = document.getElementById("usrProfileScreenUsrDn")
+        const usrProfileScreenUsrUn = document.getElementById("usrProfileScreenUsrUn")
+        const usrProfileScreenUsrPro = document.getElementById("usrProfileScreenUsrPro")
+        const usrProfileScreenUsrActions = document.getElementById("usrProfileScreenUsrActions")
+        const usrProfileScreenUsrActionMsg = document.getElementById("usrProfileScreenUsrActionMsg")
+        const usrProfileScreenUsrActionFri = document.getElementById("usrProfileScreenUsrActionFri")
+        const usrProfileScreenUsrBio = document.getElementById("usrProfileScreenUsrBio")
+
         const replying = document.getElementById("replying")
         const replyingPFP = document.getElementById("replyingPFP")
         const replyingUsername = document.getElementById("replyingUsername")
@@ -343,6 +383,14 @@
         const textEntry = document.getElementById("textEntry")
         const sendMsgBtn = document.getElementById("sendMsg")
         const addFileBtn = document.getElementById("addFileInput")
+
+        const usrProfilePopup = document.getElementById("usrProfilePopup")
+        const usrProfilePopupPfp = document.getElementById("usrProfilePopupPfp")
+        const usrProfilePopupDn = document.getElementById("usrProfilePopupDn")
+        const usrProfilePopupUn = document.getElementById("usrProfilePopupUn")
+        const usrProfilePopupPro = document.getElementById("usrProfilePopupPro")
+        const usrProfilePopupBio = document.getElementById("usrProfilePopupBio")
+        const usrProfilePopupFullBio = document.getElementById("usrProfilePopupFullBio")
     </script>
     <script>
         // String comparison by aceakash (https://github.com/aceakash/string-similarity)
@@ -545,6 +593,189 @@
             } catch {
                 console.warn("Failed to copy to clipboard!")
             }
+        })
+
+        var usrProfileScreenVisible = false
+        var usrProfileScreenUsrInfo = null
+        var usrProfileScreenFriendCID = -1
+        var usrProfileScreenUID = -1
+        var usrProfileFriAction = "none"
+
+        function hideUsrProfile() {
+            usrProfileScreen.style.visibility = "hidden"
+            usrProfileScreenFriendCID = -1
+            usrProfileScreenUID = -1
+            usrProfileScreenVisible = false
+            usrProfileScreenUsrInfo = null
+            usrProfileFriAction = "none"
+        }
+
+        function showUsrProfile(usrInfo) {
+            usrProfileScreenUsrPfp.src = usrInfo["pfp"]
+            usrProfileScreenUsrDn.textContent = usrInfo["displayname"]
+            usrProfileScreenUsrUn.textContent = usrInfo["username"]
+            usrProfileScreenUsrPro.textContent = usrInfo["pronouns"]
+            usrProfileScreenUsrBio.textContent = usrInfo["bio"]
+
+            if (usrInfo["UID"] == currUID) {
+                usrProfileScreenUsrActions.style.position = "absolute"
+                usrProfileScreenUsrActions.style.visibility = "hidden"
+            } else {
+                usrProfileScreenUsrActions.style.position = ""
+                usrProfileScreenUsrActions.style.visibility = "inherit"
+            }
+
+            usrProfileScreenUID = usrInfo["UID"]
+
+            let isFriend = false
+            for (let fri = 0; fri < friends.length; fri++) {
+                const friend = friends[fri];
+
+                if (friend["UID"] == usrInfo["UID"]) {
+                    isFriend = true
+                    usrProfileScreenFriendCID = friend["CID"]
+                    usrProfileScreenFriendUID = friend["UID"]
+                    break
+                }
+            }
+
+            let isSendingFriendReq = false
+            for (let friReq = 0; friReq < friendReqs.length; friReq++) {
+                const friendReq = friendReqs[friReq];
+
+                if (friendReq["UID"] == usrInfo["UID"] && friendReq["type"] == "outgoing") {
+                    isSendingFriendReq = true
+                    break
+                }
+            }
+
+            usrProfileScreenUsrActionFri.disabled = false
+
+            if (isFriend) {
+                usrProfileScreenUsrActionMsg.style.position = ""
+                usrProfileScreenUsrActionMsg.style.visibility = "inherit"
+
+                usrProfileScreenUsrActionFri.style.backgroundColor = "var(--rose)"
+                usrProfileScreenUsrActionFri.textContent = "remove friend"
+                usrProfileFriAction = "remove"
+            } else {
+                usrProfileScreenUsrActionMsg.style.position = "absolute"
+                usrProfileScreenUsrActionMsg.style.visibility = "hidden"
+
+                usrProfileScreenUsrActionFri.style.backgroundColor = "var(--button)"
+
+                if (isSendingFriendReq) {
+                    usrProfileScreenUsrActionFri.style.backgroundColor = "var(--rose)"
+                    usrProfileScreenUsrActionFri.textContent = "cancel"
+                    usrProfileFriAction = "cancel"
+                } else {
+                    usrProfileScreenUsrActionFri.textContent = "add friend"
+                    usrProfileFriAction = "add"
+                }
+            }
+
+            usrProfileScreen.style.visibility = "visible"
+            usrProfileScreenVisible = true
+            usrProfileScreenUsrInfo = usrInfo
+        }
+
+        var usrProfilePopupInfo = null
+        function showUsrProfilePopup(x, y, usrInfo) {
+            usrProfilePopupPfp.src = usrInfo["pfp"]
+            usrProfilePopupDn.textContent = usrInfo["displayname"]
+            usrProfilePopupUn.textContent = usrInfo["username"]
+            usrProfilePopupPro.textContent = usrInfo["pronouns"]
+            usrProfilePopupBio.textContent = usrInfo["bio"].slice(0, 100)
+
+            if (usrInfo["bio"].length > 100) {
+                usrProfilePopupFullBio.style.visibility = "visible"
+            } else {
+                usrProfilePopupFullBio.style.visibility = "hidden"
+            }
+
+            const xOffset = x + usrProfilePopup.offsetWidth > window.innerWidth ? -usrProfilePopup.offsetWidth : 0
+            const yOffset = y + usrProfilePopup.offsetHeight > window.innerHeight ? -usrProfilePopup.offsetHeight : 0
+
+            usrProfilePopup.style.left = x + xOffset + "px"
+            usrProfilePopup.style.top = y + yOffset + "px"
+            usrProfilePopup.style.visibility = "visible"
+
+            usrProfilePopupInfo = usrInfo
+        }
+
+        usrProfileScreenUsrActionFri.addEventListener("click", () => {
+            if (usrProfileFriAction == "none") {
+                return
+            }
+
+            if (usrProfileFriAction == "add") {
+                let isPendingFriend = false
+                for (let friReq = 0; friReq < friendReqs.length; friReq++) {
+                    const friendReq = friendReqs[friReq];
+                    if (friendReq["UID"] == usrProfileScreenUID && friendReq["type"] == "incoming") {
+                        isPendingFriend = true
+                        break
+                    }
+                }
+
+                if (isPendingFriend) {
+                    request(JSON.stringify({
+                        "type": "acceptFriendReq",
+                        "UID": usrProfileScreenUID
+                    }))
+                } else {
+                    request(JSON.stringify({
+                        "type": "friendReq",
+                        "UID": usrProfileScreenUID
+                    }))
+                }
+            }
+
+            if (usrProfileFriAction == "cancel") {
+                request(JSON.stringify({
+                    "type": "cancelFriendReq",
+                    "UID": usrProfileScreenUID
+                }))
+            }
+
+            if (usrProfileFriAction == "remove") {
+                request(JSON.stringify({
+                    "type": "removeFriend",
+                    "UID": usrProfileScreenUID
+                }))
+            }
+        })
+
+        usrProfileScreenUsrActionMsg.addEventListener("click", () => {
+            if (usrProfileScreenFriendCID == -1) {
+                return
+            }
+
+            moveChat(usrProfileScreenFriendCID)
+            hideUsrProfile()
+        })
+
+        usrProfileScreen.addEventListener("click", hideUsrProfile)
+
+        usrProfileScreenContent.addEventListener("click", (e) => {
+            e.stopPropagation()
+        })
+
+        usrProfilePopupPfp.addEventListener("mousedown", () => {
+            if (usrProfilePopupInfo) {
+                showUsrProfile(usrProfilePopupInfo)
+            }
+        })
+
+        usrProfilePopupFullBio.addEventListener("mousedown", () => {
+            if (usrProfilePopupInfo) {
+                showUsrProfile(usrProfilePopupInfo)
+            }
+        })
+
+        document.addEventListener("click", () => {
+            usrProfilePopup.style.visibility = "hidden"
+            usrProfilePopupInfo = null
         })
 
         var chats = []
@@ -828,8 +1059,16 @@
             }
         })
 
+        usrListProfile.addEventListener("mousedown", () => {
+            if (usrListRClickMenu && usrListRClickMenuUsr != null) {
+                reqUsrInfo(usrListRClickMenuUsr).then((uInfo) => {
+                    showUsrProfile(uInfo)
+                })
+            }
+        })
+
         usrListRemove.addEventListener("mousedown", (e) => {
-            if (usrListRClickMenu && usrListRClickMenuUsr && usrListRClickMenuUsr != currUID && currUID == chatCache["Owner"] && currChat != 0) {
+            if (usrListRClickMenu && usrListRClickMenuUsr != null && usrListRClickMenuUsr != currUID && currUID == chatCache["Owner"] && currChat != 0) {
                 request(JSON.stringify({"type": "rmUsrFromChat", "CID": currChat, "UID": usrListRClickMenuUsr}))
             }
         })
@@ -1023,6 +1262,10 @@
             })
 
             popSearchResults()
+
+            if (usrProfileScreenVisible) {
+                showUsrProfile(usrProfileScreenUsrInfo)
+            }
         }
 
         async function moveChat(newCID) {
@@ -1382,6 +1625,10 @@
 
         function onScroll(atBottom) {
             if (!atBottom) {
+                return
+            }
+
+            if (currPage != 0) {
                 return
             }
 
@@ -1846,22 +2093,31 @@
             imgArea.style.width = "2.5%"
 
             const pfpImg = document.createElement("img")
-            pfpImg.style.width = "100%"
-            pfpImg.style.aspectRatio = "1"
-            pfpImg.style.border = "3px solid var(--acc4)"
-            pfpImg.style.borderRadius = "9999999999px"
-            pfpImg.style.backgroundColor = "rgba(0, 0, 0, 0)"
+            pfpImg.classList = "fullMsgPfpImg"
             pfpImg.src = usrInfo["pfp"]
+
+            pfpImg.addEventListener("click", (e) => {
+                showUsrProfilePopup(e.clientX, e.clientY, usrInfo)
+                e.stopPropagation()
+            })
 
             const textarea = document.createElement("div")
             textarea.style.width = "96%"
             textarea.style.background = "none"
 
-            const username = document.createElement("h2")
-            username.style.margin = "0"
-            username.classList = "font white"
-            username.style.display = "flex"
-            username.textContent = usrInfo["displayname"]
+            const dnWrapper = document.createElement("div")
+            dnWrapper.classList = "fullMsgDisplaynameWrapper"
+
+            const displayname = document.createElement("h2")
+            displayname.style.margin = "0"
+            displayname.classList = "font white fullMsgDisplayname"
+            displayname.textContent = usrInfo["displayname"]
+            dnWrapper.appendChild(displayname)
+
+            displayname.addEventListener("click", (e) => {
+                showUsrProfilePopup(e.clientX, e.clientY, usrInfo)
+                e.stopPropagation()
+            })
 
             if (messageDate) {
                 const timeDisplay = document.createElement("p")
@@ -1870,10 +2126,11 @@
                 timeDisplay.style.margin = "0"
                 timeDisplay.style.color = "gray"
                 timeDisplay.style.fontWeight = "500"
+                timeDisplay.style.fontSize = "larger"
                 timeDisplay.style.marginLeft = "1em"
                 timeDisplay.textContent = messageDate.toLocaleTimeString("en-US", {"hour":"2-digit","minute":"2-digit"})
 
-                username.append(timeDisplay)
+                dnWrapper.append(timeDisplay)
             }
 
             const msgP = await genMsg(message)
@@ -1884,7 +2141,7 @@
             }
 
             imgArea.append(pfpImg)
-            textarea.appendChild(username)
+            textarea.appendChild(dnWrapper)
             textarea.append(msgP)
             messageDiv.append(imgArea)
             messageDiv.append(textarea)
@@ -2253,6 +2510,11 @@
                         }
                         usrListRClickMenuUsr = uid
                     })
+
+                    userDiv.addEventListener("click", (e) => {
+                        showUsrProfilePopup(e.clientX, e.clientY, usrInfo)
+                        e.stopPropagation()
+                    })
                 }
 
                 const addUsr = document.createElement("button")
@@ -2320,66 +2582,32 @@
                 userListCounter.style.position = "absolute"
 
                 const pfp = document.createElement("img")
-                pfp.style.width = "20%"
-                pfp.style.aspectRatio = "1"
-                pfp.style.borderRadius = "9999px"
-                pfp.style.border = "4px solid var(--acc4)"
-                pfp.style.marginLeft = "5%"
-                pfp.style.marginTop = "2.5em"
-                pfp.style.cursor = "pointer"
+                pfp.classList = "usrProfilePopupPfp"
                 pfp.src = usrInfo["pfp"]
                 userListContent.appendChild(pfp)
 
+                pfp.addEventListener("click", () => {
+                    showUsrProfile(usrInfo)
+                })
+
                 const dn = document.createElement("p")
-                dn.style.fontSize = "1.25em"
-                dn.style.fontWeight = "bold"
-                dn.style.margin = "0"
-                dn.style.marginLeft = "5%"
-                dn.style.whiteSpace = "pre"
-                dn.style.background = "linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%)"
-                dn.style.backgroundClip = "text"
-                dn.style.color = "transparent"
-                dn.classList = "font"
+                dn.classList = "font usrProfilePopupDn"
                 dn.textContent = usrInfo["displayname"]
                 userListContent.appendChild(dn)
 
                 const un = document.createElement("p")
-                un.style.fontSize = ".75em"
-                un.style.margin = "0"
-                un.style.marginLeft = "5%"
-                un.style.whiteSpace = "pre"
-                un.style.background = "linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%)"
-                un.style.backgroundClip = "text"
-                un.style.color = "transparent"
-                un.classList = "font"
+                un.classList = "font usrProfilePopupUn"
                 un.textContent = usrInfo["username"]
                 userListContent.appendChild(un)
 
                 const pro = document.createElement("p")
-                pro.style.fontSize = ".7em"
-                pro.style.margin = "0"
-                pro.style.marginLeft = "5%"
-                pro.style.whiteSpace = "pre"
-                pro.style.background = "linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%)"
-                pro.style.backgroundClip = "text"
-                pro.style.color = "transparent"
-                pro.classList = "font"
+                pro.classList = "font usrProfilePopupPro"
                 pro.textContent = usrInfo["pronouns"]
                 userListContent.appendChild(pro)
 
                 const bio = document.createElement("textarea")
-                bio.style.width = "90%"
-                bio.style.minHeight = "3lh"
-                bio.style.maxHeight = "10lh"
-                bio.style.margin = "0"
-                bio.style.marginLeft = "5%"
-                bio.style.marginTop = "1em"
-                bio.style.outline = "none"
-                bio.style.border = "1px solid var(--acc4)"
-                bio.style.backgroundColor = "transparent"
-                bio.style.resize = "none"
-                bio.style.fieldSizing = "content"
-                bio.classList = "font white"
+                bio.placeholder = "[no bio]"
+                bio.classList = "font white usrProfilePopupBio"
                 bio.value = usrInfo["bio"].slice(0, 100)
                 bio.readOnly = true
                 userListContent.appendChild(bio)
@@ -2387,14 +2615,13 @@
                 if (usrInfo["bio"].length > 100) {
                     bio.value += "..."
                     const viewFullBio = document.createElement("p")
-                    viewFullBio.style.fontSize = ".6em"
-                    viewFullBio.style.textDecoration = "underline"
-                    viewFullBio.style.margin = "0"
-                    viewFullBio.style.marginLeft = "5%"
-                    viewFullBio.style.cursor = "pointer"
-                    viewFullBio.classList = "font white"
+                    viewFullBio.classList = "font white usrProfilePopupFullBio"
                     viewFullBio.textContent = "View Full Bio"
                     userListContent.appendChild(viewFullBio)
+
+                    viewFullBio.addEventListener("click", () => {
+                        showUsrProfile(usrInfo)
+                    })
                 }
             }
         }
@@ -2460,9 +2687,11 @@
             }
 
             let lastMsg = null
+            let lastAnyMsgId = 0
             for (let index = 0; index < chat["messages"].length; index++) {
                 const message = chat["messages"][index];
                 currMsgID = message["MSGID"]
+                lastAnyMsgId = currMsgID
 
                 if (message["deleted"]) {
                     continue
@@ -2472,6 +2701,8 @@
 
                 lastMsg = message
             }
+
+            lastMsgId = lastAnyMsgId
 
             if (currPage > 0) {
                 const goDownBtn = document.createElement("button")
@@ -3033,7 +3264,7 @@
                 return trackerId
             }
 
-            async function request(data) {
+            function request(data) {
                 return new Promise((resolve) => {
                     const trackerId = genTrackerId()
                     trackerIds.push(trackerId)
@@ -3134,10 +3365,10 @@
                                         }
 
                                         if (respBody["type"] == "metaChatUpdate") {
-                                            delete chatMetaCache[respBody["chat"]["CID"].toString()]
-
-                                            setChat(respBody["chat"])
-                                            setChatList()
+                                            setChat(respBody["chat"]).then(() => {
+                                                delete chatMetaCache[respBody["chat"]["CID"].toString()]
+                                                setChatList()
+                                            })
                                         }
 
                                         if (respBody["type"] == "chatGone") {
@@ -3201,22 +3432,17 @@
                                                             lastMsgE = document.querySelector('[data-msgid="MSGID' + lastMsg["MSGID"] + '"]')
                                                         }
 
+                                                        let lastE = chatDiv.firstChild
                                                         if (lastMsgE) {
-                                                            let lastE = lastMsgE
-                                                            msgList.forEach((e) => {
-                                                                lastE.after(e)
-                                                                lastE = e
-                                                            })
-
-                                                            attemptScroll(atBottom, startAtTop, currScroll)
-                                                        } else {
-                                                            let lastE = chatDiv.firstChild
-                                                            msgList.forEach((e) => {
-                                                                lastE.after(e)
-                                                                lastE = e
-                                                            })
-                                                            attemptScroll(atBottom, startAtTop, currScroll)
+                                                            lastE = lastMsgE
                                                         }
+
+                                                        msgList.forEach((e) => {
+                                                            lastE.after(e)
+                                                            lastE = e
+                                                        })
+
+                                                        attemptScroll(atBottom, startAtTop, currScroll)
                                                     })
                                                 })
                                             }

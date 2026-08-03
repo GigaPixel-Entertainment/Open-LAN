@@ -1219,6 +1219,222 @@ footer > a {
     background-color: var(--button-press);
 }
 
+#usrProfilePopup {
+    position: absolute;
+    width: 300px;
+    height: fit-content;
+    overflow: hidden;
+    background-color: var(--acc);
+    border: 2px solid var(--acc2);
+
+    padding-top: 1em;
+    padding-bottom: 1em;
+
+    display: flex;
+    flex-direction: column;
+
+    visibility: hidden;
+}
+
+.usrProfilePopupPfp {
+    width: 20%;
+    aspect-ratio: 1;
+    border-radius: 9999px;
+    border: 4px solid var(--acc4);
+    margin-left: 5%;
+    margin-top: 2.5em;
+    cursor: pointer;
+}
+
+.usrProfilePopupDn {
+    font-size: 1.25em;
+    font-weight: bold;
+    margin: 0;
+    margin-left: 5%;
+    white-space: pre;
+    background: linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%);
+    background-clip: text;
+    color: transparent;
+}
+
+.usrProfilePopupUn {
+    font-size: .75em;
+    margin: 0;
+    margin-left: 5%;
+    white-space: pre;
+    background: linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%);
+    background-clip: text;
+    color: transparent;
+}
+
+.usrProfilePopupPro {
+    font-size: .7em;
+    margin: 0;
+    margin-left: 5%;
+    white-space: pre;
+    background: linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%);
+    background-clip: text;
+    color: transparent;
+}
+
+.usrProfilePopupBio {
+    width: 90%;
+    min-height: 3lh;
+    max-height: 10lh;
+    margin: 0;
+    margin-left: 5%;
+    margin-top: 1em;
+    outline: none;
+    border: 1px solid var(--acc4);
+    background-color: transparent;
+    resize: none;
+    field-sizing: content;
+}
+
+.usrProfilePopupBio::placeholder {
+    color: var(--placeholder);
+}
+
+.usrProfilePopupFullBio {
+    font-size: .6em;
+    text-decoration: underline;
+    margin: 0;
+    margin-left: 5%;
+    cursor: pointer;
+}
+
+#usrProfileScreenContent {
+    position: absolute;
+    width: 50%;
+    height: 75%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--bg);
+}
+
+#usrProfileScreenUsrInfoWrapper {
+    position: absolute;
+    width: 50%;
+    height: 100%;
+    left: 0;
+    background-color: var(--acc);
+    overflow: hidden;
+    overflow-y: auto;
+}
+
+#usrProfileScreenUsrPfp {
+    width: 25%;
+    border-radius: 9999px;
+    border: 4px solid var(--acc4);
+    margin-top: 1em;
+    margin-left: 5%;
+}
+
+#usrProfileScreenUsrDn {
+    font-size: 1.75em;
+    margin-left: 5%;
+    white-space: pre;
+    background: linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%);
+    background-clip: text;
+    color: transparent;
+    margin-top: .25em;
+    margin-bottom: 0;
+}
+
+#usrProfileScreenUsrUn {
+    font-size: 1em;
+    margin-left: 5%;
+    white-space: pre;
+    background: linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%);
+    background-clip: text;
+    color: transparent;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+#usrProfileScreenUsrPro {
+    font-size: .9em;
+    margin-left: 5%;
+    margin-top: 0;
+}
+
+#usrProfileScreenUsrActions {
+    display: flex;
+    flex-direction: row;
+    overflow: hidden;
+    overflow-x: auto;
+    height: 2em;
+    margin-left: 5%;
+    width: 90%;
+}
+
+#usrProfileScreenUsrActions > button {
+    margin-right: 1em;
+    border: none;
+    border-radius: 0;
+    background-color: var(--button);
+}
+
+#usrProfileScreenUsrActions > button:enabled {
+    cursor: pointer;
+}
+
+#usrProfileScreenUsrBio {
+    width: 90%;
+    min-height: 8lh;
+    max-height: 16lh;
+    margin: 0;
+    margin-left: 5%;
+    margin-top: 1em;
+    outline: none;
+    border: 1px solid var(--acc4);
+    background-color: transparent;
+    resize: none;
+    field-sizing: content;
+}
+
+#usrProfileScreenSoon {
+    position: absolute;
+    width: 50%;
+    height: 100%;
+    right: 0;
+    overflow: hidden;
+}
+
+#usrProfileScreenSoon > img {
+    width: 80%;
+    margin-left: 10%;
+    margin-top: 1em;
+}
+
+#usrProfileScreenSoon > h1 {
+    text-align: center;
+}
+
+.fullMsgPfpImg {
+    width: 100%;
+    aspect-ratio: 1;
+    border: 3px solid var(--acc4);
+    border-radius: 9999px;
+    background-color: transparent;
+    cursor: pointer;
+}
+
+.fullMsgDisplaynameWrapper {
+    display: flex;
+    flex-direction: row;
+    font-size: large;
+}
+
+.fullMsgDisplayname {
+    cursor: pointer;
+}
+
+.fullMsgDisplayname:hover {
+    text-decoration: underline;
+}
+
 .header {
     width: calc(100% - 2em);
     background-color: var(--acc3);
