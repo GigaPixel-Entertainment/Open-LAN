@@ -1142,6 +1142,7 @@
         function setFriendReqs() {
             incomingList.replaceChildren()
             outgoingList.replaceChildren()
+            friendCount.textContent = "friends (" + friends.length + ")"
 
             friendReqs.forEach((req) => {
                 const uid = req["UID"]
@@ -1466,8 +1467,6 @@
             friendReqs = resp["friendReq"]
 
             readMsgs = resp["readMsgs"]
-
-            friendCount.textContent = "friends (" + friends.length + ")"
 
             currUsernameI.value = resp["username"]
             currDisplaynameI.value = resp["displayname"]
