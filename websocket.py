@@ -1321,6 +1321,8 @@ class WS():
                                 await self.wsSendEncrypted(ws, orjson.dumps({"type": "leaveGcFailed"}), trackerId)
                                 continue
 
+                            await self.wsSendEncrypted(ws, orjson.dumps({"type": "chatGone", "chats": usrInfo["Chats"]}), trackerId)
+
                             if uid == chat["Owner"] and len(chat["Recipients"]) > 0:
                                 chat["Owner"] = chat["Recipients"][0]
 
@@ -1338,8 +1340,6 @@ class WS():
                                 "TARGET": uid,
                                 "time": int(time.time())
                             })
-
-                            await self.wsSendEncrypted(ws, orjson.dumps({"type": "chatGone", "chats": usrInfo["Chats"]}), trackerId)
 
                             for ws2 in self.WS_CLIENTS:
                                 wsUID = getattr(ws2, "UID", None)
