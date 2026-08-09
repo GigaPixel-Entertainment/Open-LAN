@@ -13,8 +13,8 @@
     <body>
         <div id="serverList"></div>
         <div id="msgBoxHeader">
-            <img id="ChatIcon" src="Media/Copy.png">
-            <p class="font white" id="ChatName">The Void</p>
+            <img id="ChatIcon" src="Media/LogoSquare.png">
+            <p class="font" id="ChatName">The Void</p>
             <button class="font white" onclick="showMyProfileScreen()">my profile ↓</button>
         </div>
         <div id="lookingAtOldMsgs">
@@ -60,6 +60,14 @@
                         <input type="search" id="newGCSearch" placeholder="search friends...">
                         <div id="newGCSearchRes" class="scroll"></div>
                         <input type="submit" id="newGCCreate" value="Create" class="font">
+                    </div>
+                </button>
+                <button id="friendsListServerSettings" class="font">
+                    server settings
+                    <div id="serverSettingsFriendsList">
+                        <input id="serverSettingsSettings" type="button" class="font" value="full settings">
+                        <input id="serverSettingsInvite" type="button" class="font" value="invite people">
+                        <input id="serverSettingsLeave" type="button" class="font" value="leave server">
                     </div>
                 </button>
                 <div id="friendsListContent" class="scroll"></div>
@@ -161,7 +169,7 @@
         <div id="editGcWrapper" class="overlay">
             <div id="editGc">
                 <img id="editGcIcon">
-                <input type="file" id="editGcIconFile" name="editGcIconFile" accept="image/*">
+                <input type="file" id="editGcIconFile" accept="image/*">
                 <div id="editGcIconOverlay"></div>
                 <input type="text" maxlength="100" class="font white" id="editGcName" placeholder="groupchat name">
                 <div id="editGcActions">
@@ -171,12 +179,43 @@
             </div>
         </div>
 
+        <div id="createServerWrapper" class="overlay">
+            <div id="createServer">
+                <img id="createServerIcon">
+                <input type="file" id="createServerIconFile" accept="image/*">
+                <div id="createServerIconOverlay"></div>
+                <input type="text" maxlength="100" class="font white" id="createServerName" placeholder="server name">
+                <div id="createServerActions">
+                    <button class="font" id="createServerCancel">Cancel</button>
+                    <button class="font" id="createServerCreate">Create</button>
+                </div>
+            </div>
+        </div>
+
         <div id="addUserWrapper" class="overlay">
             <div id="addUserFriendsList">
                 <input type="search" id="addUserSearch" placeholder="search friends..." class="font white">
                 <div id="addUserSearchRes" class="scroll"></div>
-                <input type="submit" id="addUserAdd" value="Add" class="font" class="font" disabled>
-                <input type="submit" id="addUserCancel" value="Cancel" class="font" class="font">
+                <input type="submit" id="addUserAdd" value="Add" class="font" disabled>
+                <input type="submit" id="addUserCancel" value="Cancel" class="font">
+            </div>
+        </div>
+
+        <div id="newChannelWrapper" class="overlay">
+            <div id="newChannel">
+                <h1 class="font white" id="newChannelHeading">New Channel</h1>
+                <input type="text" maxlength="100" id="newChannelName" placeholder="channel name..." class="font white">
+                <input type="submit" id="newChannelCreate" value="Create" class="font" disabled>
+                <input type="submit" id="newChannelCancel" value="Cancel" class="font">
+            </div>
+        </div>
+
+        <div id="newCategoryWrapper" class="overlay">
+            <div id="newCategory">
+                <h1 class="font white" id="newCategoryHeading">New Category</h1>
+                <input type="text" maxlength="100" id="newCategoryName" placeholder="category name..." class="font white">
+                <input type="submit" id="newCategoryCreate" value="Create" class="font" disabled>
+                <input type="submit" id="newCategoryCancel" value="Cancel" class="font">
             </div>
         </div>
 
@@ -251,6 +290,15 @@
             <textarea id="usrProfilePopupBio" class="font white usrProfilePopupBio" placeholder="[no bio]" readonly></textarea>
             <p id="usrProfilePopupFullBio" class="font white usrProfilePopupFullBio">View Full Bio</p>
         </div>
+
+        <div id="createCategoryRClickMenu" class="rClickMenu">
+            <button id="createCategory" class="rClickMenuOption font white">new category</button>
+        </div>
+
+        <div id="serverUsrListRClickMenu" class="rClickMenu">
+            <button id="serverUsrListProfile" class="rClickMenuOption font white">see profile</button>
+            <button id="serverUsrListKick" class="rClickMenuOption font white">kick user</button>
+        </div>
     </body>
     <footer>
         Open-LAN is open-source under the <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank">GNU General Public License</a> and available on <a href="https://github.com/GigaPixel-Entertainment/GPE-Open-LAN" target="_blank">Github</a>
@@ -259,6 +307,8 @@
     <script>
         // constants
         const userInfoCache = []
+
+        const serverList = document.getElementById("serverList")
 
         const genericPopup = document.getElementById("genericPopup")
         const popupTitle = document.getElementById("popupTitle")
@@ -275,6 +325,12 @@
         const newGCSearch = document.getElementById("newGCSearch")
         const newGCSearchRes = document.getElementById("newGCSearchRes")
         const newGCCreate = document.getElementById("newGCCreate")
+
+        const friendsListServerSettings = document.getElementById("friendsListServerSettings")
+        const serverSettingsFriendsList = document.getElementById("serverSettingsFriendsList")
+        const serverSettingsSettings = document.getElementById("serverSettingsSettings")
+        const serverSettingsInvite = document.getElementById("serverSettingsInvite")
+        const serverSettingsLeave = document.getElementById("serverSettingsLeave")
 
         const chatDiv = document.getElementById("msgBox")
 
@@ -312,12 +368,34 @@
         const editGcActionsCancel = document.getElementById("editGcActionsCancel")
         const editGcActionsSet = document.getElementById("editGcActionsSet")
 
+        const createServerWrapper = document.getElementById("createServerWrapper")
+        const createServer = document.getElementById("createServer")
+        const createServerIcon = document.getElementById("createServerIcon")
+        const createServerIconFile = document.getElementById("createServerIconFile")
+        const createServerIconOverlay = document.getElementById("createServerIconOverlay")
+        const createServerName = document.getElementById("createServerName")
+        const createServerActions = document.getElementById("createServerActions")
+        const createServerCancel = document.getElementById("createServerCancel")
+        const createServerCreate = document.getElementById("createServerCreate")
+
         const addUserWrapper = document.getElementById("addUserWrapper")
         const addUserFriendsList = document.getElementById("addUserFriendsList")
         const addUserSearch = document.getElementById("addUserSearch")
         const addUserSearchRes = document.getElementById("addUserSearchRes")
         const addUserAdd = document.getElementById("addUserAdd")
         const addUserCancel = document.getElementById("addUserCancel")
+
+        const newChannelWrapper = document.getElementById("newChannelWrapper")
+        const newChannel = document.getElementById("newChannel")
+        const newChannelName = document.getElementById("newChannelName")
+        const newChannelCreate = document.getElementById("newChannelCreate")
+        const newChannelCancel = document.getElementById("newChannelCancel")
+
+        const newCategoryWrapper = document.getElementById("newCategoryWrapper")
+        const newCategory = document.getElementById("newCategory")
+        const newCategoryName = document.getElementById("newCategoryName")
+        const newCategoryCreate = document.getElementById("newCategoryCreate")
+        const newCategoryCancel = document.getElementById("newCategoryCancel")
 
         const currUsernameI = document.getElementById("currUsername")
         const currDisplaynameI = document.getElementById("currDisplayname")
@@ -379,6 +457,7 @@
         const usrListProfile = document.getElementById("usrListProfile")
         const usrListRemove = document.getElementById("usrListRemove")
 
+        const textEntryOverlay = document.getElementById("textEntryWrapper")
         const embedList = document.getElementById("embedList")
         const textEntry = document.getElementById("textEntry")
         const sendMsgBtn = document.getElementById("sendMsg")
@@ -391,6 +470,13 @@
         const usrProfilePopupPro = document.getElementById("usrProfilePopupPro")
         const usrProfilePopupBio = document.getElementById("usrProfilePopupBio")
         const usrProfilePopupFullBio = document.getElementById("usrProfilePopupFullBio")
+
+        const createCategoryRClickMenu = document.getElementById("createCategoryRClickMenu")
+        const createCategory = document.getElementById("createCategory")
+
+        const serverUsrListRClickMenu = document.getElementById("serverUsrListRClickMenu")
+        const serverUsrListProfile = document.getElementById("serverUsrListProfile")
+        const serverUsrListKick = document.getElementById("serverUsrListKick")
     </script>
     <script>
         // String comparison by aceakash (https://github.com/aceakash/string-similarity)
@@ -456,7 +542,7 @@
             usr = await request(JSON.stringify({"type": "reqUsersList", "users": [UID]}))
 
             if (usr["users"].length == 0) {
-                return null
+                return {}
             }
 
             usr["users"].forEach((userInfo) => {
@@ -506,6 +592,31 @@
         }
     </script>
     <script>
+        // Array comparison adapted from Tomáš Zato (https://stackoverflow.com/a/14853974)
+
+        function compareLists(a, b) {
+            if (!a || !b)
+                return false
+
+            if(a == b)
+                return true;
+
+            if (a.length != b.length)
+                return false
+
+            for (var i = 0, l=a.length; i < l; i++) {
+                if (a[i] instanceof Array && b[i] instanceof Array) {
+                    if (!compareLists(a[i], b[i]))
+                        return false;
+                } else if (a[i] != b[i]) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+    </script>
+    <script>
         // Popups
         var popupOpen = false
 
@@ -549,7 +660,9 @@
             window.scrollTo(0, 0)
         }, 100);
 
-        var currChat = 0
+        var currChat = -1
+        var currServer = -1
+        var currCategory = -1
         var currUID = -1
 
         var editingMsgId = -1
@@ -580,6 +693,13 @@
             }
 
             myProfileScreenShown = !myProfileScreenShown
+        }
+
+        function replaceChildren(parent, childList) {
+            parent.replaceChildren()
+            childList.forEach((e) => {
+                parent.appendChild(e)
+            })
         }
 
         imageOverlay.addEventListener("click", () => {
@@ -974,6 +1094,7 @@
 
         var msgRClickMenuMsg = null
         var usrListRClickMenuUsr = null
+        var serverUsrListRClickMenuUsr = null
         var lastRClickMenuClose = 0
 
         var selected = null
@@ -1020,6 +1141,17 @@
                 usrListRClickMenuUsr = null
                 lastRClickMenuClose = Date.now()
             }
+
+            if (createCategoryRClickMenu.style.visibility == "visible") {
+                createCategoryRClickMenu.style.visibility = "hidden"
+                lastRClickMenuClose = Date.now()
+            }
+
+            if (serverUsrListRClickMenu.style.visibility == "visible") {
+                serverUsrListRClickMenu.style.visibility = "hidden"
+                serverUsrListRClickMenuUsr = null
+                lastRClickMenuClose = Date.now()
+            }
         })
 
         cpyTxt.addEventListener("mousedown", (e) => {
@@ -1033,12 +1165,8 @@
         })
 
         rplyTxt.addEventListener("mousedown", (e) => {
-            if (msgRClickMenuMsg) {
+            if (msgRClickMenuMsg && !msgRClickMenuMsg["SYSMSG"]) {
                 replyingMsgId = msgRClickMenuMsg["MSGID"]
-
-                if (!msgRClickMenuMsg["UID"]) {
-                    return
-                }
 
                 reqUsrInfo(msgRClickMenuMsg["UID"]).then((usrInfo) => {
                     replyingPFP.src = usrInfo["pfp"]
@@ -1082,9 +1210,26 @@
             }
         })
 
-        usrListRemove.addEventListener("mousedown", (e) => {
-            if (usrListRClickMenu && usrListRClickMenuUsr != null && usrListRClickMenuUsr != currUID && currUID == chatCache["Owner"] && currChat != 0) {
+        serverUsrListProfile.addEventListener("mousedown", () => {
+            if (serverUsrListRClickMenu && serverUsrListRClickMenuUsr != null) {
+                reqUsrInfo(serverUsrListRClickMenuUsr).then((uInfo) => {
+                    showUsrProfile(uInfo)
+                })
+            }
+
+        })
+
+        usrListRemove.addEventListener("mousedown", () => {
+            if (usrListRClickMenu && usrListRClickMenuUsr != null && usrListRClickMenuUsr != currUID && currUID == chatCache["Owner"]) {
                 request(JSON.stringify({"type": "rmUsrFromChat", "CID": currChat, "UID": usrListRClickMenuUsr}))
+            }
+        })
+
+        serverUsrListKick.addEventListener("mousedown", () => {
+            if (serverUsrListRClickMenu && serverUsrListRClickMenuUsr != null && serverUsrListRClickMenuUsr != currUID && currUID == serverCache["Owner"]) {
+                // TODO: implement backend
+                console.warn("TODO: IMPLEMENT KICKING BACKEND")
+                request(JSON.stringify({"type": "kickUsrFromServer", "SID": currServer, "UID": serverUsrListRClickMenuUsr}))
             }
         })
 
@@ -1284,8 +1429,8 @@
             }
         }
 
-        async function moveChat(newCID) {
-            if (newCID == currChat) {
+        async function moveChat(newCID, refetch=false) {
+            if (!refetch && newCID == currChat) {
                 return
             }
 
@@ -1296,14 +1441,186 @@
             await setChatList()
         }
 
+        async function moveServer(newSID) {
+            if (newSID == currServer) {
+                return
+            }
+
+            currServer = newSID
+            serverCache = null
+            await moveChat(-1, true)
+            await setServerList()
+        }
+
         var settingChatList = false
         var lastMsgId = 0
+        var serverCache = null
         const chatMetaCache = []
+        const hiddenCategories = []
         async function setChatList() {
             if (settingChatList) {
                 return
             }
             settingChatList = true
+
+            if (currServer != -1) {
+                const serverChannels = []
+
+                if (!serverCache) {
+                    serverCache = (await request(JSON.stringify({
+                        "type": "reqServer",
+                        "SID": currServer
+                    })))["server"]
+                }
+
+                if (!serverCache) {
+                    console.log("Failed to fetch server " + currServer + ", pretending it doesn't exist")
+                    friendsListContent.replaceChildren()
+                    settingChatList = false
+                    return
+                }
+
+                for (let cIdx = 0; cIdx < serverCache["Categories"].length; cIdx++) {
+                    const category = serverCache["Categories"][cIdx]
+
+                    const categoryDiv = document.createElement("div")
+                    categoryDiv.style.width = "100%"
+                    categoryDiv.style.height = "20px"
+                    categoryDiv.style.marginTop = "1em"
+                    categoryDiv.style.marginBottom = ".5em"
+                    categoryDiv.style.display = "flex"
+                    categoryDiv.style.flexDirection = "row"
+                    categoryDiv.style.alignItems = "center"
+                    categoryDiv.style.cursor = "pointer"
+
+                    categoryDiv.addEventListener("click", () => {
+                        const categoryIndex = hiddenCategories.indexOf(currServer + "_" + category["categoryID"])
+                        if (categoryIndex != -1) {
+                            hiddenCategories.splice(categoryIndex, 1)
+                        } else {
+                            hiddenCategories.push(currServer + "_" + category["categoryID"])
+                        }
+
+                        setChatList()
+                    })
+
+                    const categoryHidden = hiddenCategories.includes(currServer + "_" + category["categoryID"])
+
+                    const categoryName = document.createElement("h2")
+                    categoryName.style.width = "90%"
+                    categoryName.style.margin = "0"
+                    categoryName.style.background = "linear-gradient(to right, lightgray 0%, lightgray 80%, transparent 100%)"
+                    categoryName.style.backgroundClip = "text"
+                    categoryName.style.color = "transparent"
+                    categoryName.style.whiteSpace = "pre"
+                    categoryName.classList = "font"
+                    categoryName.textContent = (categoryHidden ? " ↓ " : " ↑ ") + category["name"]
+                    categoryName.title = category["name"]
+
+                    categoryDiv.appendChild(categoryName)
+
+                    if (currUID == serverCache["Owner"]) {
+                        const addChannelToCategory = document.createElement("img")
+                        addChannelToCategory.style.height = "100%"
+                        addChannelToCategory.style.aspectRatio = "1"
+                        addChannelToCategory.style.cursor = "pointer"
+                        addChannelToCategory.src = "Media/add.png"
+
+                        addChannelToCategory.addEventListener("click", (e) => {
+                            e.stopPropagation()
+                            currCategory = category["categoryID"]
+                            openNewChannel()
+                        })
+                        categoryDiv.appendChild(addChannelToCategory)
+                    }
+
+                    serverChannels.push(categoryDiv)
+
+                    if (categoryHidden) {
+                        continue
+                    }
+
+                    for (let idx = 0; idx < category["Chats"].length; idx++) {
+                        const chatID = category["Chats"][idx]
+                        let chat = null
+
+                        if (chatMetaCache[chatID.toString()]) {
+                            chat = chatMetaCache[chatID.toString()]
+                        } else {
+                            chat = (await request(JSON.stringify({"type": "reqChatMeta", "CID": chatID})))["chat"]
+                            chatMetaCache[chatID.toString()] = chat
+                        }
+
+                        if (chat == null) {
+                            console.log("Failed to fetch chat " + chatID + ", pretending it doesn't exist")
+                            continue
+                        }
+
+                        const chatDiv = document.createElement("div")
+                        chatDiv.style.width = "100%"
+                        chatDiv.style.height = "40px"
+                        chatDiv.style.display = "flex"
+                        chatDiv.style.flexDirection = "row"
+                        chatDiv.style.alignItems = "center"
+                        chatDiv.style.cursor = "pointer"
+
+                        if (currChat == chatID) {
+                            chatDiv.style.backgroundColor = "var(--acc2)"
+                            lastMsgId = chat["lastMsg"]["MSGID"]
+                        }
+
+                        chatDiv.addEventListener("click", () => {
+                            moveChat(chatID)
+                        })
+
+                        const readIndicator = document.createElement("div")
+                        readIndicator.style.height = "50%"
+                        readIndicator.style.aspectRatio = "1"
+                        readIndicator.style.backgroundColor = "white"
+                        readIndicator.style.borderRadius = "9999px"
+
+                        const chatIcon = document.createElement("img")
+                        chatIcon.style.height = "100%"
+                        chatIcon.style.aspectRatio = "1"
+                        chatIcon.src = "Media/textChannel.png"
+
+                        const numUnreadMsgs = chat["lastMsg"]["MSGID"] - readMsgs[chatID.toString()]
+                        const isRead = numUnreadMsgs == 0 || isNaN(numUnreadMsgs)
+                        readIndicator.style.visibility = isRead ? "hidden" : "visible"
+
+                        const channelName = document.createElement("h2")
+                        channelName.style.width = "calc(100% - 60px)"
+                        channelName.style.margin = "0"
+                        channelName.style.background = "linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%)"
+                        channelName.style.backgroundClip = "text"
+                        channelName.style.color = "transparent"
+                        channelName.style.whiteSpace = "nowrap"
+                        channelName.classList = "font"
+                        channelName.textContent = chat["name"]
+                        channelName.title = chat["name"]
+
+                        chatDiv.appendChild(readIndicator)
+                        chatDiv.appendChild(chatIcon)
+                        chatDiv.appendChild(channelName)
+
+                        serverChannels.push(chatDiv)
+                    }
+                }
+
+                friendsListNewGC.style.visibility = "hidden"
+                friendsListNewGC.style.position = "absolute"
+                friendsListServerSettings.style.visibility = "visible"
+                friendsListServerSettings.style.position = ""
+                replaceChildren(friendsListContent, serverChannels)
+
+                settingChatList = false
+                return
+            }
+
+            friendsListNewGC.style.visibility = "visible"
+            friendsListNewGC.style.position = ""
+            friendsListServerSettings.style.visibility = "hidden"
+            friendsListServerSettings.style.position = "absolute"
 
             const unreadMessagesP = document.createElement("p")
             unreadMessagesP.classList = "font white"
@@ -1337,6 +1654,7 @@
                 chatDiv.style.margin = "0"
                 chatDiv.style.paddingTop = ".5em"
                 chatDiv.style.paddingBottom = ".5em"
+                chatDiv.style.paddingLeft = "4px"
                 chatDiv.style.display = "flex"
                 chatDiv.style.flexDirection = "row"
                 chatDiv.style.cursor = "pointer"
@@ -1414,7 +1732,7 @@
                         // Fallback
                         chatImgPic.src = "Media/LogoSquare.png"
                     }
-                } else if (chat["type"] == "gc" || chat["type"] == "forced-gc") {
+                } else if (chat["type"] == "gc") {
                     chatImgPic.src = chat["icon"] || "Media/LogoSquare.png"
                 } else {
                     chatImgPic.src = "Media/LogoSquare.png"
@@ -1442,20 +1760,82 @@
 
             unreadMsgs.sort(timeSort)
             activeMsgs.sort(timeSort)
+            var friendsList2 = []
 
             if (unreadMsgs.length > 0) {
-                friendsList2 = [unreadMessagesP, ...unreadMsgs, activeMessagesP, ...activeMsgs]
-            } else {
-                friendsList2 = [activeMessagesP, ...activeMsgs]
+                friendsList2 = [unreadMessagesP, ...unreadMsgs]
             }
 
-            friendsListContent.replaceChildren()
+            if (activeMsgs.length > 0) {
+                friendsList2.push(activeMessagesP, ...activeMsgs)
+            }
 
-            friendsList2.forEach((e) => {
-                friendsListContent.appendChild(e)
+            replaceChildren(friendsListContent, friendsList2)
+            settingChatList = false
+        }
+
+        var servers = []
+        const ServerMetaCache = []
+        async function setServerList() {
+            const dmIcon = document.createElement("img")
+            dmIcon.classList = "serverIcon"
+            dmIcon.src = "Media/LogoSquare.png"
+
+            if (currServer == -1) {
+                dmIcon.style.border = "4px solid var(--highlight)"
+            }
+
+            dmIcon.addEventListener("click", () => {
+                moveServer(-1)
             })
 
-            settingChatList = false
+            const seperator = document.createElement("hr")
+            seperator.style.width = "calc(100% - 16px)"
+            seperator.style.border = "2px solid var(--acc)"
+
+            const serverList2 = [dmIcon, seperator]
+
+            for (let ind = 0; ind < servers.length; ind++) {
+                const SID = servers[ind];
+                let serverMeta = null
+
+                if (ServerMetaCache[SID.toString()]) {
+                    serverMeta = ServerMetaCache[SID.toString()]
+                } else {
+                    serverMeta = (await request(JSON.stringify({
+                        "type": "reqServerMeta",
+                        "SID": SID
+                    })))["server"]
+                    ServerMetaCache[SID.toString()] = serverMeta
+                }
+
+                const serverIcon = document.createElement("img")
+                serverIcon.classList = "serverIcon"
+                serverIcon.src = serverMeta["icon"]
+                if (SID == currServer) {
+                    serverIcon.style.border = "4px solid var(--highlight)"
+                }
+
+                serverIcon.addEventListener("click", () => {
+                    moveServer(SID)
+                })
+
+                serverList2.push(serverIcon)
+            }
+
+            const newServer = document.createElement("img")
+            newServer.classList = "serverIcon"
+            newServer.src = "Media/add.png"
+
+            newServer.addEventListener("click", openCreateServer)
+
+            serverList2.push(newServer)
+
+            replaceChildren(serverList, serverList2)
+
+            if (loading) {
+                loadingStatus += 1
+            }
         }
 
         var readMsgs = {}
@@ -1463,6 +1843,7 @@
             currUID = resp["UID"]
 
             chats = resp["chats"]
+            servers = resp["servers"]
             friends = resp["friends"]
             friendReqs = resp["friendReq"]
 
@@ -1487,6 +1868,7 @@
 
             setFriendReqs()
             setChatList()
+            setServerList()
             setCreateGCList()
         }
 
@@ -1643,6 +2025,10 @@
             }
 
             if (currPage != 0) {
+                return
+            }
+
+            if (currChat == -1) {
                 return
             }
 
@@ -2439,6 +2825,96 @@
             onScroll(atBottom)
         }
 
+        async function createUserList(users, currOwner) {
+            const userList2 = []
+            for (let i = 0; i < users.length; i++) {
+                const uid = users[i];
+                const usrInfo = await reqUsrInfo(uid)
+
+                const userDiv = document.createElement("div")
+                userDiv.classList = "userDiv"
+
+                const pfp = document.createElement("img")
+                pfp.style.height = "calc(100% - 4px)"
+                pfp.style.aspectRatio = "1"
+                pfp.style.borderRadius = "9999px"
+                pfp.style.border = "2px solid var(--acc4)"
+                pfp.style.marginRight = ".5em"
+                pfp.src = usrInfo["pfp"]
+
+                if (currOwner == uid) {
+                    const crown = document.createElement("img")
+                    crown.style.position = "absolute"
+                    crown.style.left = "30px"
+                    crown.style.top = "30px"
+                    crown.style.height = "50%"
+                    crown.style.transform = "translateX(-50%)"
+                    crown.src = "Media/ribbon.png"
+
+                    userDiv.style.backgroundColor = "var(--highlighted-transparent)"
+                    userDiv.style.borderLeft = "2px solid var(--highlighted)"
+
+                    userDiv.appendChild(crown)
+                }
+
+                const displayname = document.createElement("p")
+                displayname.style.width = "calc(100% - 36px - .5em)"
+                displayname.style.padding = "0"
+                displayname.style.margin = "0"
+                displayname.style.fontSize = "1.25em"
+                displayname.style.whiteSpace = "pre"
+                displayname.style.background = "linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%)"
+                displayname.style.backgroundClip = "text"
+                displayname.style.color = "transparent"
+                displayname.classList = "font"
+                displayname.textContent = usrInfo["displayname"]
+
+                userDiv.appendChild(pfp)
+                userDiv.appendChild(displayname)
+                userList2.push(userDiv)
+
+                userDiv.addEventListener("contextmenu", (e) => {
+                    if (Date.now() - lastRClickMenuClose < 10) {
+                        return
+                    }
+
+                    e.preventDefault()
+
+                    var targetRClickMenu = currServer == -1 ? usrListRClickMenu : serverUsrListRClickMenu
+
+                    if (currUID == chatCache["Owner"] && currUID != uid) {
+                        usrListRemove.disabled = false
+                        serverUsrListKick.disabled = false
+                    } else {
+                        usrListRemove.disabled = true
+                        serverUsrListKick.disabled = true
+                    }
+
+                    targetRClickMenu.style.visibility = "visible"
+                    if (e.pageX + targetRClickMenu.offsetWidth > window.innerWidth) {
+                        targetRClickMenu.style.left = e.pageX - targetRClickMenu.offsetWidth + "px"
+                    } else {
+                        targetRClickMenu.style.left = e.pageX + "px"
+                    }
+
+                    if (e.pageY + targetRClickMenu.offsetHeight > window.innerHeight) {
+                        targetRClickMenu.style.top = e.pageY - targetRClickMenu.offsetHeight + "px"
+                    } else {
+                        targetRClickMenu.style.top = e.pageY + "px"
+                    }
+                    usrListRClickMenuUsr = uid
+                    serverUsrListRClickMenuUsr = uid
+                })
+
+                userDiv.addEventListener("click", (e) => {
+                    showUsrProfilePopup(e.clientX, e.clientY, usrInfo)
+                    e.stopPropagation()
+                })
+            }
+
+            return userList2
+        }
+
         async function setMemberList() {
             const chat = chatCache
             const currChatName = chat["Name"]
@@ -2446,91 +2922,11 @@
             const currOwner = chat["Owner"]
             const currChatType = chat["Type"]
 
-            if (currChatType == "forced-gc" || currChatType == "gc") {
+            if (currChatType == "gc") {
                 chatName.textContent = currChatName
                 chatIcon.src = chat["Icon"] || "Media/LogoSquare.png"
 
-                const userList2 = []
-                for (let i = 0; i < chat["Recipients"].length; i++) {
-                    const uid = chat["Recipients"][i];
-                    const usrInfo = await reqUsrInfo(uid)
-
-                    const userDiv = document.createElement("div")
-                    userDiv.classList = "userDiv"
-
-                    const pfp = document.createElement("img")
-                    pfp.style.height = "calc(100% - 4px)"
-                    pfp.style.aspectRatio = "1"
-                    pfp.style.borderRadius = "9999px"
-                    pfp.style.border = "2px solid var(--acc4)"
-                    pfp.style.marginRight = ".5em"
-                    pfp.src = usrInfo["pfp"]
-
-                    if (currOwner == uid) {
-                        const crown = document.createElement("img")
-                        crown.style.position = "absolute"
-                        crown.style.left = "30px"
-                        crown.style.top = "30px"
-                        crown.style.height = "50%"
-                        crown.style.transform = "translateX(-50%)"
-                        crown.src = "Media/ribbon.png"
-
-                        userDiv.style.backgroundColor = "var(--highlighted-transparent)"
-                        userDiv.style.borderLeft = "2px solid var(--highlighted)"
-
-                        userDiv.appendChild(crown)
-                    }
-
-                    const displayname = document.createElement("p")
-                    displayname.style.width = "calc(100% - 36px - .5em)"
-                    displayname.style.padding = "0"
-                    displayname.style.margin = "0"
-                    displayname.style.fontSize = "1.25em"
-                    displayname.style.whiteSpace = "pre"
-                    displayname.style.background = "linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%)"
-                    displayname.style.backgroundClip = "text"
-                    displayname.style.color = "transparent"
-                    displayname.classList = "font"
-                    displayname.textContent = usrInfo["displayname"]
-
-                    userDiv.appendChild(pfp)
-                    userDiv.appendChild(displayname)
-                    userList2.push(userDiv)
-
-                    userDiv.addEventListener("contextmenu", (e) => {
-                        if (Date.now() - lastRClickMenuClose < 10) {
-                            return
-                        }
-
-                        e.preventDefault()
-
-                        if (currUID == chatCache["Owner"] && currUID != uid && currChat != 0) {
-                            usrListRemove.disabled = false
-                        } else {
-                            usrListRemove.disabled = true
-                        }
-
-                        usrListRClickMenu.style.visibility = "visible"
-                        if (e.pageX + usrListRClickMenu.offsetWidth > window.innerWidth) {
-                            usrListRClickMenu.style.left = e.pageX - usrListRClickMenu.offsetWidth + "px"
-                        } else {
-                            usrListRClickMenu.style.left = e.pageX + "px"
-                        }
-
-                        if (e.pageY + usrListRClickMenu.offsetHeight > window.innerHeight) {
-                            usrListRClickMenu.style.top = e.pageY - usrListRClickMenu.offsetHeight + "px"
-                        } else {
-                            usrListRClickMenu.style.top = e.pageY + "px"
-                        }
-                        usrListRClickMenuUsr = uid
-                    })
-
-                    userDiv.addEventListener("click", (e) => {
-                        showUsrProfilePopup(e.clientX, e.clientY, usrInfo)
-                        e.stopPropagation()
-                    })
-                }
-
+                const userList2 = await createUserList(chat["Recipients"], currOwner)
                 const addUsr = document.createElement("button")
                 addUsr.style.width = "90%"
                 addUsr.style.marginLeft = "5%"
@@ -2541,6 +2937,7 @@
                 addUsr.style.marginTop = "1em"
                 addUsr.classList = "font white"
                 addUsr.textContent = "add user"
+                addUsr.style.cursor = "pointer"
 
                 addUsr.addEventListener("click", openAddUser)
 
@@ -2555,6 +2952,7 @@
                 leaveGc.style.color = "var(--rose)"
                 leaveGc.classList = "font"
                 leaveGc.textContent = "leave gc"
+                leaveGc.style.cursor = "pointer"
 
                 leaveGc.addEventListener("click", () => {
                     request(JSON.stringify({
@@ -2563,27 +2961,14 @@
                     }))
                 })
 
-                if (chatCache["Type"] == "forced-gc") {
-                    addUsr.style.backgroundColor = "var(--placeholder)"
-                    leaveGc.style.color = "var(--placeholder)"
-                    leaveGc.style.border = "2px solid var(--placeholder)"
-                    addUsr.disabled = true
-                    leaveGc.disabled = true
-                } else {
-                    addUsr.style.cursor = "pointer"
-                    leaveGc.style.cursor = "pointer"
-                }
-
                 userList2.push(addUsr)
                 userList2.push(leaveGc)
 
                 userListCounter.style.position = ""
                 userListCounter.style.visibility = "visible"
                 userListCounter.textContent = "Members-" + currRecipients.length
-                userListContent.replaceChildren()
-                userList2.forEach((e) => {
-                    userListContent.appendChild(e)
-                })
+
+                replaceChildren(userListContent, userList2)
             } else if (currChatType == "dm") {
                 const other = currRecipients.filter(item => item != currUID)[0]
                 const usrInfo = await reqUsrInfo(other)
@@ -2637,6 +3022,16 @@
                         showUsrProfile(usrInfo)
                     })
                 }
+            } else if (currChatType == "channel") {
+                chatName.textContent = serverCache["Name"] + " > " + currChatName
+                chatIcon.src = serverCache["Icon"]
+
+                const userList2 = await createUserList(serverCache["Users"], serverCache["Owner"])
+                userListCounter.style.position = ""
+                userListCounter.style.visibility = "visible"
+                userListCounter.textContent = "Members-" + serverCache["Users"].length
+
+                replaceChildren(userListContent, userList2)
             }
         }
 
@@ -2644,6 +3039,8 @@
             if (chat["CID"] != currChat) {
                 return
             }
+
+            textEntryOverlay.style.visibility = "visible"
 
             if (chat["messages"].length > 100) {
                 const len = chat["messages"].length
@@ -2748,20 +3145,65 @@
             padding2.style.height = "6em"
             chatDiv2.push(padding2)
 
-            chatDiv.replaceChildren()
-
-            chatDiv2.forEach((e) => {
-                chatDiv.appendChild(e)
-            })
-
+            replaceChildren(chatDiv, chatDiv2)
             attemptScroll(atBottom, startAtTop, currScroll)
 
             startAtTop = false
             chatFetchInProgress = false
+        }
 
-            if (loading) {
-                loadingStatus += 1
+        async function setEmptyChat() {
+            userListCounter.textContent = ""
+            userListContent.replaceChildren()
+            textEntryOverlay.style.visibility = "hidden"
+
+            chatDiv.replaceChildren()
+
+            const logo = document.createElement("img")
+            logo.style.display = "block"
+            logo.style.margin = "0 auto"
+            logo.style.marginTop = "10%"
+            logo.style.height = "25%"
+
+            const heading = document.createElement("h1")
+            heading.style.textAlign = "center"
+            heading.classList = "font white"
+
+            const content = document.createElement("p")
+            content.style.textAlign = "center"
+            content.classList = "font white"
+
+            chatDiv.appendChild(logo)
+            chatDiv.appendChild(heading)
+            chatDiv.appendChild(content)
+
+            if (currServer == -1) {
+                chatName.textContent = "The Void"
+                chatIcon.src = "Media/LogoSquare.png"
+                logo.src = "Media/Logo.png"
+                heading.textContent = "Welcome to Open-LAN"
+                content.textContent = "To get started, simply open the sidebar on the right."
+            } else {
+                let serverMeta = null
+
+                if (ServerMetaCache[currServer.toString()]) {
+                    serverMeta = ServerMetaCache[currServer.toString()]
+                } else {
+                    serverMeta = (await request(JSON.stringify({
+                        "type": "reqServerMeta",
+                        "SID": currServer
+                    })))["server"]
+                    ServerMetaCache[currServer.toString()] = serverMeta
+                }
+
+                chatName.textContent = serverMeta["name"]
+                chatIcon.src = serverMeta["icon"]
+                logo.src = serverMeta["icon"]
+                logo.style.borderRadius = "16px"
+                heading.textContent = serverMeta["name"]
+                content.textContent = "View channels on the sidebar to the right."
             }
+
         }
 
         function jumpToBottom() {
@@ -2907,8 +3349,22 @@
             request(JSON.stringify({"type": "createGC", "include": included}))
         })
 
+        friendsListServerSettings.addEventListener("click", () => {
+            serverSettingsFriendsList.style.visibility = "visible"
+        })
+
+        document.addEventListener("click", (e) => {
+            if (!friendsListServerSettings.contains(e.target)) {
+                serverSettingsFriendsList.style.visibility = "hidden"
+            }
+        })
+
         function openEditGc() {
-            const isGC = chatCache["Type"] == "gc" || chatCache["Type"] == "forced-gc"
+            if (currChat == -1) {
+                return
+            }
+
+            const isGC = chatCache["Type"] == "gc"
             if (!isGC) {
                 return
             }
@@ -2959,6 +3415,42 @@
                 const file = files[0]
                 convertFileToBase64(file).then((b64) => {
                     editGcIcon.src = b64
+                })
+            }
+        })
+
+        function openCreateServer() {
+            createServerIconFile.value = ""
+            createServerIcon.src = "Media/add.png"
+            createServerName.value = ""
+            createServerWrapper.style.visibility = "visible"
+            createServerWrapper.style.opacity = "1"
+        }
+
+        function closeCreateServer() {
+            createServerWrapper.style.opacity = "0"
+            setTimeout(() => {
+                createServerWrapper.style.visibility = "hidden"
+            }, 250)
+        }
+
+        createServerCancel.addEventListener("click", closeCreateServer)
+        createServerCreate.addEventListener("click", () => {
+            request(JSON.stringify({
+                "type": "createServer",
+                "icon": createServerIcon.src,
+                "name": createServerName.value
+            }))
+            closeCreateServer()
+        })
+
+        createServerIconFile.addEventListener("change", (e) => {
+            const files = e.target.files
+
+            if (files && files.length == 1) {
+                const file = files[0]
+                convertFileToBase64(file).then((b64) => {
+                    createServerIcon.src = b64
                 })
             }
         })
@@ -3097,6 +3589,116 @@
                 addUserWrapper.style.visibility = "hidden"
             }, 250)
         })
+
+        function openNewChannel() {
+            newChannelName.value = ""
+            newChannelCreate.disabled = true
+
+            newChannelWrapper.style.visibility = "visible"
+            newChannelWrapper.style.opacity = "1"
+        }
+
+        function closeNewChannel() {
+            newChannelWrapper.style.opacity = "0"
+
+            setTimeout(() => {
+                newChannelWrapper.style.visibility = "hidden"
+            }, 250)
+        }
+
+        newChannelName.addEventListener("input", () => {
+            const currLen = newChannelName.value.length
+            if (currLen == 0 || currLen > 100) {
+                newChannelCreate.disabled = true
+            } else {
+                newChannelCreate.disabled = false
+            }
+        })
+
+        newChannelCancel.addEventListener("click", closeNewChannel)
+        newChannelCreate.addEventListener("click", () => {
+            if (newChannelName.value.trim() == "") {
+                return
+            }
+
+            request(JSON.stringify({
+                "type": "newChannel",
+                "SID": currServer,
+                "categoryID": currCategory,
+                "name": newChannelName.value.trim()
+            }))
+            closeNewChannel()
+        })
+
+        friendsListContent.addEventListener("contextmenu", (e) => {
+            if (currServer == -1) {
+                return
+            }
+
+            if (e.target != friendsListContent) {
+                return
+            }
+
+            if (Date.now() - lastRClickMenuClose < 10) {
+                return
+            }
+
+            e.preventDefault()
+
+            createCategoryRClickMenu.style.visibility = "visible"
+            if (e.pageX + createCategoryRClickMenu.offsetWidth > window.innerWidth) {
+                createCategoryRClickMenu.style.left = e.pageX - createCategoryRClickMenu.offsetWidth + "px"
+            } else {
+                createCategoryRClickMenu.style.left = e.pageX + "px"
+            }
+
+            if (e.pageY + createCategoryRClickMenu.offsetHeight > window.innerHeight) {
+                createCategoryRClickMenu.style.top = e.pageY - createCategoryRClickMenu.offsetHeight + "px"
+            } else {
+                createCategoryRClickMenu.style.top = e.pageY + "px"
+            }
+        })
+
+        function openNewCategory() {
+            newCategoryName.value = ""
+            newCategoryCreate.disabled = true
+
+            newCategoryWrapper.style.visibility = "visible"
+            newCategoryWrapper.style.opacity = "1"
+        }
+
+        function closeNewCategory() {
+            newCategoryWrapper.style.opacity = "0"
+
+            setTimeout(() => {
+                newCategoryWrapper.style.visibility = "hidden"
+            }, 250)
+        }
+
+        newCategoryName.addEventListener("input", () => {
+            const currLen = newCategoryName.value.length
+            if (currLen == 0 || currLen > 100) {
+                newCategoryCreate.disabled = true
+            } else {
+                newCategoryCreate.disabled = false
+            }
+        })
+
+        newCategoryCancel.addEventListener("click", closeNewCategory)
+        newCategoryCreate.addEventListener("click", () => {
+            if (newCategoryName.value.trim() == "") {
+                return
+            }
+
+            request(JSON.stringify({
+                "type": "newCategory",
+                "SID": currServer,
+                "name": newCategoryName.value.trim()
+            }))
+            closeNewCategory()
+        })
+
+        createCategory.addEventListener("mousedown", openNewCategory)
     </script>
 
     <script>
@@ -3217,6 +3819,11 @@
             }
 
             async function fetchChatData() {
+                if (currChat == -1) {
+                    await setEmptyChat()
+                    return
+                }
+
                 ws.send(JSON.stringify({"type": "reqChat", "CID": currChat, "page": currPage}))
             }
 
@@ -3227,7 +3834,7 @@
 
                 return new Promise((resolve) => {
                     const checkLoad = () => {
-                        if (loadingStatus >= 3) {
+                        if (loadingStatus >= 2) {
                             resolve()
                         } else {
                             setTimeout(checkLoad, 100)
@@ -3300,14 +3907,11 @@
             }
 
             wsUrlReady.then((wsURL) => {
-                console.log("Connecting to websocket via " + WsProtocol + "//")
-
                 generatePubKey().then((pubBytes) => {
                     try {
                         ws = new WebSocket(wsURL);
 
                         ws.onopen = (ev) => {
-                            console.log("Websocket Connected!")
                             ws.send(JSON.stringify({"type":"encrypt-key-xch", "publicKey": bytesToHex(pubBytes)}))
                             loadingText.textContent = "Encrypting..."
                         }
@@ -3325,7 +3929,6 @@
                                             origSend.call(ws, JSON.stringify({"encryption": "AES", "iv": encryptionResults["iv"],"body":encryptionResults["ciphertext"]}))
                                         })
                                     }
-                                    console.log("Encrypted with AES!")
 
                                     load()
                                 })
@@ -3337,7 +3940,6 @@
                                         respBody = JSON.parse(data)
                                         trackerId = respBody["trackerID"]
 
-                                        console.log(respBody)
                                         if (respBody["type"] == "auth_expired") {
                                             window.location.assign(protocol + "//" + domainURL + "/login.html?errT=Login%20Expired&errC=Your%20session%20has%20expired.%20Please%20try%20logging%20in%20again.")
                                         }
@@ -3354,10 +3956,6 @@
                                         }
 
                                         if (respBody["type"] == "reqChatSuccess") {
-                                            if (loading) {
-                                                loadingStatus += 1
-                                            }
-
                                             maxPage = respBody["numPages"]
                                             setChat(respBody["chat"])
                                         }
@@ -3385,14 +3983,36 @@
                                             })
                                         }
 
+                                        if (respBody["type"] == "serverContentUpdate") {
+                                            if (currServer == respBody["SID"]) {
+                                                if (serverCache) {
+                                                    serverCache["Categories"] = respBody["categories"]
+                                                }
+
+                                                setChatList()
+                                            }
+                                        }
+
                                         if (respBody["type"] == "chatGone") {
                                             chats = respBody["chats"]
-                                            moveChat(0)
+
+                                            if (!chats.includes(currChat)) {
+                                                moveChat(-1)
+                                            }
+
+                                            setChatList()
                                         }
 
                                         if (respBody["type"] == "newMsg") {
-                                            delete chatMetaCache[respBody["CID"].toString()]
-                                            setChatList()
+                                            if (!respBody["message"]["SYSMSG"]) {
+                                                if (respBody["CID"].toString() in chatMetaCache) {
+                                                    chatMetaCache[respBody["CID"].toString()]["lastMsg"]["MSGID"] = respBody["message"]["MSGID"]
+                                                    chatMetaCache[respBody["CID"].toString()]["lastMsg"]["content"] = respBody["message"]["content"]
+                                                    chatMetaCache[respBody["CID"].toString()]["lastMsg"]["time"] = respBody["message"]["time"]
+                                                }
+
+                                                setChatList()
+                                            }
 
                                             if (currChat == respBody["CID"]) {
                                                 lastMsgId = respBody["message"]["MSGID"]
@@ -3401,6 +4021,7 @@
                                                     chatCache["messages"].push(respBody["message"])
                                                 } else {
                                                     // TODO: Push next message onto this screen
+                                                    console.warn("TODO: PUSH NEXT MSG ONTO THIS SCREEN")
                                                     fetchChatData()
                                                     return
                                                 }
@@ -3489,6 +4110,11 @@
                                             setChatList()
                                         }
 
+                                        if (respBody["type"] == "updateServers") {
+                                            servers = respBody["servers"]
+                                            setServerList()
+                                        }
+
                                         if (respBody["type"] == "newChat") {
                                             chats = respBody["chats"]
                                             setChatList()
@@ -3507,8 +4133,11 @@
                                         }
 
                                         if (respBody["type"] == "setReadSuccess") {
-                                            readMsgs = respBody["readMsgs"]
-                                            delete chatMetaCache[currChat.toString()]
+                                            if (!compareLists(readMsgs, respBody["readMsgs"])) {
+                                                readMsgs = respBody["readMsgs"]
+                                                delete chatMetaCache[currChat.toString()]
+                                            }
+
                                             setChatList()
                                         }
 
@@ -3517,7 +4146,7 @@
                                         }
                                     })
                                 } else {
-                                    console.log("Recieved encrypted message, but we are not ready!")
+                                    console.warn("Recieved encrypted message, but we are not ready!")
                                 }
                             }
                         };
@@ -3527,14 +4156,14 @@
                         };
 
                         ws.onclose = (event) => {
-                            console.log('Connection closed:', event.reason);
+                            console.warn('Connection closed:', event.reason);
 
                             console.log("Attempting reconnect...")
                             loadingText.textContent = "Connection lost"
                             setTimeout(() => window.location.reload(), 5000)
                         };
                     } catch {
-                        console.log("Websocket Connection Failed!")
+                        console.warn("Websocket Connection Failed!")
                         console.log("Attempting reconnect...")
                         setTimeout(() => window.location.reload(), 5000)
                     }
@@ -3578,8 +4207,9 @@
                 embeddedFiles.forEach((file) => {
                     const embedImgWrapper = document.createElement("div")
                     embedImgWrapper.style.position = "relative"
+                    embedImgWrapper.style.width = ""
                     embedImgWrapper.style.height = "calc(100%-4px)"
-                    embedImgWrapper.style.aspectRatio = 1
+                    embedImgWrapper.style.aspectRatio = "1 / 1"
                     embedImgWrapper.style.overflow = "hidden"
                     embedImgWrapper.style.border = "2px solid var(--acc4)"
                     embedImgWrapper.style.borderRadius = "8px"
@@ -3649,6 +4279,10 @@
         }
 
         async function uploadFiles(files) {
+            if (currChat == -1) {
+                return
+            }
+
             if (files && files.length > 0) {
                 if (files.length > 10) {
                     openPopup("Woah there!", "Please upload up to 10 files at a time!")
@@ -3661,6 +4295,11 @@
                     if (file.size > (25*1024*1024)) {
                         openPopup("Woah there!", "That file exceeded the max size of 25MB!")
                         continue
+                    }
+
+                    if (embeddedFiles.length > 10) {
+                        openPopup("Woah there!", "Please upload up to 10 files at a time!")
+                        break
                     }
 
                     embeddedFiles.push(file)

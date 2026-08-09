@@ -46,6 +46,10 @@ footer > a {
     width: 5%;
     height: 100%;
     background-color: var(--acc2);
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 #msgBoxHeader {
@@ -76,14 +80,22 @@ footer > a {
     font-weight: 100;
     margin-left: .5em;
     margin-top: 1em;
-    margin-bottom: 1em;
+    margin-bottom: .5em;
     width: 85%;
+    min-width: 0;
+    flex-grow: 0;
     white-space: pre;
     cursor: pointer;
+
+    white-space: nowrap;
+    background: linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%);
+    background-clip: text;
+    color: transparent;
 }
 
 #msgBoxHeader > button {
-    width: 15%;
+    width: 15em;
+    flex-shrink: 0;
     border: none;
     border-radius: 0;
     background-color: var(--acc3);
@@ -126,7 +138,7 @@ footer > a {
 
 #msgBox {
     position: absolute;
-    width: calc(85% * 0.95 + 12px);
+    width: calc((100% - (15em * 1.25)) - 5%);
     height: calc(100% - 40px - 1.25em);
     bottom: 0;
     left: 5%;
@@ -136,7 +148,7 @@ footer > a {
 
 #userList {
     position: absolute;
-    width: calc(15% * 0.95 - 12px);
+    width: calc(15em * 1.25);
     height: calc(100% - 40px - 1.25em);
     right: 0;
     bottom: 0;
@@ -223,6 +235,7 @@ footer > a {
     margin-left: 5%;
     margin-right: 5%;
     margin-top: .5em;
+    margin-bottom: .5em;
     border: none;
     border-radius: 0;
     background-color: var(--button);
@@ -280,6 +293,53 @@ footer > a {
 }
 
 #newGCCreate:enabled:hover {
+    background-color: var(--button-press);
+}
+
+#friendsListServerSettings {
+    width: 90%;
+    font-size: 1.5em;
+    margin-left: 5%;
+    margin-right: 5%;
+    margin-top: .5em;
+    margin-bottom: .5em;
+    border: none;
+    border-radius: 0;
+    background-color: var(--button);
+    cursor: pointer;
+}
+
+#friendsListServerSettings:hover {
+    background-color: var(--button-press);
+}
+
+#serverSettingsFriendsList {
+    position: absolute;
+    width: 90%;
+    left: 5%;
+    background-color: var(--acc4);
+    visibility: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    align-items: center;
+    cursor: auto;
+}
+#serverSettingsFriendsList > input {
+    width: 95%;
+    height: 2em;
+    margin-top: .5em;
+    margin-bottom: .5em;
+    background-color: var(--button);
+    border: none;
+    border-radius: 0;
+}
+
+#serverSettingsFriendsList > input:enabled {
+    cursor: pointer;
+}
+
+#serverSettingsFriendsList > input:enabled:hover {
     background-color: var(--button-press);
 }
 
@@ -373,6 +433,7 @@ footer > a {
     display: flex;
     flex-direction: row;
     visibility: hidden;
+    flex-wrap: nowrap;
 }
 
 #replying {
@@ -467,6 +528,7 @@ footer > a {
     font-weight: 700;
     text-align: center;
     cursor: pointer;
+    outline: none;
 }
 
 #myProfileScreen {
@@ -501,10 +563,13 @@ footer > a {
     margin-top: 1em;
     margin-bottom: 1em;
     width: 85%;
+    min-width: 0;
+    flex-grow: 0;
 }
 
 #myProfileHeader > button {
-    width: 15%;
+    width: 15em;
+    flex-shrink: 0;
     border: none;
     border-radius: 0;
     background-color: var(--acc3);
@@ -799,6 +864,110 @@ footer > a {
     color: var(--button-press);
 }
 
+#createServer {
+    position: absolute;
+    width: 30%;
+    height: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--bg);
+}
+
+#createServerIcon {
+    position: absolute;
+    left: 50%;
+    top: 5%;
+    height: 60%;
+    aspect-ratio: 1;
+    border-radius: 9999px;
+    border: 4px solid var(--acc4);
+
+    transform: translateX(-50%);
+}
+
+#createServerIconFile {
+    position: absolute;
+    left: 50%;
+    top: 5%;
+    height: 60%;
+    aspect-ratio: 1;
+    border-radius: 9999px;
+    border: 4px solid transparent;
+    opacity: 0;
+    cursor: pointer;
+
+    transform: translateX(-50%);
+}
+
+#createServerIconOverlay {
+    position: absolute;
+    left: 50%;
+    top: 5%;
+    height: 60%;
+    aspect-ratio: 1;
+    border-radius: 9999px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border: 4px solid transparent;
+    visibility: hidden;
+
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+
+#createServerName {
+    position: absolute;
+    left: 50%;
+    bottom: 15%;
+    width: 90%;
+    font-size: 2em;
+    outline: none;
+    border: none;
+    border-radius: 0;
+    background-color: var(--acc);
+
+    transform: translateX(-50%);
+}
+
+#createServerName::placeholder {
+    color: var(--placeholder);
+}
+
+#createServerActions {
+    position: absolute;
+    width: 100%;
+    height: 10%;
+    bottom: 1%;
+    display: flex;
+    justify-content: space-evenly;
+}
+
+#createServerActions > button {
+    width: 40%;
+    font-size: 2em;
+    cursor: pointer;
+}
+
+#createServerCreate {
+    background-color: var(--button);
+    border: none;
+}
+
+#createServerCreate:hover {
+    background-color: var(--button-press);
+}
+
+#createServerCancel {
+    background: none;
+    border: 2px solid var(--button);
+    color: var(--button);
+}
+
+#createServerCancel:hover {
+    border-color: var(--button-press);
+    color: var(--button-press);
+}
+
 #addUserFriendsList {
     position: absolute;
     width: 50%;
@@ -869,6 +1038,146 @@ footer > a {
 }
 
 #addUserCancel:hover {
+    color: var(--button-press);
+    border: 2px solid var(--button-press);
+}
+
+#newChannel {
+    position: absolute;
+    width: 50%;
+    height: 30%;
+    top: 50%;
+    left: 50%;
+    background-color: var(--bg);
+    transform: translate(-50%, -50%);
+
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+
+    align-items: center;
+}
+
+#newChannelHeading {
+    margin-top: .5em;
+    margin-bottom: .5em;
+}
+
+#newChannelName {
+    width: 95%;
+    height: 15%;
+    font-size: 1.5em;
+    color: var(--text);
+    background-color: var(--acc3);
+    border: none;
+    outline: none;
+}
+
+#newChannelName::placeholder {
+    color: var(--placeholder);
+}
+
+#newChannelCreate {
+    width: 95%;
+    height: 15%;
+    background-color: var(--button);
+    border: none;
+    border-radius: 0;
+    outline: none;
+    font-size: 1.5em;
+}
+
+#newChannelCreate:enabled {
+    cursor: pointer;
+}
+
+#newChannelCreate:enabled:hover {
+    background-color: var(--button-press);
+}
+
+#newChannelCancel {
+    width: 95%;
+    height: 15%;
+    background: none;
+    border: 2px solid var(--button);
+    border-radius: 0;
+    outline: none;
+    cursor: pointer;
+    font-size: 1.5em;
+    color: var(--button);
+}
+
+#newChannelCancel:hover {
+    color: var(--button-press);
+    border: 2px solid var(--button-press);
+}
+
+#newCategory {
+    position: absolute;
+    width: 50%;
+    height: 30%;
+    top: 50%;
+    left: 50%;
+    background-color: var(--bg);
+    transform: translate(-50%, -50%);
+
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+
+    align-items: center;
+}
+
+#newCategoryHeading {
+    margin-top: .5em;
+    margin-bottom: .5em;
+}
+
+#newCategoryName {
+    width: 95%;
+    height: 15%;
+    font-size: 1.5em;
+    color: var(--text);
+    background-color: var(--acc3);
+    border: none;
+    outline: none;
+}
+
+#newCategoryName::placeholder {
+    color: var(--placeholder);
+}
+
+#newCategoryCreate {
+    width: 95%;
+    height: 15%;
+    background-color: var(--button);
+    border: none;
+    border-radius: 0;
+    outline: none;
+    font-size: 1.5em;
+}
+
+#newCategoryCreate:enabled {
+    cursor: pointer;
+}
+
+#newCategoryCreate:enabled:hover {
+    background-color: var(--button-press);
+}
+
+#newCategoryCancel {
+    width: 95%;
+    height: 15%;
+    background: none;
+    border: 2px solid var(--button);
+    border-radius: 0;
+    outline: none;
+    cursor: pointer;
+    font-size: 1.5em;
+    color: var(--button);
+}
+
+#newCategoryCancel:hover {
     color: var(--button-press);
     border: 2px solid var(--button-press);
 }
@@ -1495,6 +1804,8 @@ footer > a {
     display: flex;
     flex-direction: column;
     visibility: hidden;
+
+    z-index: 97;
 }
 
 .rClickMenuOption {
@@ -1543,6 +1854,14 @@ footer > a {
     z-index: 10;
 
     transition: opacity 250ms linear;
+}
+
+.serverIcon {
+    width: calc(100% - 24px);
+    border-radius: 16px;
+    border: 4px solid var(--acc4);
+    margin: 8px;
+    cursor: pointer;
 }
 
 .green {

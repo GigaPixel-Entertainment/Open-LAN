@@ -36,7 +36,7 @@ import ssl
 
 from cryptography.fernet import Fernet
 
-from PIL import Image
+from PIL import Image, ImageSequence
 import msgpack
 
 import config
@@ -139,6 +139,9 @@ def loadUsers():
                     for cht in userData["Chats"]:
                         userData["ReadMsgs"][str(cht)] = 0
 
+                if not "Servers" in userData:
+                    userData["Servers"] = []
+
                 userData["Chats"] = list(set(userData["Chats"]))
 
                 users.append(userData)
@@ -159,6 +162,7 @@ def loadChats():
                 with open(chat, "rb") as f:
                     fileContents = msgpack.unpackb(f.read())
                     metadata = fileContents["meta"]
+                    server = metadata["Server"] if "Server" in metadata else -1
                     name = fileContents["Name"]
                     recipients = (fileContents["Recipients"] if "Recipients" in fileContents else [])
                     owner = (fileContents["Owner"] if "Owner" in fileContents else (recipients[0] if len(recipients) > 0 else 0))
@@ -169,16 +173,44 @@ def loadChats():
                         if not "SYSMSG" in msg:
                             msg["content"] = fernet.decrypt(msg["content"]).decode("utf-16")
 
-                    if metadata["CID"] == 0:
-                        recipients = list(range(len(users)))
-
-                    chats.append({"CID": metadata["CID"], "Type": metadata["Type"], "Time": metadata["Time"] if "Time" in metadata else int(time.time()), "Name": name, "Recipients": recipients, "Owner": owner, "Icon": icon, "messages": messages})
+                    chats.append({"CID": metadata["CID"], "Type": metadata["Type"], "Server": server, "Time": metadata["Time"] if "Time" in metadata else int(time.time()), "Name": name, "Recipients": recipients, "Owner": owner, "Icon": icon, "messages": messages})
                     f.close()
             except:
                 traceback.print_exc()
                 logging.error("[IO] Failed to load chat! %s", chat.name)
 
     logging.info("[IO] Chats loaded")
+
+def loadServers():
+    logging.info("[IO] Loading servers")
+
+    if not config.SERVER_DIR.exists():
+        config.SERVER_DIR.mkdir()
+
+    for srv in config.SERVER_DIR.iterdir():
+        if srv.is_file() and srv.suffix == ".srv":
+            with open(srv, "rb") as f:
+                serverData = msgpack.unpackb(fernet.decrypt(f.read()))
+
+                if not "Owner" in serverData:
+                    serverData["Owner"] = serverData["Users"][0] if len(serverData["Users"]) > 0 else 0
+
+                if "Chats" in serverData:
+                    textCategory = {
+                        "categoryID": 0,
+                        "name": "Text Channels",
+                        "Chats": copy.copy(serverData["Chats"])
+                    }
+                    serverData["Categories"] = [textCategory]
+                    serverData.pop("Chats", None)
+
+                for cate in serverData["Categories"]:
+                    cate["Chats"] = list(dict.fromkeys(cate["Chats"]))
+
+                servers.append(serverData)
+                f.close()
+
+    logging.info("[IO] Servers loaded")
 
 def saveUsers():
     logging.info("[IO] Saving users")
@@ -206,7 +238,7 @@ def saveChats():
         try:
             chatID = chat["CID"]
             with open(config.CHATS_DIR / f"{chatID}.enc", "wb") as f:
-                metadata = {"CID": chatID, "Type": chat["Type"], "Time": chat["Time"]}
+                metadata = {"CID": chatID, "Type": chat["Type"], "Server": chat["Server"] if "Server" in chat else -1, "Time": chat["Time"]}
                 messages = []
 
                 for msg in chat["messages"]:
@@ -217,7 +249,7 @@ def saveChats():
 
                     messages.append(messageSaving)
 
-                packed: bytes | None = msgpack.packb({"meta":metadata,"Name":chat["Name"],"Recipients": chat["Recipients"], "Owner": chat["Owner"] if "Owner" in chat else (chat["Recipients"][0] if len(chat["Recipients"]) > 0 else 0), "Icon": chat["Icon"], "messages":messages})
+                packed: bytes | None = msgpack.packb({"meta":metadata,"Name":chat["Name"],"Recipients": chat["Recipients"] if "Recipients" in chat else [], "Owner": chat["Owner"] if "Owner" in chat else (chat["Recipients"][0] if len(chat["Recipients"]) > 0 else 0), "Icon": chat["Icon"], "messages":messages})
 
                 if packed:
                     f.write(packed)
@@ -230,6 +262,26 @@ def saveChats():
             logging.error("[IO] Failed to save chat! %s", chat)
 
     logging.info("[IO] Chats saved")
+
+
+def saveServers():
+    logging.info("[IO] Saving servers")
+
+    for srv in servers:
+        try:
+            with open(config.SERVER_DIR / f"{srv["SID"]}.srv", "wb") as f:
+                packed: bytes | None = msgpack.packb(srv)
+
+                if packed:
+                    f.write(fernet.encrypt(packed))
+                else:
+                    logging.error("[IO] Failed to save server %s!", srv["SID"])
+
+                f.close()
+        except:
+            traceback.print_exc()
+            logging.error("[IO] Failed to save server %s!", srv["SID"])
+    logging.info("[IO] Servers saved")
 
 def formatLoginResponse(username: str, cloudflare: bool):
     if not username:
@@ -338,6 +390,18 @@ def isValidRedirectToken(redirectToken):
 
     return None
 
+def isValidGif(fileStream: BytesIO):
+    try:
+        img = Image.open(fileStream)
+
+        if img.format != "GIF":
+            return False
+
+        img.verify()
+        return True
+    except:
+        return False
+
 def resizePfpBytes(pfpBytes: bytes):
     pfpStream = BytesIO(pfpBytes)
 
@@ -363,6 +427,7 @@ async def autosave(shutdownEvent: asyncio.Event, shutdownEventDone: asyncio.Even
                 logging.debug("[AS] Autosaving...")
                 saveUsers()
                 saveChats()
+                saveServers()
                 logging.debug("[AS] Autosave done")
     except asyncio.CancelledError:
         pass
@@ -429,6 +494,7 @@ if __name__ == "__main__":
     config.MEDIA_DIR.mkdir(exist_ok=True)
     config.PFP_DIR.mkdir(exist_ok=True)
     config.SECURITY_DIR.mkdir(exist_ok=True)
+    config.SERVER_DIR.mkdir(exist_ok=True)
     config.USERS_DIR.mkdir(exist_ok=True)
 
     print("[MAIN] Starting logger", flush=True)
@@ -445,6 +511,7 @@ if __name__ == "__main__":
 
     users = []
     chats = []
+    servers = []
 
     if not config.SAVE_KEY.exists():
         logging.info("[IO] Generating new save key!")
@@ -457,6 +524,7 @@ if __name__ == "__main__":
     loadPfps()
     loadUsers()
     loadChats()
+    loadServers()
 
     ipAddrs = httphelper.getIpAddrs()
 
@@ -467,7 +535,7 @@ if __name__ == "__main__":
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     context.load_cert_chain(certfile=config.CA_CERT_DIR / "server.crt", keyfile=config.CA_CERT_DIR / "server.key")
 
-    ws = websocket.WS(VALID_TOKENS, SHORT_REDIRECT_TOKENS, DEFAULT_PFPS, chats, users, fernet, resizePfpBytes)
+    ws = websocket.WS(VALID_TOKENS, SHORT_REDIRECT_TOKENS, DEFAULT_PFPS, chats, users, servers, fernet, resizePfpBytes)
 
     socketList: list[socket.socket] = []
     for addr in ipAddrs:
@@ -551,5 +619,6 @@ if __name__ == "__main__":
 
     saveUsers()
     saveChats()
+    saveServers()
 
     logging.info("[MAIN] Goodbye, World")

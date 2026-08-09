@@ -4,6 +4,7 @@ import mimetypes
 import traceback
 import logging
 import secrets
+import random
 import asyncio
 import base64
 import time
@@ -26,12 +27,13 @@ import config
 import httphelper
 
 class WS():
-    def __init__(self, validTokens: dict, redirTokens: dict, defaultPfps: list, chats: list, users: list, fernet: Fernet, resizePfpBytes: Callable) -> None:
+    def __init__(self, validTokens: dict, redirTokens: dict, defaultPfps: list, chats: list, users: list, servers: list, fernet: Fernet, resizePfpBytes: Callable) -> None:
         self.VALID_TOKENS: dict = validTokens
         self.SHORT_REDIRECT_TOKENS: dict = redirTokens
         self.DEFAULT_PFPS: list[str] = defaultPfps
         self.chats: list[dict] = chats
         self.users: list[dict] = users
+        self.servers: list[dict] = servers
         self.fernet: Fernet = fernet
 
         self.resizePfpBytes: Callable = resizePfpBytes
@@ -73,6 +75,13 @@ class WS():
                     return True
 
         return False
+
+    def isValidB64(self, b64: str) -> bool:
+        try:
+            base64.b64decode(b64, validate=True)
+            return True
+        except:
+            return False
 
     def getUsernameFromAuthToken(self, token: str | None) -> str | None:
         for username, tk in self.VALID_TOKENS.items():
@@ -117,6 +126,13 @@ class WS():
 
         return None
 
+    def getServerFromSID(self, SID: int) -> dict | None:
+        for server in self.servers:
+            if server["SID"] == SID:
+                return server
+
+        return None
+
     def setUserProperty(self, UID: int | None, propertyName: str, value) -> bool:
         if UID is None:
             return False
@@ -131,10 +147,16 @@ class WS():
         return success
 
     def tokenInChat(self, token: str | None, CID: int) -> bool:
+        if CID < 0 or CID >= len(self.chats):
+            return False
+
         chat = self.getChatFromCID(CID)
 
         if chat is None:
             return False
+
+        if "Server" in chat and chat["Server"] != -1:
+            return self.tokenInServer(token, chat["Server"])
 
         userInfo = self.getUserInfoFromToken(token)
 
@@ -145,6 +167,26 @@ class WS():
             return False
 
         return True
+
+    def tokenInServer(self, token: str | None, SID: int) -> bool:
+        if SID < 0 or SID >= len(self.servers):
+            return False
+
+        server = self.getServerFromSID(SID)
+
+        if server is None:
+            return False
+
+        userInfo = self.getUserInfoFromToken(token)
+
+        if userInfo is None:
+            return False
+
+        if not SID in userInfo["Servers"]:
+            return False
+
+        return True
+
 
     def validateUsername(self, username: str):
         return username.replace("_", "").isalnum() and username.isascii() and len(username) >= 3 and len(username) <= 30
@@ -159,8 +201,22 @@ class WS():
     def resizePfp(self, pfp: str):
         if "," in pfp:
             pfp = pfp.split(",")[1]
+
+        if not self.isValidB64(pfp):
+            return random.choice(self.DEFAULT_PFPS)
+
         pfpBytes = base64.b64decode(pfp)
         return self.resizePfpBytes(pfpBytes)
+
+    async def delChat(self, chat: dict):
+        chat["messages"] = []
+        chat["Name"] = "deleted"
+        chat["Icon"] = config.EMPTY_IMG
+        chat["Owner"] = -1
+        chat["Type"] = ""
+        chat["Server"] = -1
+        chat["Time"] = 0
+        chat["Recipients"] = []
 
     async def wsSendEncrypted(self, ws: ServerConnection, data: bytes, trackerId: int | None=None):
         if trackerId is not None:
@@ -326,21 +382,26 @@ class WS():
                             f.write(self.fernet.encrypt(orjson.dumps({"name": name, "username": username, "secQ": securityKey})))
                             f.close()
 
-                        self.users.append({"UID": len(self.users), "USRNAME": username, "PWD": bcrypt.hashpw(password, bcrypt.gensalt(config.NUM_ENCRYPT_ROUNDS)).decode("utf-8"), "Displayname": username, "Birthday": None, "BirthdayV": "PRIVATE", "AccCreated": time.time(), "Pronouns": "", "Bio": "", "PFP": self.DEFAULT_PFPS[secrets.randbelow(len(self.DEFAULT_PFPS))], "Friends": [], "Chats": [0], "FriendRequests": [], "ReadMsgs": {"0": 0}})
+                        uid = len(self.users)
+                        self.users.append({"UID": uid, "USRNAME": username, "PWD": bcrypt.hashpw(password, bcrypt.gensalt(config.NUM_ENCRYPT_ROUNDS)).decode("utf-8"), "Displayname": username, "Birthday": None, "BirthdayV": "PRIVATE", "AccCreated": time.time(), "Pronouns": "", "Bio": "", "PFP": self.DEFAULT_PFPS[secrets.randbelow(len(self.DEFAULT_PFPS))], "Friends": [], "Chats": [0], "FriendRequests": [], "ReadMsgs": {"0": 0}, "Servers": []})
+
+                        chat0 = None
+                        for cht in self.chats:
+                            if cht["CID"] == 0:
+                                cht["Recipients"].append(uid)
+                                chat0 = cht
+                                break
+
+                        for ws2 in self.WS_CLIENTS:
+                            wsUID = getattr(ws2, "UID", None)
+                            targetInfo = self.getUserInfoFromUserId(wsUID)
+
+                            if wsUID is not None and wsUID in chat0["Recipients"]:
+                                await self.wsSendEncrypted(ws2, orjson.dumps({"type": "chatUpdate", "chat": chat0}))
 
                         self.RATELIMITED_IPS.append({"ip": ws.remote_address[0], "expire": time.time() + config.ACC_CREATION_COOLDOWN_SEC})
 
                         await self.wsSendEncrypted(ws, orjson.dumps({"type": "signupSuccess", "redirect": "/signupSuccess.html"}))
-
-                        targetChat = None
-                        for cht in self.chats:
-                            if cht["Type"] == "forced-gc":
-                                cht["Recipients"] = list(range(len(self.users)))
-                                targetChat = cht
-
-                        if targetChat:
-                            await self.wsBroadcastEncrypted(self.WS_CLIENTS, orjson.dumps({"type": "chatUpdate", "chat": targetChat}))
-
 
                     if decryptedBody["type"] == "reqUser":
                         if await self.checkAuthTokenEncrypted(ws, authToken):
@@ -364,7 +425,8 @@ class WS():
                                 "bio": userinfo["Bio"],
                                 "pronouns": userinfo["Pronouns"],
                                 "friendReq": userinfo["FriendRequests"],
-                                "readMsgs": userinfo["ReadMsgs"]
+                                "readMsgs": userinfo["ReadMsgs"],
+                                "servers": userinfo["Servers"]
                             }), trackerId)
                         else:
                             break
@@ -395,7 +457,7 @@ class WS():
                                 "CID": chat["CID"],
                                 "type": chat["Type"],
                                 "name": chat["Name"],
-                                "icon": chat["Icon"] if "Icon" in chat else secrets.choice(self.DEFAULT_PFPS),
+                                "icon": chat["Icon"] if "Icon" in chat else random.choice(self.DEFAULT_PFPS),
                                 "recipients": chat["Recipients"],
                                 "lastMsg": {
                                     "time": lastMsg["time"] if lastMsg else chat["Time"],
@@ -570,12 +632,7 @@ class WS():
                                 if cAuthToken is None:
                                     continue
 
-                                userInfo = self.getUserInfoFromToken(cAuthToken)
-
-                                if userInfo is None:
-                                    continue
-
-                                if decryptedBody["CID"] in userInfo["Chats"]:
+                                if self.tokenInChat(cAuthToken, decryptedBody["CID"]):
                                     broadcastClients.append(client)
 
                             await self.wsBroadcastEncrypted(broadcastClients, orjson.dumps({"type":"newMsg", "CID": chat["CID"], "message": msgObj}))
@@ -622,12 +679,7 @@ class WS():
                                 if cAuthToken is None:
                                     continue
 
-                                userInfo = self.getUserInfoFromToken(cAuthToken)
-
-                                if userInfo is None:
-                                    continue
-
-                                if decryptedBody["CID"] in userInfo["Chats"]:
+                                if self.tokenInChat(cAuthToken, decryptedBody["CID"]):
                                     broadcastClients.append(client)
 
                             await self.wsBroadcastEncrypted(broadcastClients, orjson.dumps({"type":"metaChatUpdate", "chat": chat}))
@@ -670,12 +722,7 @@ class WS():
                                 if cAuthToken is None:
                                     continue
 
-                                userInfo = self.getUserInfoFromToken(cAuthToken)
-
-                                if userInfo is None:
-                                    continue
-
-                                if decryptedBody["CID"] in userInfo["Chats"]:
+                                if self.tokenInChat(cAuthToken, decryptedBody["CID"]):
                                     broadcastClients.append(client)
 
                             await self.wsBroadcastEncrypted(broadcastClients, orjson.dumps({"type":"metaChatUpdate", "chat": chat}))
@@ -1038,7 +1085,7 @@ class WS():
                                 chatExists = False
                                 cid = len(self.chats)
 
-                                self.chats.append({"CID": cid, "Type": "dm", "Name": f"{targetInfo["Displayname"]} & {selfInfo["Displayname"]}", "Recipients": [selfUID, targetUID], "Icon": secrets.choice(self.DEFAULT_PFPS), "Time": int(time.time()), "messages": []})
+                                self.chats.append({"CID": cid, "Type": "dm", "Name": f"{targetInfo["Displayname"]} & {selfInfo["Displayname"]}", "Recipients": [selfUID, targetUID], "Icon": random.choice(self.DEFAULT_PFPS), "Time": int(time.time()), "messages": []})
 
                             for usr in self.users:
                                 if usr["UID"] == targetUID:
@@ -1182,7 +1229,7 @@ class WS():
                             if len(chatName) > 100:
                                 chatName = f"{len(included)} people"
 
-                            self.chats.append({"CID": cid, "Type": "gc", "Name": chatName, "Recipients": included, "Owner": selfUID, "Icon": secrets.choice(self.DEFAULT_PFPS), "Time": int(time.time()), "messages": []})
+                            self.chats.append({"CID": cid, "Type": "gc", "Name": chatName, "Recipients": included, "Owner": selfUID, "Icon": random.choice(self.DEFAULT_PFPS), "Time": int(time.time()), "messages": []})
 
                             for ws2 in self.WS_CLIENTS:
                                 wsUID = getattr(ws2, "UID", None)
@@ -1213,18 +1260,23 @@ class WS():
 
                             iconB64 = self.resizePfp(decryptedBody["icon"])
 
+                            isChanged = True
+                            if iconB64 == chat["Icon"] and newChatName == chat["Name"]:
+                                isChanged = False
+
                             chat["Icon"] = iconB64
 
                             if len(newChatName) <= 100 and len(newChatName) > 0:
                                 chat["Name"] = newChatName
 
-                            chat["messages"].append({
-                                "SYSMSG": True,
-                                "MSGID": len(chat["messages"]),
-                                "TYPE": "editGcInfo",
-                                "TARGET": uid,
-                                "time": int(time.time())
-                            })
+                            if isChanged:
+                                chat["messages"].append({
+                                    "SYSMSG": True,
+                                    "MSGID": len(chat["messages"]),
+                                    "TYPE": "editGcInfo",
+                                    "TARGET": uid,
+                                    "time": int(time.time())
+                                })
 
                             for ws2 in self.WS_CLIENTS:
                                 wsUID = getattr(ws2, "UID", None)
@@ -1304,7 +1356,7 @@ class WS():
                             usrInfo = self.getUserInfoFromUserId(uid)
                             chat = self.getChatFromCID(cid)
 
-                            if uid is None or usrInfo is None or chat is None or chat["Type"] == "forced-gc":
+                            if uid is None or usrInfo is None or chat is None:
                                 await self.wsSendEncrypted(ws, orjson.dumps({"type": "leaveGcFailed"}), trackerId)
                                 continue
 
@@ -1327,10 +1379,7 @@ class WS():
                                 chat["Owner"] = chat["Recipients"][0]
 
                             if len(chat["Recipients"]) == 0:
-                                chat["messages"] = []
-                                chat["Name"] = "deleted"
-                                chat["Icon"] = secrets.choice(self.DEFAULT_PFPS)
-                                chat["Owner"] = 0
+                                await self.delChat(chat)
                                 continue
 
                             chat["messages"].append({
@@ -1366,7 +1415,7 @@ class WS():
                                 await self.wsSendEncrypted(ws, orjson.dumps({"type": "rmUsrFailed"}), trackerId)
                                 continue
 
-                            if chat["Type"] == "forced-gc" or chat["Owner"] != selfUID or chat["Owner"] == targetUID:
+                            if chat["Owner"] != selfUID or chat["Owner"] == targetUID:
                                 await self.wsSendEncrypted(ws, orjson.dumps({"type": "rmUsrFailed"}), trackerId)
                                 continue
 
@@ -1418,6 +1467,198 @@ class WS():
                                 "type": "setReadSuccess",
                                 "readMsgs": usrInfo["ReadMsgs"]
                             }), trackerId)
+                        else:
+                            break
+
+                    if decryptedBody["type"] == "createServer":
+                        if await self.checkAuthTokenEncrypted(ws, authToken):
+                            if not self.checkFields(decryptedBody, ["icon", "name"]):
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "createServerFailed"}), trackerId)
+                                continue
+
+                            selfInfo = self.getUserInfoFromToken(authToken)
+
+                            if selfInfo is None:
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "createServerFailed"}), trackerId)
+                                continue
+
+                            selfUID = selfInfo["UID"]
+
+                            sid = len(self.servers)
+                            cid = len(self.chats)
+                            genChat = {"CID": cid, "Type": "channel", "Server": sid, "Name": "general", "Recipients": [], "Owner": selfUID, "Icon": EMPTY_IMG, "Time": int(time.time()), "messages": []}
+                            textCategory = {
+                                "categoryID": 0,
+                                "name": "Text Channels",
+                                "Chats": [cid]
+                            }
+                            serverDict = {
+                                "SID": sid,
+                                "Owner": selfUID,
+                                "Users": [selfUID],
+                                "Categories": [textCategory]
+                            }
+
+                            serverDict["Icon"] = self.resizePfp(decryptedBody["icon"])
+
+                            serverName = decryptedBody["name"].strip()
+                            if len(serverName) == 0 or len(serverName) > 100:
+                                serverDict["Name"] = f"{self.getUsernameFromAuthToken(authToken)}'s Server"
+                            else:
+                                serverDict["Name"] = serverName
+
+                            self.servers.append(serverDict)
+                            self.chats.append(genChat)
+                            selfInfo["Servers"].append(sid)
+
+                            await self.wsSendEncrypted(ws, orjson.dumps({
+                                "type": "updateServers",
+                                "servers": selfInfo["Servers"]
+                            }), trackerId)
+                        else:
+                            break
+
+                    if decryptedBody["type"] == "reqServerMeta":
+                        if await self.checkAuthTokenEncrypted(ws, authToken):
+                            if not self.checkFields(decryptedBody, ["SID"]):
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "reqServerMetaFailed"}), trackerId)
+                                continue
+
+                            if not self.tokenInServer(authToken, decryptedBody["SID"]):
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "reqServerMetaFailed"}), trackerId)
+                                continue
+
+                            server = self.getServerFromSID(decryptedBody["SID"])
+
+                            if not server:
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "reqServerMetaFailed"}), trackerId)
+                                continue
+
+                            await self.wsSendEncrypted(ws, orjson.dumps({
+                                "type": "reqServerMetaSuccess",
+                                "server": {
+                                    "SID": server["SID"],
+                                    "icon": server["Icon"],
+                                    "name": server["Name"]
+                                }
+                            }), trackerId)
+                        else:
+                            break
+
+                    if decryptedBody["type"] == "reqServer":
+                        if await self.checkAuthTokenEncrypted(ws, authToken):
+                            if not self.checkFields(decryptedBody, ["SID"]):
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "reqServerFailed"}), trackerId)
+                                continue
+
+                            if not self.tokenInServer(authToken, decryptedBody["SID"]):
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "reqServerFailed"}), trackerId)
+                                continue
+
+                            server = self.getServerFromSID(decryptedBody["SID"])
+
+                            if not server:
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "reqServerFailed"}), trackerId)
+                                continue
+
+                            await self.wsSendEncrypted(ws, orjson.dumps({
+                                "type": "reqServerSuccess",
+                                "server": server
+                            }), trackerId)
+                        else:
+                            break
+
+                    if decryptedBody["type"] == "newChannel":
+                        if await self.checkAuthTokenEncrypted(ws, authToken):
+                            if not self.checkFields(decryptedBody, ["SID", "categoryID", "name"]):
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "newChannelFailed"}), trackerId)
+                                continue
+
+                            if not self.tokenInServer(authToken, decryptedBody["SID"]):
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "newChannelFailed"}), trackerId)
+                                continue
+
+                            server = self.getServerFromSID(decryptedBody["SID"])
+
+                            if server is None:
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "newChannelFailed"}), trackerId)
+                                continue
+
+                            userId = self.getUserIdFromAuthToken(authToken)
+
+                            if userId is None or not userId == server["Owner"]:
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "newChannelFailed"}), trackerId)
+                                continue
+
+                            category = None
+                            for cate in server["Categories"]:
+                                if cate["categoryID"] == decryptedBody["categoryID"]:
+                                    category = cate
+                                    break
+
+                            if category is None:
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "newChannelFailed"}), trackerId)
+                                continue
+
+                            channelName = decryptedBody["name"].strip()
+
+                            if len(channelName) == 0 or len(channelName) > 100:
+                                channelName = "New Channel"
+
+                            cid = len(self.chats)
+                            channel = {"CID": cid, "Type": "channel", "Server": decryptedBody["SID"], "Name": channelName, "Recipients": [], "Owner": server["Owner"], "Icon": config.EMPTY_IMG, "Time": int(time.time()), "messages": []}
+                            self.chats.append(channel)
+                            category["Chats"].append(cid)
+
+                            await self.wsSendEncrypted(ws, orjson.dumps({"type": "newChannelSuccess"}), trackerId)
+
+                            for ws2 in self.WS_CLIENTS:
+                                wsUID = getattr(ws2, "UID", None)
+                                targetInfo = self.getUserInfoFromUserId(wsUID)
+
+                                if wsUID is not None and decryptedBody["SID"] in targetInfo["Servers"]:
+                                    await self.wsSendEncrypted(ws2, orjson.dumps({"type": "serverContentUpdate", "SID": server["SID"], "categories": server["Categories"]}))
+                        else:
+                            break
+
+                    if decryptedBody["type"] == "newCategory":
+                        if await self.checkAuthTokenEncrypted(ws, authToken):
+                            if not self.checkFields(decryptedBody, ["SID", "name"]):
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "newCategoryFailed"}), trackerId)
+                                continue
+
+                            if not self.tokenInServer(authToken, decryptedBody["SID"]):
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "newCategoryFailed"}), trackerId)
+                                continue
+
+                            server = self.getServerFromSID(decryptedBody["SID"])
+
+                            if server is None:
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "newCategoryFailed"}), trackerId)
+                                continue
+
+                            userId = self.getUserIdFromAuthToken(authToken)
+
+                            if userId is None or not userId == server["Owner"]:
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "newCategoryFailed"}), trackerId)
+                                continue
+
+                            categoryName = decryptedBody["name"].strip()
+
+                            if len(categoryName) == 0 or len(categoryName) > 100:
+                                categoryName = "New Category"
+
+                            category = {"categoryID": len(server["Categories"]), "name": categoryName, "Chats": []}
+                            server["Categories"].append(category)
+
+                            await self.wsSendEncrypted(ws, orjson.dumps({"type": "newCategorySuccess"}), trackerId)
+
+                            for ws2 in self.WS_CLIENTS:
+                                wsUID = getattr(ws2, "UID", None)
+                                targetInfo = self.getUserInfoFromUserId(wsUID)
+
+                                if wsUID is not None and decryptedBody["SID"] in targetInfo["Servers"]:
+                                    await self.wsSendEncrypted(ws2, orjson.dumps({"type": "serverContentUpdate", "SID": server["SID"], "categories": server["Categories"]}))
                         else:
                             break
 

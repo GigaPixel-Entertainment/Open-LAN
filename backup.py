@@ -23,6 +23,8 @@ ACTIVE_DIR.mkdir(exist_ok=False)
 
 shutil.copytree(config.CHATS_DIR, ACTIVE_DIR / "Chats/")
 shutil.copytree(config.USERS_DIR, ACTIVE_DIR / "Users/")
+shutil.copytree(config.SERVER_DIR, ACTIVE_DIR / "Servers/")
 shutil.copytree(config.CDN_DIR, ACTIVE_DIR / "cdn/")
+shutil.copyfile(config.SAVE_KEY, ACTIVE_DIR / "meta.key")
 
 print("Done!")

@@ -200,8 +200,6 @@
 
             var encrypted = false
 
-            console.log("Connecting to websocket via " + WsProtocol + "//")
-
             const hexToBytes = hex => Uint8Array.from(hex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
             const bytesToHex = bytes => Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
             const textEncode = (text) => new TextEncoder().encode(text);
@@ -282,7 +280,6 @@
                         const ws = new WebSocket(wsURL);
 
                         ws.onopen = (ev) => {
-                            console.log("Websocket Connected!")
                             ws.send(JSON.stringify({"type":"encrypt-key-xch", "publicKey": bytesToHex(pubBytes)}))
                         }
 
@@ -299,7 +296,6 @@
                                             origSend.call(ws, JSON.stringify({"encryption": "AES", "iv": encryptionResults["iv"],"body":encryptionResults["ciphertext"]}))
                                         })
                                     }
-                                    console.log("Encrypted with AES!")
                                 })
                             }
 
