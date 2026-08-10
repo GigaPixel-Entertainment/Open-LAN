@@ -307,8 +307,7 @@ if __name__ == "__main__":
         except KeyboardInterrupt:
             if serverProc:
                 endProc = True
-                serverProc.send_signal(signal.SIGINT)
-                serverProc.wait()
+                stopServerProc()
                 print()
         except:
             logging.error("An exception occured while running the server!", stack_info=True)

@@ -196,7 +196,7 @@
             <div id="addUserFriendsList">
                 <input type="search" id="addUserSearch" placeholder="search friends..." class="font white">
                 <div id="addUserSearchRes" class="scroll"></div>
-                <input type="submit" id="addUserAdd" value="Add" class="font" disabled>
+                <input type="submit" id="addUserAdd" value="Invite" class="font" disabled>
                 <input type="submit" id="addUserCancel" value="Cancel" class="font">
             </div>
         </div>
@@ -216,6 +216,15 @@
                 <input type="text" maxlength="100" id="newCategoryName" placeholder="category name..." class="font white">
                 <input type="submit" id="newCategoryCreate" value="Create" class="font" disabled>
                 <input type="submit" id="newCategoryCancel" value="Cancel" class="font">
+            </div>
+        </div>
+
+        <div id="leavingWrapper" class="overlay">
+            <div id="leaving">
+                <h1 class="font white" id="leavingHeading">Leaving Open-LAN</h1>
+                <textarea id="leavingUrl" class="font white" readonly></textarea>
+                <input type="submit" id="leavingLeave" value="Continue" class="font">
+                <input type="submit" id="leavingCancel" value="Cancel" class="font">
             </div>
         </div>
 
@@ -304,6 +313,8 @@
         Open-LAN is open-source under the <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank">GNU General Public License</a> and available on <a href="https://github.com/GigaPixel-Entertainment/GPE-Open-LAN" target="_blank">Github</a>
     </footer>
     <script src="JS/stop.js"></script>
+    <script src="JS/marked.umd.js"></script>
+    <script type="text/javascript" src="JS/purify.min.js"></script>
     <script>
         // constants
         const userInfoCache = []
@@ -396,6 +407,11 @@
         const newCategoryName = document.getElementById("newCategoryName")
         const newCategoryCreate = document.getElementById("newCategoryCreate")
         const newCategoryCancel = document.getElementById("newCategoryCancel")
+
+        const leavingWrapper = document.getElementById("leavingWrapper")
+        const leavingUrl = document.getElementById("leavingUrl")
+        const leavingCancel = document.getElementById("leavingCancel")
+        const leavingLeave = document.getElementById("leavingLeave")
 
         const currUsernameI = document.getElementById("currUsername")
         const currDisplaynameI = document.getElementById("currDisplayname")
@@ -515,7 +531,7 @@
         }
     </script>
     <script>
-        // Validate Url
+        // Sanitization
         function isValidUrl(url) {
             try {
                 const parsedUrl = URL.parse(url)
@@ -528,6 +544,38 @@
 
             return false
         }
+
+        function sanitizeHTML(html) {
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+            return doc.body.textContent || "";
+        }
+    </script>
+    <script>
+        var currUrl = ""
+
+        function travelLink(dest) {
+            currUrl = dest
+            leavingUrl.value = dest
+            leavingWrapper.style.visibility = "visible"
+            leavingWrapper.style.opacity = "1"
+        }
+
+        function closeLeavingWrapper() {
+            currUrl = ""
+            leavingWrapper.style.opacity = "0"
+            setTimeout(() => {
+                leavingWrapper.style.visibility = "hidden"
+            }, 250)
+        }
+
+        leavingCancel.addEventListener("click", closeLeavingWrapper)
+        leavingLeave.addEventListener("click", () => {
+            if (currUrl == "") {
+                return
+            }
+            window.open(currUrl, "_blank")
+            closeLeavingWrapper()
+        })
     </script>
     <script>
         // Userinfo Mgr
@@ -589,6 +637,15 @@
             }
 
             return finalUserinfoList
+        }
+    </script>
+    <script>
+        const waitForImg = (img, src) => {
+            return new Promise((res, rej) => {
+                img.onload = res
+                img.onerror = rej
+                img.src = src
+            })
         }
     </script>
     <script>
@@ -696,10 +753,7 @@
         }
 
         function replaceChildren(parent, childList) {
-            parent.replaceChildren()
-            childList.forEach((e) => {
-                parent.appendChild(e)
-            })
+            parent.replaceChildren(...childList)
         }
 
         imageOverlay.addEventListener("click", () => {
@@ -923,7 +977,7 @@
                 return
             }
 
-            friendSearchResult.replaceChildren()
+            const searchResElements = []
 
             searchResult["results"].forEach((res) => {
                 const parent = document.createElement("div")
@@ -1016,8 +1070,10 @@
                 infoWrapper.appendChild(extraInfo)
                 parent.appendChild(infoWrapper)
                 parent.appendChild(btn)
-                friendSearchResult.appendChild(parent)
+                searchResElements.push(parent)
             })
+
+            replaceChildren(friendSearchResult, searchResElements)
         }
 
         async function searchForUsers(search) {
@@ -1191,7 +1247,7 @@
                     origEditingMsg = msgRClickMenuMsg["content"]
                     editingMsgCurr = origEditingMsg
 
-                    setChat(chatCache)
+                    refreshCachedChat()
                 }
             }
         })
@@ -1227,8 +1283,6 @@
 
         serverUsrListKick.addEventListener("mousedown", () => {
             if (serverUsrListRClickMenu && serverUsrListRClickMenuUsr != null && serverUsrListRClickMenuUsr != currUID && currUID == serverCache["Owner"]) {
-                // TODO: implement backend
-                console.warn("TODO: IMPLEMENT KICKING BACKEND")
                 request(JSON.stringify({"type": "kickUsrFromServer", "SID": currServer, "UID": serverUsrListRClickMenuUsr}))
             }
         })
@@ -1285,9 +1339,10 @@
         }
 
         function setFriendReqs() {
-            incomingList.replaceChildren()
-            outgoingList.replaceChildren()
             friendCount.textContent = "friends (" + friends.length + ")"
+
+            const incomingBuffer = []
+            const outgoingBuffer = []
 
             friendReqs.forEach((req) => {
                 const uid = req["UID"]
@@ -1398,7 +1453,7 @@
                         actionDiv.appendChild(sep)
                         actionDiv.appendChild(xBtn)
 
-                        incomingList.appendChild(reqDiv)
+                        incomingBuffer.push(reqDiv)
                     } else {
                         const xBtn = document.createElement("button")
                         xBtn.style.width = "100%"
@@ -1417,10 +1472,13 @@
 
                         actionDiv.appendChild(xBtn)
 
-                        outgoingList.appendChild(reqDiv)
+                        outgoingBuffer.push(reqDiv)
                     }
                 })
             })
+
+            replaceChildren(incomingList, incomingBuffer)
+            replaceChildren(outgoingList, outgoingBuffer)
 
             popSearchResults()
 
@@ -1441,8 +1499,8 @@
             await setChatList()
         }
 
-        async function moveServer(newSID) {
-            if (newSID == currServer) {
+        async function moveServer(newSID, refetch=false) {
+            if (!refetch && newSID == currServer) {
                 return
             }
 
@@ -1779,7 +1837,7 @@
         async function setServerList() {
             const dmIcon = document.createElement("img")
             dmIcon.classList = "serverIcon"
-            dmIcon.src = "Media/LogoSquare.png"
+            await waitForImg(dmIcon, "Media/LogoSquare.png")
 
             if (currServer == -1) {
                 dmIcon.style.border = "4px solid var(--highlight)"
@@ -1811,7 +1869,7 @@
 
                 const serverIcon = document.createElement("img")
                 serverIcon.classList = "serverIcon"
-                serverIcon.src = serverMeta["icon"]
+                await waitForImg(serverIcon, serverMeta["icon"])
                 if (SID == currServer) {
                     serverIcon.style.border = "4px solid var(--highlight)"
                 }
@@ -1825,7 +1883,7 @@
 
             const newServer = document.createElement("img")
             newServer.classList = "serverIcon"
-            newServer.src = "Media/add.png"
+            await waitForImg(newServer, "Media/add.png")
 
             newServer.addEventListener("click", openCreateServer)
 
@@ -2102,14 +2160,9 @@
                         imageOverlayImg.src = img.src
                     }
 
-                    new Promise((r) => {
-                        img.onload = r
-                        img.onerror = r
-                    }).then(() => {
+                    waitForImg(img, embed).then(() => {
                         img.style.minHeight = "0"
                     })
-
-                    img.src = embed
 
                     embeds.appendChild(img)
                 } else if (embedType.startsWith("audio/")) {
@@ -2308,60 +2361,88 @@
                         editingMsgId = -1
                         origEditingMsg = ""
                         editingMsgCurr = ""
-                        setChat(chatCache)
+                        refreshCachedChat()
                     }
                 })
 
                 return msgT
             }
 
-            const lines = message["content"].split("\n")
             const msgP = document.createElement("p")
+            msgP.style.margin = "0"
             msgP.classList = "font white"
-            msgP.style.margin = ".1em"
-            msgP.style.overflowWrap = "break-word"
-            msgP.style.wordWrap = "break-word"
 
-            for (let line = 0; line < lines.length; line++) {
-                const lineContent = lines[line];
-                const words = lineContent.split(" ")
+            const msgNoNl = message["content"].replaceAll("\n", "\n\n")
+            const markdownParsed = (new DOMParser()).parseFromString(DOMPurify.sanitize(marked.parse(msgNoNl), {"breaks": true, "gfm": true}), "text/html")
+            if (markdownParsed) {
+                const children = Array.from(markdownParsed.body.children)
+                for (let i = 0; i < children.length; i++) {
+                    const child = children[i]
+                    child.style.margin = "0"
+                    msgP.appendChild(child)
+                }
+            } else {
+                msgP.textContent = message["content"]
+            }
 
-                for (let index = 0; index < words.length; index++) {
-                    const word = words[index];
+            const links = msgP.getElementsByTagName("a")
+            for (let i = 0; i < links.length; i++) {
+                const link = links[i];
+                const origDest = link.href
 
-                    let wordE = null
-                    if (word.startsWith("http") && isValidUrl(word)) {
-                        wordE = document.createElement("a")
-                        wordE.href = word
-                        wordE.target = "_blank"
-                        wordE.style.color = "var(--highlight)"
-                    } else {
-                        wordE = document.createElement("p")
-                    }
+                link.style.color = "var(--highlight)"
+                link.href = "#"
 
-                    wordE.textContent = word + (index + 1 < words.length ? " " : "")
-                    wordE.style.display = "inline-block"
-                    wordE.style.overflowWrap = "anywhere"
-                    wordE.style.wordWrap = "anywhere"
-                    wordE.style.margin = "0"
-                    wordE.style.whiteSpace = "pre-wrap"
+                link.addEventListener("click", () => {
+                    travelLink(origDest)
+                })
+            }
+
+            const paragraphs = Array.from(msgP.querySelectorAll("p,h1,h2,h3,h4,h5,h6"))
+            for (let i = 0; i < paragraphs.length; i++) {
+                const p = paragraphs[i]
+                const words = p.textContent.split(" ")
+                const mentions = []
+                let currLetterPos = 0
+                let lastMentionEnd = 0
+                let removedChars = 0
+                let newContent = ""
+
+                if (p.children.length > 0) {
+                    continue
+                }
+
+                for (let j = 0; j < words.length; j++) {
+                    const word = words[j];
 
                     if (word.startsWith("@")) {
-                        const mentionFor = word.split("@")[1]
-                        const usrInfo = await getUsernameInChat(mentionFor)
-                        const isValidMention = mentionFor == "everyone" || usrInfo
+                        const usrName = word.slice(1)
+                        const usrInfo = await getUsernameInChat(usrName)
+                        const isValidMention = usrName == "everyone" || usrInfo
 
                         if (isValidMention) {
-                            const isForMe =  mentionFor == "everyone" || usrInfo["UID"] == currUID
-                            const mentionDisplay = usrInfo ? usrInfo["displayname"] : mentionFor
+                            const isForMe = usrName == "everyone" || usrInfo["UID"] == currUID
+                            const mentionDisplay = usrInfo ? usrInfo["displayname"] : usrName
+                            const mentionSpan = document.createElement("span")
+                            mentionSpan.style.backgroundColor = "var(--highlight)"
+                            mentionSpan.style.borderRadius = "8px"
+                            mentionSpan.style.paddingLeft = "0.5em"
+                            mentionSpan.style.paddingRight = "0.5em"
+                            mentionSpan.style.cursor = "pointer"
+                            mentionSpan.textContent = "@" + mentionDisplay
 
-                            wordE.style.backgroundColor = "var(--highlight)"
-                            wordE.style.borderRadius = "8px"
-                            wordE.style.paddingLeft = "0.5em"
-                            wordE.style.paddingRight = "0.5em"
-                            wordE.style.marginRight = "0.5em"
-                            wordE.style.cursor = "pointer"
-                            wordE.textContent = "@" + mentionDisplay
+                            mentionSpan.addEventListener("click", (e) => {
+                                e.stopPropagation()
+                                showUsrProfilePopup(e.clientX, e.clientY, usrInfo)
+                            })
+
+                            newContent += p.textContent.slice(lastMentionEnd, currLetterPos)
+                            lastMentionEnd = currLetterPos + mentionSpan.textContent.length
+                            mentions.push([currLetterPos - removedChars, mentionSpan])
+                            removedChars += mentionSpan.textContent.length
+
+                            p.style.marginTop = "0.25em"
+                            p.style.marginBottom = "0.25em"
 
                             if (isForMe) {
                                 msgP.dataset.highlighted = true
@@ -2369,28 +2450,58 @@
                         }
                     }
 
-                    msgP.appendChild(wordE)
+                    currLetterPos += word.length + 1
                 }
 
-                if (line + 1 < lines.length) {
-                    const br = document.createElement("br")
-                    msgP.appendChild(br)
+                newContent += p.textContent.slice(lastMentionEnd)
+                p.textContent = newContent
+
+                let textNode = p.firstChild || p
+                let lastMention = [0, null]
+                const range = document.createRange()
+
+                for (let j = 0; j < mentions.length; j++) {
+                    const mention = mentions[j];
+                    let startAt = mention[0] - lastMention[0]
+
+                    range.setStart(textNode, startAt)
+                    range.collapse(true)
+                    range.insertNode(mention[1])
+
+                    lastMention = mention
+
+                    if (textNode != p) {
+                        textNode = textNode.nextSibling.nextSibling
+                    }
                 }
             }
 
+            const codeblocks = msgP.getElementsByTagName("code")
+            for (let i = 0; i < codeblocks.length; i++) {
+                const codeblock = codeblocks[i];
+
+                const pre = codeblock.parentElement
+                pre.style.lineHeight = ".8"
+                pre.style.padding = "1em"
+                pre.style.paddingTop = "0"
+                pre.style.overflow = "auto"
+                pre.style.width = "fit-content"
+                pre.style.maxWidth = "90%"
+                pre.style.borderRadius = "8px"
+                pre.style.backgroundColor = "var(--acc4)"
+            }
+
             if (message["edited"]) {
-                const editedTxt = document.createElement("p")
+                const editedTxt = document.createElement("span")
                 editedTxt.style.color = "gray"
                 editedTxt.style.fontSize = "0.7em"
                 editedTxt.style.display = "inline-block"
                 editedTxt.style.width = "max-content"
-                editedTxt.style.overflowWrap = "break-word"
-                editedTxt.style.wordWrap = "break-word"
                 editedTxt.style.margin = "0"
                 editedTxt.style.whiteSpace = "pre-wrap"
                 editedTxt.textContent = " (edited)"
 
-                msgP.appendChild(editedTxt)
+                msgP.lastElementChild.appendChild(editedTxt)
             }
 
             if (message["embed"] && message["embed"].length > 0) {
@@ -2559,7 +2670,7 @@
 
             if (messageDate) {
                 const timeDisplay = document.createElement("p")
-                timeDisplay.textContent = messageDate.toLocaleTimeString("en-US", {"hour":"2-digit","minute":"2-digit"})
+                timeDisplay.textContent = messageDate.toLocaleTimeString("en-US", {"hour":"2-digit","minute":"2-digit", "hour12": false})
                 timeDisplay.style.width = "4%"
                 timeDisplay.classList = "font smallTime"
 
@@ -2599,13 +2710,14 @@
             messageDiv.style.marginTop = "1em"
             messageDiv.style.marginBottom = "1em"
             messageDiv.style.backgroundColor = "var(--highlighted-transparent)"
+            messageDiv.style.borderLeft = "2px solid var(--highlighted)"
 
             const padArea = document.createElement("div")
             padArea.style.width = "4%"
 
             if (messageDate) {
                 const timeDisplay = document.createElement("p")
-                timeDisplay.textContent = messageDate.toLocaleTimeString("en-US", {"hour":"2-digit","minute":"2-digit"})
+                timeDisplay.textContent = messageDate.toLocaleTimeString("en-US", {"hour":"2-digit","minute":"2-digit", "hour12": false})
                 timeDisplay.style.width = "4%"
                 timeDisplay.classList = "font smallTime"
 
@@ -2634,7 +2746,7 @@
                 targetInfo = await reqUsrInfo(message["TARGET"])
 
                 if (targetInfo) {
-                    msgP.innerHTML = "<b>" + targetInfo["displayname"] + "</b> changed the group name/icon"
+                    msgP.innerHTML = "<b>" + sanitizeHTML(targetInfo["displayname"]) + "</b> changed the group name/icon"
                 }
             } else if (message["TYPE"] == "addUsrToGc") {
                 targetInfo = await reqUsrInfo(message["TARGET"])
@@ -2642,16 +2754,16 @@
                 if (targetInfo) {
                     if (message["TARGETS"].length == 1) {
                         otherInfo = await reqUsrInfo(message["TARGETS"][0])
-                        msgP.innerHTML = "<span class='green'>-></span> <b>" + targetInfo["displayname"] + "</b> added <b>" + otherInfo["displayname"] + "</b> to this chat"
+                        msgP.innerHTML = "<span class='green'>-></span> <b>" + sanitizeHTML(targetInfo["displayname"]) + "</b> added <b>" + sanitizeHTML(otherInfo["displayname"]) + "</b> to this chat"
                     } else {
-                        msgP.innerHTML = "<span class='green'>-></span> <b>" + targetInfo["displayname"] + "</b> added <b>" + message["TARGETS"].length + "</b> people to this chat"
+                        msgP.innerHTML = "<span class='green'>-></span> <b>" + sanitizeHTML(targetInfo["displayname"]) + "</b> added <b>" + message["TARGETS"].length + "</b> people to this chat"
                     }
                 }
             } else if (message["TYPE"] == "usrLeaveGc") {
                 targetInfo = await reqUsrInfo(message["TARGET"])
 
                 if (targetInfo) {
-                    msgP.innerHTML = "<span class='red'><-</span> <b>" + targetInfo["displayname"] + "</b> left the chat"
+                    msgP.innerHTML = "<span class='red'><-</span> <b>" + sanitizeHTML(targetInfo["displayname"]) + "</b> left the chat"
                 }
             } else if (message["TYPE"] == "usrRemovedGc") {
                 infos = await reqMultiUsrInfo([message["TARGET"], message["TARGET2"]])
@@ -2659,7 +2771,143 @@
                 if (infos) {
                     owner = infos[0]
                     victim = infos[1]
-                    msgP.innerHTML = "<span class='red'><-</span> <b>" + victim["displayname"] + "</b> was removed by <b>" + owner["displayname"] + "</b>"
+                    msgP.innerHTML = "<span class='red'><-</span> <b>" + sanitizeHTML(victim["displayname"]) + "</b> was removed by <b>" + sanitizeHTML(owner["displayname"]) + "</b>"
+                }
+            } else if (message["TYPE"] == "serverInvite") {
+                let serverMeta = null
+
+                if (ServerMetaCache[message["TARGET"].toString()]) {
+                    serverMeta = ServerMetaCache[message["TARGET"].toString()]
+                } else {
+                    serverMeta = (await request(JSON.stringify({
+                        "type": "reqServerMeta",
+                        "SID": message["TARGET"]
+                    })))["server"]
+                    ServerMetaCache[message["TARGET"].toString()] = serverMeta
+                }
+
+                if (serverMeta) {
+                    let inviteInvalid = message["expire"] == null || message["expire"] - (Date.now() / 1000) < 0
+
+                    if (!inviteInvalid) {
+                        inviteInvalid = !(await request(JSON.stringify({"type": "checkInviteValid", "inviteID": message["ID"]})))["isValid"]
+                    }
+
+                    const inviteFrame = document.createElement("div")
+                    inviteFrame.style.width = "25vw"
+                    inviteFrame.style.height = "9vh"
+                    inviteFrame.style.borderRadius = "8px"
+                    inviteFrame.style.backgroundColor = "var(--acc5)"
+                    inviteFrame.style.display = "flex"
+                    inviteFrame.style.flexDirection = "row"
+                    inviteFrame.style.alignItems = "center"
+                    inviteFrame.style.overflow = "hidden"
+
+                    const serverIcon = document.createElement("img")
+                    serverIcon.style.height = "calc(100% - 16px)"
+                    serverIcon.style.margin = "6px"
+                    serverIcon.style.border = "2px solid var(--acc4)"
+                    serverIcon.style.aspectRatio = "1"
+                    serverIcon.style.borderRadius = "8px"
+                    serverIcon.src = serverMeta["icon"]
+
+                    const serverInfo = document.createElement("div")
+                    serverInfo.style.width = "calc(100% - 9vh - 16px)"
+                    serverInfo.style.height = "calc(100% - 12px)"
+                    serverInfo.style.margin = "6px"
+                    serverInfo.style.display = "flex"
+                    serverInfo.style.containerType = "size"
+                    serverInfo.style.flexDirection = "column"
+
+                    const inviteTitle = document.createElement("h2")
+                    inviteTitle.style.width = "100%"
+                    inviteTitle.style.height = "45%"
+                    inviteTitle.style.margin = "0"
+                    inviteTitle.style.whiteSpace = "pre"
+                    inviteTitle.style.fontSize = "35cqh"
+                    inviteTitle.style.background = "linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%)"
+                    inviteTitle.style.backgroundClip = "text"
+                    inviteTitle.style.color = "transparent"
+                    inviteTitle.style.lineHeight = "1"
+                    inviteTitle.classList = "font"
+                    inviteTitle.textContent = "You've been invited!"
+                    inviteTitle.title = "You've been invited!"
+
+                    const inviteSubtext = document.createElement("div")
+                    inviteSubtext.style.width = "100%"
+                    inviteSubtext.style.height = "55%"
+                    inviteSubtext.style.margin = "0"
+                    inviteSubtext.style.display = "flex"
+                    inviteSubtext.style.flexDirection = "row"
+                    inviteSubtext.style.alignItems = "center"
+
+                    const subtext = document.createElement("p")
+                    subtext.style.width = "75%"
+                    subtext.style.height = "100%"
+                    subtext.style.color = "var(--placeholder)"
+                    subtext.style.margin = "0"
+                    subtext.style.fontSize = ".8em"
+                    subtext.classList = "font"
+                    subtext.textContent = "You've been invited to join " + serverMeta["name"]
+                    subtext.title = "You've been invited to join " + serverMeta["name"]
+
+                    inviteSubtext.appendChild(subtext)
+
+                    if (inviteInvalid && !servers.includes(message["TARGET"])) {
+                        serverIcon.src = "Media/trash.png"
+                        inviteTitle.textContent = "Expired Invite"
+                        inviteTitle.title = "Expired Invite"
+                        subtext.textContent = "Sorry, but this invite has expired. Try asking for another one."
+                        subtext.title = "Sorry, but this invite has expired. Try asking for another one."
+                        subtext.style.width = "100%"
+                    } else {
+                        const joinBtn = document.createElement("button")
+                        joinBtn.style.width = "20%"
+                        joinBtn.style.height = "80%"
+                        joinBtn.style.marginRight = "2.5%"
+                        joinBtn.style.backgroundColor = "var(--button)"
+                        joinBtn.style.border = "none"
+                        joinBtn.style.cursor = "pointer"
+                        joinBtn.classList = "font"
+
+                        if (servers.includes(serverMeta["SID"])) {
+                            joinBtn.textContent = "View"
+                        } else {
+                            joinBtn.textContent = "Join"
+                        }
+
+                        joinBtn.addEventListener("click", () => {
+                            if (servers.includes(serverMeta["SID"])) {
+                                moveServer(serverMeta["SID"])
+                            } else {
+                                request(JSON.stringify({
+                                    "type": "acceptInvite",
+                                    "inviteID": message["ID"]
+                                })).then((r) => {
+                                    if (r["type"] == "updateServers" && r["newServer"] != null) {
+                                        moveServer(r["newServer"])
+                                    } else {
+                                        refreshCachedChat()
+                                    }
+                                })
+                            }
+                        })
+
+                        inviteSubtext.appendChild(joinBtn)
+                    }
+
+                    serverInfo.appendChild(inviteTitle)
+                    serverInfo.appendChild(inviteSubtext)
+
+                    inviteFrame.appendChild(serverIcon)
+                    inviteFrame.appendChild(serverInfo)
+                    msgP.appendChild(inviteFrame)
+                }
+            } else if (message["TYPE"] == "newServerMember") {
+                targetInfo = await reqUsrInfo(message["TARGET"])
+
+                if (targetInfo) {
+                    msgP.innerHTML = "<span class='green'>-></span> <b>" + sanitizeHTML(targetInfo["displayname"]) + "</b> joined the chat!"
                 }
             }
 
@@ -3203,7 +3451,6 @@
                 heading.textContent = serverMeta["name"]
                 content.textContent = "View channels on the sidebar to the right."
             }
-
         }
 
         function jumpToBottom() {
@@ -3261,7 +3508,7 @@
                 return diffB - diffA
             })
 
-            newGCSearchRes.replaceChildren()
+            const searchResElements = []
             for (let i = 0; i < searchRes.length; i++) {
                 const usrInfo = searchRes[i]
 
@@ -3318,8 +3565,9 @@
                 fDiv.appendChild(pfp)
                 fDiv.appendChild(dn)
                 fDiv.appendChild(check)
-                newGCSearchRes.appendChild(fDiv)
+                searchResElements.push(fDiv)
             }
+            replaceChildren(newGCSearchRes, searchResElements)
         }
 
         newGCSearch.addEventListener("input", setCreateGCList)
@@ -3350,6 +3598,14 @@
         })
 
         friendsListServerSettings.addEventListener("click", () => {
+            if (currUID == serverCache["Owner"]) {
+                serverSettingsInvite.disabled = false
+                serverSettingsSettings.disabled = false
+            } else {
+                serverSettingsInvite.disabled = true
+                serverSettingsSettings.disabled = true
+            }
+
             serverSettingsFriendsList.style.visibility = "visible"
         })
 
@@ -3457,7 +3713,8 @@
 
         const usersToAdd = []
         async function setAddUsrSearchResults() {
-            const currChatRecipients = chatCache["Recipients"]
+            const currChatRecipients = currServer == -1 ? chatCache["Recipients"] : serverCache["Users"]
+
             const searchQuery = addUserSearch.value
             const searchRes = []
 
@@ -3477,7 +3734,7 @@
                 return diffB - diffA
             })
 
-            addUserSearchRes.replaceChildren()
+            const searchResElements = []
             for (let i = 0; i < searchRes.length; i++) {
                 const usrInfo = searchRes[i]
 
@@ -3547,8 +3804,10 @@
                 fDiv.appendChild(pfp)
                 fDiv.appendChild(dn)
                 fDiv.appendChild(check)
-                addUserSearchRes.appendChild(fDiv)
+                searchResElements.push(fDiv)
             }
+
+            replaceChildren(addUserSearchRes, searchResElements)
         }
 
         function openAddUser() {
@@ -3575,11 +3834,19 @@
                 return
             }
 
-            request(JSON.stringify({
-                "type": "addUsrToChat",
-                "CID": currChat,
-                "users": usersToAdd
-            }))
+            if (currServer == -1) {
+                request(JSON.stringify({
+                    "type": "addUsrToChat",
+                    "CID": currChat,
+                    "users": usersToAdd
+                }))
+            } else {
+                request(JSON.stringify({
+                    "type": "addUsrToServer",
+                    "SID": currServer,
+                    "users": usersToAdd
+                }))
+            }
 
             addUserSearch.value = ""
             usersToAdd.splice(0, usersToAdd.length)
@@ -3699,6 +3966,21 @@
         })
 
         createCategory.addEventListener("mousedown", openNewCategory)
+
+        serverSettingsInvite.addEventListener("click", (e) => {
+            e.stopPropagation()
+            serverSettingsFriendsList.style.visibility = "hidden"
+            openAddUser()
+        })
+
+        serverSettingsLeave.addEventListener("click", (e) => {
+            e.stopPropagation()
+            serverSettingsFriendsList.style.visibility = "hidden"
+            request(JSON.stringify({
+                "type": "leaveServer",
+                "SID": currServer
+            }))
+        })
     </script>
 
     <script>
@@ -3740,8 +4022,8 @@
             var loading = true
             var loadingStatus = 0
 
-            const hexToBytes = hex => Uint8Array.from(hex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
-            const bytesToHex = bytes => Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+            const hexToBytes = hex => Uint8Array.fromHex(hex);
+            const bytesToHex = bytes => bytes.toHex();
             const textEncode = (text) => new TextEncoder().encode(text);
             const textDecode = (text) => new TextDecoder().decode(text);
             var keyPair = null
@@ -3940,6 +4222,8 @@
                                         respBody = JSON.parse(data)
                                         trackerId = respBody["trackerID"]
 
+                                        //console.log(respBody)
+
                                         if (respBody["type"] == "auth_expired") {
                                             window.location.assign(protocol + "//" + domainURL + "/login.html?errT=Login%20Expired&errC=Your%20session%20has%20expired.%20Please%20try%20logging%20in%20again.")
                                         }
@@ -3983,6 +4267,16 @@
                                             })
                                         }
 
+                                        if (respBody["type"] == "serverMembersUpdate") {
+                                            if (currServer == respBody["SID"]) {
+                                                if (serverCache) {
+                                                    serverCache["Users"] = respBody["members"]
+                                                }
+
+                                                setMemberList()
+                                            }
+                                        }
+
                                         if (respBody["type"] == "serverContentUpdate") {
                                             if (currServer == respBody["SID"]) {
                                                 if (serverCache) {
@@ -4003,16 +4297,28 @@
                                             setChatList()
                                         }
 
-                                        if (respBody["type"] == "newMsg") {
-                                            if (!respBody["message"]["SYSMSG"]) {
-                                                if (respBody["CID"].toString() in chatMetaCache) {
-                                                    chatMetaCache[respBody["CID"].toString()]["lastMsg"]["MSGID"] = respBody["message"]["MSGID"]
-                                                    chatMetaCache[respBody["CID"].toString()]["lastMsg"]["content"] = respBody["message"]["content"]
-                                                    chatMetaCache[respBody["CID"].toString()]["lastMsg"]["time"] = respBody["message"]["time"]
-                                                }
+                                        if (respBody["type"] == "serverGone") {
+                                            servers = respBody["servers"]
 
-                                                setChatList()
+                                            if (!servers.includes(currServer)) {
+                                                moveServer(-1)
                                             }
+
+                                            setServerList()
+                                        }
+
+                                        if (respBody["type"] == "newMsg") {
+                                            stringCID = respBody["CID"].toString()
+                                            if (stringCID in chatMetaCache) {
+                                                chatMetaCache[stringCID]["lastMsg"]["MSGID"] = respBody["message"]["MSGID"]
+                                                chatMetaCache[stringCID]["lastMsg"]["time"] = respBody["message"]["time"]
+
+                                                if (!respBody["message"]["SYSMSG"]) {
+                                                    chatMetaCache[stringCID]["lastMsg"]["content"] = respBody["message"]["content"]
+                                                }
+                                            }
+
+                                            setChatList()
 
                                             if (currChat == respBody["CID"]) {
                                                 lastMsgId = respBody["message"]["MSGID"]

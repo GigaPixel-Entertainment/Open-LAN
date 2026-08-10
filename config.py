@@ -10,8 +10,8 @@ import os
 from dotenv import load_dotenv
 
 DEV = True
-VER = "0.0.7"
-STAGE = "alpha"
+VER = "0.1.0"
+STAGE = "beta"
 
 CWD = pathlib.Path(__file__).resolve().parent
 WEB_DIR = CWD / "Web"
@@ -21,6 +21,7 @@ CDN_DIR = WEB_DIR / "cdn/"
 CHATS_DIR = CWD / "Chats/"
 CSS_DIR = WEB_DIR / "CSS/"
 ENV_FILE = CWD / ".env"
+INVITE_FILE = CWD / "invites.inv"
 JS_DIR = WEB_DIR / "JS/"
 LOG_DIR = CWD / "logs/"
 MEDIA_DIR = WEB_DIR / "Media/"
@@ -40,7 +41,8 @@ PRIVATE_DIRS = [
     LOG_DIR,
     RUN_LOG_DIR,
     ENV_FILE,
-    BACKUP_DIR
+    BACKUP_DIR,
+    INVITE_FILE
 ]
 
 IMPORTANT_FILES = [
@@ -62,6 +64,8 @@ AUTOSAVE_INTERVAL_SEC = 300
 ACC_CREATION_COOLDOWN_SEC = 30*60
 NUM_ENCRYPT_ROUNDS = 15
 LOG_LEVEL = logging.DEBUG if DEV else logging.INFO
+
+INVITE_EXPIRE_TIME = 24*60*60 # 1 day
 
 ZSTD_COMPRESSION_LEVEL = 9 # -inf - 22
 BROTLI_COMPRESSION_LEVEL = 11 # 0 - 11

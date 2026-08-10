@@ -36,7 +36,7 @@ import ssl
 
 from cryptography.fernet import Fernet
 
-from PIL import Image, ImageSequence
+from PIL import Image
 import msgpack
 
 import config
@@ -207,10 +207,28 @@ def loadServers():
                 for cate in serverData["Categories"]:
                     cate["Chats"] = list(dict.fromkeys(cate["Chats"]))
 
+                if not "AnnouncementChat" in serverData:
+                    serverData["AnnouncementChat"] = -1
+
                 servers.append(serverData)
                 f.close()
 
     logging.info("[IO] Servers loaded")
+
+def loadInvites() -> list:
+    logging.info("[IO] Loading invites")
+
+    if not config.INVITE_FILE.exists():
+        return []
+
+    invites = []
+    with open(config.INVITE_FILE, "rb") as f:
+        invites = msgpack.unpackb(fernet.decrypt(f.read()))
+        f.close()
+
+    logging.info("[IO] Invites loaded")
+
+    return invites
 
 def saveUsers():
     logging.info("[IO] Saving users")
@@ -282,6 +300,23 @@ def saveServers():
             traceback.print_exc()
             logging.error("[IO] Failed to save server %s!", srv["SID"])
     logging.info("[IO] Servers saved")
+
+def saveInvites():
+    logging.info("[IO] Saving invites")
+
+    try:
+        with open(config.INVITE_FILE, "wb") as f:
+            packed: bytes | None = msgpack.packb(invites)
+
+            if packed:
+                f.write(fernet.encrypt(packed))
+            else:
+                logging.error("[IO] Failed to save invites!")
+    except:
+        traceback.print_exc()
+        logging.error("[IO] Failed to save invites!")
+
+    logging.info("[IO] Invites saved")
 
 def formatLoginResponse(username: str, cloudflare: bool):
     if not username:
@@ -428,6 +463,7 @@ async def autosave(shutdownEvent: asyncio.Event, shutdownEventDone: asyncio.Even
                 saveUsers()
                 saveChats()
                 saveServers()
+                saveInvites()
                 logging.debug("[AS] Autosave done")
     except asyncio.CancelledError:
         pass
@@ -525,6 +561,7 @@ if __name__ == "__main__":
     loadUsers()
     loadChats()
     loadServers()
+    invites: list = loadInvites()
 
     ipAddrs = httphelper.getIpAddrs()
 
@@ -535,7 +572,7 @@ if __name__ == "__main__":
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     context.load_cert_chain(certfile=config.CA_CERT_DIR / "server.crt", keyfile=config.CA_CERT_DIR / "server.key")
 
-    ws = websocket.WS(VALID_TOKENS, SHORT_REDIRECT_TOKENS, DEFAULT_PFPS, chats, users, servers, fernet, resizePfpBytes)
+    ws = websocket.WS(VALID_TOKENS, SHORT_REDIRECT_TOKENS, DEFAULT_PFPS, chats, users, servers, invites, fernet, resizePfpBytes)
 
     socketList: list[socket.socket] = []
     for addr in ipAddrs:
@@ -620,5 +657,6 @@ if __name__ == "__main__":
     saveUsers()
     saveChats()
     saveServers()
+    saveInvites()
 
     logging.info("[MAIN] Goodbye, World")

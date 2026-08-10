@@ -7,7 +7,6 @@ import sys
 
 from cryptography.fernet import Fernet
 import msgpack
-import bcrypt
 
 import config
 
