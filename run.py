@@ -53,7 +53,7 @@ class HttpHandler:
         self.keepListening: bool = False
 
         self.context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        self.context.load_cert_chain(certfile=config.CA_CERT_DIR / "server.crt", keyfile=config.CA_CERT_DIR / "server.key")
+        self.context.load_cert_chain(certfile=config.SERVER_PEM_FILE, keyfile=config.SERVER_KEY_FILE)
 
     def handleRequest(self, sk: socket.socket):
         pass

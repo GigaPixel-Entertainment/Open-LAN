@@ -570,7 +570,7 @@ if __name__ == "__main__":
         sys.exit(-1)
 
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    context.load_cert_chain(certfile=config.CA_CERT_DIR / "server.crt", keyfile=config.CA_CERT_DIR / "server.key")
+    context.load_cert_chain(certfile=config.SERVER_PEM_FILE, keyfile=config.SERVER_KEY_FILE)
 
     ws = websocket.WS(VALID_TOKENS, SHORT_REDIRECT_TOKENS, DEFAULT_PFPS, chats, users, servers, invites, fernet, resizePfpBytes)
 

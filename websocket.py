@@ -1805,7 +1805,7 @@ class WS():
                             chat = self.getChatFromCID(server["AnnouncementChat"])
                             newMemberMsg = None
 
-                            if chat["CID"] != -1:
+                            if chat is not None and chat["CID"] != -1:
                                 newMemberMsg = {
                                     "SYSMSG": True,
                                     "MSGID": len(chat["messages"]),
@@ -1929,6 +1929,8 @@ class WS():
                             if len(server["Users"]) == 0:
                                 self.delServer(server)
                                 continue
+                            elif uid == server["Owner"]:
+                                server["Owner"] = server["Users"][0]
 
                             for ws2 in self.WS_CLIENTS:
                                 wsUID = getattr(ws2, "UID", None)
@@ -1955,10 +1957,90 @@ class WS():
 
                             valid, targetServer = await self.checkInviteValid(decryptedBody["inviteID"])
                             if targetServer is None or not valid:
-                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "checkInviteFailed", "isValid": False}), trackerId)
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "checkInviteSuccess", "isValid": False}), trackerId)
                                 continue
 
                             await self.wsSendEncrypted(ws, orjson.dumps({"type": "checkInviteSuccess", "isValid": True}), trackerId)
+                        else:
+                            break
+
+                    if decryptedBody["type"] == "transferOwnershipGc":
+                        if await self.checkAuthTokenEncrypted(ws, authToken):
+                            if not self.checkFields(decryptedBody, ["CID", "UID"]):
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "transferOwnershipGcFailed"}), trackerId)
+                                continue
+
+                            chat = self.getChatFromCID(decryptedBody["CID"])
+                            selfInfo = self.getUserInfoFromToken(authToken)
+                            selfUid = self.getUserIdFromUserInfo(selfInfo)
+
+                            if chat is None or selfUid not in chat["Recipients"] or chat["Owner"] == decryptedBody["UID"] or decryptedBody["UID"] not in chat["Recipients"]:
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "transferOwnershipGcFailed"}), trackerId)
+                                continue
+
+                            chat["Owner"] = decryptedBody["UID"]
+                            chat["messages"].append({
+                                "SYSMSG": True,
+                                "MSGID": len(chat["messages"]),
+                                "TYPE": "transferOwnership",
+                                "TARGET": decryptedBody["UID"],
+                                "time": int(time.time())
+                            })
+
+                            await self.wsSendEncrypted(ws, orjson.dumps({"type": "transferOwnershipGcSuccess"}), trackerId)
+
+                            for ws2 in self.WS_CLIENTS:
+                                wsUID = getattr(ws2, "UID", None)
+                                targetInfo = self.getUserInfoFromUserId(wsUID)
+
+                                if wsUID is not None and chat["CID"] in targetInfo["Chats"]:
+                                    await self.wsSendEncrypted(ws2, orjson.dumps({"type": "metaChatUpdate", "chat": chat}))
+
+                        else:
+                            break
+
+                    if decryptedBody["type"] == "transferOwnershipServer":
+                        if await self.checkAuthTokenEncrypted(ws, authToken):
+                            if not self.checkFields(decryptedBody, ["SID", "UID"]):
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "transferOwnershipServerFailed"}), trackerId)
+                                continue
+
+                            server = self.getServerFromSID(decryptedBody["SID"])
+                            selfInfo = self.getUserInfoFromToken(authToken)
+                            selfUid = self.getUserIdFromUserInfo(selfInfo)
+
+                            if server is None or selfUid not in server["Users"] or server["Owner"] == decryptedBody["UID"] or decryptedBody["UID"] not in server["Users"]:
+                                await self.wsSendEncrypted(ws, orjson.dumps({"type": "transferOwnershipServerFailed"}), trackerId)
+                                continue
+
+                            server["Owner"] = decryptedBody["UID"]
+
+                            chat = self.getChatFromCID(server["AnnouncementChat"])
+                            newMemberMsg = None
+
+                            if chat is not None and chat["CID"] != -1:
+                                newMemberMsg = {
+                                    "SYSMSG": True,
+                                    "MSGID": len(chat["messages"]),
+                                    "TYPE": "transferOwnership",
+                                    "TARGET": decryptedBody["UID"],
+                                    "time": int(time.time())
+                                }
+
+                                chat["messages"].append(newMemberMsg)
+
+                            await self.wsSendEncrypted(ws, orjson.dumps({"type": "transferOwnershipServerSuccess"}), trackerId)
+
+                            for ws2 in self.WS_CLIENTS:
+                                wsUID = getattr(ws2, "UID", None)
+                                targetInfo = self.getUserInfoFromUserId(wsUID)
+
+                                if wsUID is not None and server["SID"] in targetInfo["Servers"]:
+                                    await self.wsSendEncrypted(ws2, orjson.dumps({"type": "serverOwnerUpdate", "SID": server["SID"], "owner": server["Owner"]}))
+
+                                    if newMemberMsg is not None:
+                                        await self.wsSendEncrypted(ws2, orjson.dumps({"type": "newMsg", "CID": chat["CID"], "message": newMemberMsg}))
+
                         else:
                             break
 

@@ -30,6 +30,8 @@ RUN_LOG_DIR = CWD / "runLogs/"
 SAVE_KEY = CWD / "meta.key"
 SECURITY_DIR = CWD / "security/"
 SERVER_DIR = CWD / "Servers/"
+SERVER_KEY_FILE = CA_CERT_DIR / "server.key"
+SERVER_PEM_FILE = CA_CERT_DIR / "server.crt"
 USERS_DIR = CWD / "Users/"
 
 PRIVATE_DIRS = [

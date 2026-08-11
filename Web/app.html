@@ -288,6 +288,7 @@
 
         <div id="usrListRClickMenu" class="rClickMenu">
             <button id="usrListProfile" class="rClickMenuOption font white">see profile</button>
+            <button id="usrListTransferOwnership" class="rClickMenuOption font white">give ownership</button>
             <button id="usrListRemove" class="rClickMenuOption font white">remove from chat</button>
         </div>
 
@@ -306,6 +307,7 @@
 
         <div id="serverUsrListRClickMenu" class="rClickMenu">
             <button id="serverUsrListProfile" class="rClickMenuOption font white">see profile</button>
+            <button id="serverUsrListTransferOwnership" class="rClickMenuOption font white">give ownership</button>
             <button id="serverUsrListKick" class="rClickMenuOption font white">kick user</button>
         </div>
     </body>
@@ -324,6 +326,8 @@
         const genericPopup = document.getElementById("genericPopup")
         const popupTitle = document.getElementById("popupTitle")
         const popupContent = document.getElementById("popupContent")
+
+        const loadingOverlay = document.getElementById("loadingOverlay")
 
         const friendsListWrapper = document.getElementById("friendsListWrapper")
         const toggleFriendsList = document.getElementById("toggleFriendsList")
@@ -471,6 +475,7 @@
 
         const usrListRClickMenu = document.getElementById("usrListRClickMenu")
         const usrListProfile = document.getElementById("usrListProfile")
+        const usrListTransferOwnership = document.getElementById("usrListTransferOwnership")
         const usrListRemove = document.getElementById("usrListRemove")
 
         const textEntryOverlay = document.getElementById("textEntryWrapper")
@@ -492,6 +497,7 @@
 
         const serverUsrListRClickMenu = document.getElementById("serverUsrListRClickMenu")
         const serverUsrListProfile = document.getElementById("serverUsrListProfile")
+        const serverUsrListTransferOwnership = document.getElementById("serverUsrListTransferOwnership")
         const serverUsrListKick = document.getElementById("serverUsrListKick")
     </script>
     <script>
@@ -1284,6 +1290,18 @@
         serverUsrListKick.addEventListener("mousedown", () => {
             if (serverUsrListRClickMenu && serverUsrListRClickMenuUsr != null && serverUsrListRClickMenuUsr != currUID && currUID == serverCache["Owner"]) {
                 request(JSON.stringify({"type": "kickUsrFromServer", "SID": currServer, "UID": serverUsrListRClickMenuUsr}))
+            }
+        })
+
+        usrListTransferOwnership.addEventListener("mousedown", () => {
+            if (usrListRClickMenu && usrListRClickMenuUsr != null && usrListRClickMenuUsr != currUID && currUID == chatCache["Owner"]) {
+                request(JSON.stringify({"type": "transferOwnershipGc", "CID": currChat, "UID": usrListRClickMenuUsr}))
+            }
+        })
+
+        serverUsrListTransferOwnership.addEventListener("mousedown", () => {
+            if (serverUsrListRClickMenu && serverUsrListRClickMenuUsr != null && serverUsrListRClickMenuUsr != currUID && currUID == serverCache["Owner"]) {
+                request(JSON.stringify({"type": "transferOwnershipServer", "SID": currServer, "UID": serverUsrListRClickMenuUsr}))
             }
         })
 
@@ -2494,7 +2512,9 @@
             if (message["edited"]) {
                 const editedTxt = document.createElement("span")
                 editedTxt.style.color = "gray"
-                editedTxt.style.fontSize = "0.7em"
+                editedTxt.style.fontSize = "0.7rem"
+                editedTxt.style.fontWeight = "normal"
+                editedTxt.style.fontStyle = "normal"
                 editedTxt.style.display = "inline-block"
                 editedTxt.style.width = "max-content"
                 editedTxt.style.margin = "0"
@@ -2909,6 +2929,12 @@
                 if (targetInfo) {
                     msgP.innerHTML = "<span class='green'>-></span> <b>" + sanitizeHTML(targetInfo["displayname"]) + "</b> joined the chat!"
                 }
+            } else if (message["TYPE"] == "transferOwnership") {
+                targetInfo = await reqUsrInfo(message["TARGET"])
+
+                if (targetInfo) {
+                    msgP.innerHTML = "<b>" + sanitizeHTML(targetInfo["displayname"]) + "</b> is the new owner!"
+                }
             }
 
             textarea.append(msgP)
@@ -3130,12 +3156,18 @@
 
                     var targetRClickMenu = currServer == -1 ? usrListRClickMenu : serverUsrListRClickMenu
 
-                    if (currUID == chatCache["Owner"] && currUID != uid) {
+                    if (currUID == (currServer == -1 ? chatCache["Owner"] : serverCache["Owner"]) && currUID != uid) {
                         usrListRemove.disabled = false
                         serverUsrListKick.disabled = false
+
+                        usrListTransferOwnership.disabled = false
+                        serverUsrListTransferOwnership.disabled = false
                     } else {
                         usrListRemove.disabled = true
                         serverUsrListKick.disabled = true
+
+                        usrListTransferOwnership.disabled = true
+                        serverUsrListTransferOwnership.disabled = true
                     }
 
                     targetRClickMenu.style.visibility = "visible"
@@ -4151,9 +4183,9 @@
 
                 loading = false
                 loadingText.textContent = ""
-                document.getElementById("loadingOverlay").style.opacity = 0
+                loadingOverlay.style.opacity = 0
                 setTimeout(() => {
-                    document.getElementById("loadingOverlay").remove()
+                    loadingOverlay.remove()
                 }, 500)
             }
 
@@ -4265,6 +4297,16 @@
                                                 delete chatMetaCache[respBody["chat"]["CID"].toString()]
                                                 setChatList()
                                             })
+                                        }
+
+                                        if (respBody["type"] == "serverOwnerUpdate") {
+                                            if (currServer == respBody["SID"]) {
+                                                if (serverCache) {
+                                                    serverCache["Owner"] = respBody["owner"]
+                                                }
+
+                                                setMemberList()
+                                            }
                                         }
 
                                         if (respBody["type"] == "serverMembersUpdate") {
@@ -4464,8 +4506,10 @@
                         ws.onclose = (event) => {
                             console.warn('Connection closed:', event.reason);
 
-                            console.log("Attempting reconnect...")
                             loadingText.textContent = "Connection lost"
+                            document.body.appendChild(loadingOverlay)
+                            loadingOverlay.style.opacity = "1"
+
                             setTimeout(() => window.location.reload(), 5000)
                         };
                     } catch {
