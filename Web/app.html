@@ -718,10 +718,9 @@
     </script>
     <script>
         // Misc UI
-        setInterval(() => {
-            // Fix scrolling
+        document.addEventListener("scroll", () => {
             window.scrollTo(0, 0)
-        }, 100);
+        })
 
         var currChat = -1
         var currServer = -1
@@ -1531,6 +1530,7 @@
         var settingChatList = false
         var lastMsgId = 0
         var serverCache = null
+        var channelDragLocations = []
         const chatMetaCache = []
         const hiddenCategories = []
         async function setChatList() {
@@ -1538,6 +1538,7 @@
                 return
             }
             settingChatList = true
+            channelDragLocations = []
 
             if (currServer != -1) {
                 const serverChannels = []
@@ -1558,6 +1559,15 @@
 
                 for (let cIdx = 0; cIdx < serverCache["Categories"].length; cIdx++) {
                     const category = serverCache["Categories"][cIdx]
+
+                    const categoryDropLocation = document.createElement("hr")
+                    categoryDropLocation.style.width = "60%"
+                    categoryDropLocation.style.height = "4px"
+                    categoryDropLocation.style.backgroundColor = "var(--acc4)"
+                    categoryDropLocation.style.margin = "0 auto"
+                    categoryDropLocation.style.border = "none"
+                    categoryDropLocation.style.borderRadius = "9999px"
+                    categoryDropLocation.style.visibility = "hidden"
 
                     const categoryDiv = document.createElement("div")
                     categoryDiv.style.width = "100%"
@@ -1610,6 +1620,7 @@
                         categoryDiv.appendChild(addChannelToCategory)
                     }
 
+                    serverChannels.push(categoryDropLocation)
                     serverChannels.push(categoryDiv)
 
                     if (categoryHidden) {
@@ -1632,6 +1643,17 @@
                             continue
                         }
 
+                        const dropLocation = document.createElement("hr")
+                        dropLocation.style.width = "60%"
+                        dropLocation.style.height = "4px"
+                        dropLocation.style.backgroundColor = "var(--acc4)"
+                        dropLocation.style.margin = "0 auto"
+                        dropLocation.style.border = "none"
+                        dropLocation.style.borderRadius = "9999px"
+                        dropLocation.style.visibility = "hidden"
+
+                        channelDragLocations.push(dropLocation)
+
                         const chatDiv = document.createElement("div")
                         chatDiv.style.width = "100%"
                         chatDiv.style.height = "40px"
@@ -1639,6 +1661,7 @@
                         chatDiv.style.flexDirection = "row"
                         chatDiv.style.alignItems = "center"
                         chatDiv.style.cursor = "pointer"
+                        chatDiv.draggable = true
 
                         if (currChat == chatID) {
                             chatDiv.style.backgroundColor = "var(--acc2)"
@@ -1647,6 +1670,21 @@
 
                         chatDiv.addEventListener("click", () => {
                             moveChat(chatID)
+                        })
+
+                        chatDiv.addEventListener("drag", (e) => {
+                            channelDragLocations.forEach((dLocation) => {
+                                dLocation.style.visibility = "hidden"
+                                if (Math.abs(dLocation.getBoundingClientRect().top - e.clientY) < 32) {
+                                    dLocation.style.visibility = "visible"
+                                }
+                            })
+                        })
+
+                        chatDiv.addEventListener("dragend", () => {
+                            channelDragLocations.forEach((dLocation) => {
+                                dLocation.style.visibility = "hidden"
+                            })
                         })
 
                         const readIndicator = document.createElement("div")
@@ -1679,6 +1717,7 @@
                         chatDiv.appendChild(chatIcon)
                         chatDiv.appendChild(channelName)
 
+                        serverChannels.push(dropLocation)
                         serverChannels.push(chatDiv)
                     }
                 }
@@ -1916,31 +1955,32 @@
 
         var readMsgs = {}
         function popUserInfo(resp) {
-            currUID = resp["UID"]
+            let usr = resp["user"]
+            currUID = usr["UID"]
 
-            chats = resp["chats"]
-            servers = resp["servers"]
-            friends = resp["friends"]
-            friendReqs = resp["friendReq"]
+            chats = usr["Chats"]
+            servers = usr["Servers"]
+            friends = usr["Friends"]
+            friendReqs = usr["FriendRequests"]
 
-            readMsgs = resp["readMsgs"]
+            readMsgs = usr["ReadMsgs"]
 
-            currUsernameI.value = resp["username"]
-            currDisplaynameI.value = resp["displayname"]
+            currUsernameI.value = usr["USRNAME"]
+            currDisplaynameI.value = usr["Displayname"]
 
-            if (resp["birthday"] && typeof resp["birthday"] == "number") {
-                currBirthdayI.valueAsNumber = resp["birthday"] * 1000
+            if (usr["Birthday"] && typeof usr["Birthday"] == "number") {
+                currBirthdayI.valueAsNumber = usr["Birthday"] * 1000
             }
 
-            currPronounsI.value = resp["pronouns"]
-            currPFP.src = resp["pfp"]
+            currPronounsI.value = usr["Pronouns"]
+            currPFP.src = usr["PFP"]
 
-            accInfoDisplayname.textContent = resp["displayname"]
-            accInfoUsername.textContent = resp["username"]
+            accInfoDisplayname.textContent = usr["Displayname"]
+            accInfoUsername.textContent = usr["USRNAME"]
             accInfoUID.textContent = "Account ID: " + currUID
-            accCreatedDate.textContent = (new Date(resp["accCreated"] * 1000)).toLocaleDateString()
+            accCreatedDate.textContent = (new Date(usr["AccCreated"] * 1000)).toLocaleDateString()
 
-            bioArea.value = resp["bio"]
+            bioArea.value = usr["Bio"]
 
             setFriendReqs()
             setChatList()
@@ -2501,7 +2541,6 @@
                 const pre = codeblock.parentElement
                 pre.style.lineHeight = ".8"
                 pre.style.padding = "1em"
-                pre.style.paddingTop = "0"
                 pre.style.overflow = "auto"
                 pre.style.width = "fit-content"
                 pre.style.maxWidth = "90%"
@@ -2807,11 +2846,15 @@
                 }
 
                 if (serverMeta) {
-                    let inviteInvalid = message["expire"] == null || message["expire"] - (Date.now() / 1000) < 0
+                    let inviteInvalid = true
+                    if (!servers.includes(message["TARGET"])) {
+                        inviteInvalid = message["expire"] == null || message["expire"] - (Date.now() / 1000) < 0
 
-                    if (!inviteInvalid) {
-                        inviteInvalid = !(await request(JSON.stringify({"type": "checkInviteValid", "inviteID": message["ID"]})))["isValid"]
+                        if (!inviteInvalid) {
+                            inviteInvalid = !(await request(JSON.stringify({"type": "checkInviteValid", "inviteID": message["ID"]})))["isValid"]
+                        }
                     }
+
 
                     const inviteFrame = document.createElement("div")
                     inviteFrame.style.width = "25vw"
