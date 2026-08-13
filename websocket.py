@@ -91,7 +91,8 @@ class WS():
             "checkInviteValid": self.checkInviteValid,
             "transferOwnershipGc": self.transferOwnershipGc,
             "transferOwnershipServer": self.transferOwnershipServer,
-            "moveChannel": self.moveChannel
+            "moveChannel": self.moveChannel,
+            "moveCategory": self.moveCategory
         }
 
     def isValidToken(self, authToken: str | None, username=None):
@@ -1926,6 +1927,49 @@ class WS():
         targetCate["Chats"].insert(targetIdx, cid)
 
         await self.wsSendEncrypted(ws, orjson.dumps({"type": "moveChannelSuccess"}), trackerId)
+
+        targetWS = []
+        for ws2 in self.WS_CLIENTS:
+            wsUID = getattr(ws2, "UID", None)
+            targetInfo = self.getUserInfoFromUserId(wsUID)
+
+            if wsUID is not None and targetInfo is not None and decryptedBody["SID"] in targetInfo["Servers"]:
+                targetWS.append(ws2)
+
+        await self.wsBroadcastEncrypted(targetWS, orjson.dumps({"type": "serverContentUpdate", "SID": server["SID"], "categories": server["Categories"]}))
+
+    async def moveCategory(self, ws, decryptedBody, authToken, trackerId):
+        if not self.checkFields(decryptedBody, ["SID", "currCate", "targetCate"]):
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "moveCategoryFailed"}), trackerId)
+            return
+
+        server = self.getServerFromSID(decryptedBody["SID"])
+        selfInfo = self.getUserInfoFromToken(authToken)
+        selfUid = self.getUserIdFromUserInfo(selfInfo)
+
+        if server is None or selfUid != server["Owner"]:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "moveCategoryFailed"}), trackerId)
+            return
+
+        currCate: dict | None = None
+        try:
+            currCate = server["Categories"].pop(decryptedBody["currCate"])
+        except IndexError:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "moveCategoryFailed"}), trackerId)
+            return
+
+        if currCate is None:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "moveCategoryFailed"}), trackerId)
+            return
+
+        targetCate = decryptedBody["targetCate"]
+
+        if decryptedBody["currCate"] < targetCate:
+            targetCate -= 1
+
+        server["Categories"].insert(targetCate, currCate)
+
+        await self.wsSendEncrypted(ws, orjson.dumps({"type": "moveCategorySuccess"}), trackerId)
 
         targetWS = []
         for ws2 in self.WS_CLIENTS:

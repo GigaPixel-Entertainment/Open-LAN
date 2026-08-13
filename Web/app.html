@@ -1554,10 +1554,24 @@
             return dropLocation
         }
 
+        function newCategoryDroplocation(categoryId) {
+            const categoryDropLocation = document.createElement("hr")
+            categoryDropLocation.style.width = "75%"
+            categoryDropLocation.style.height = "4px"
+            categoryDropLocation.style.backgroundColor = "var(--acc4)"
+            categoryDropLocation.style.margin = "0 auto"
+            categoryDropLocation.style.border = "none"
+            categoryDropLocation.style.borderRadius = "9999px"
+            categoryDropLocation.style.visibility = "hidden"
+            categoryDropLocation.dataset.category = categoryId
+            return categoryDropLocation
+        }
+
         var settingChatList = false
         var lastMsgId = 0
         var serverCache = null
         var channelDragLocations = []
+        var categoryDragLocations = []
         const chatMetaCache = []
         const hiddenCategories = []
         async function setChatList() {
@@ -1566,6 +1580,7 @@
             }
             settingChatList = true
             channelDragLocations = []
+            categoryDragLocations = []
 
             if (currServer != -1) {
                 const serverChannels = []
@@ -1587,14 +1602,8 @@
                 for (let cIdx = 0; cIdx < serverCache["Categories"].length; cIdx++) {
                     const category = serverCache["Categories"][cIdx]
 
-                    const categoryDropLocation = document.createElement("hr")
-                    categoryDropLocation.style.width = "60%"
-                    categoryDropLocation.style.height = "4px"
-                    categoryDropLocation.style.backgroundColor = "var(--acc4)"
-                    categoryDropLocation.style.margin = "0 auto"
-                    categoryDropLocation.style.border = "none"
-                    categoryDropLocation.style.borderRadius = "9999px"
-                    categoryDropLocation.style.visibility = "hidden"
+                    const categoryDropLocation = newCategoryDroplocation(cIdx)
+                    categoryDragLocations.push(categoryDropLocation)
 
                     const categoryDiv = document.createElement("div")
                     categoryDiv.style.width = "100%"
@@ -1606,6 +1615,10 @@
                     categoryDiv.style.alignItems = "center"
                     categoryDiv.style.cursor = "pointer"
 
+                    if (serverCache["Owner"] == currUID) {
+                        categoryDiv.draggable = true
+                    }
+
                     categoryDiv.addEventListener("click", () => {
                         const categoryIndex = hiddenCategories.indexOf(currServer + "_" + category["categoryID"])
                         if (categoryIndex != -1) {
@@ -1616,6 +1629,70 @@
 
                         setChatList()
                     })
+
+                    categoryDiv.addEventListener("dragstart", (e) => {
+                        if (serverCache["Owner"] != currUID) {
+                            return
+                        }
+
+                        const categoryDivBoundingBox = categoryDiv.getBoundingClientRect()
+                        const categoryDivDragImg = categoryDiv.cloneNode(true)
+                        categoryDivDragImg.style.position = "absolute";
+                        categoryDivDragImg.style.left = "-99999px";
+                        categoryDivDragImg.style.top = "0";
+                        categoryDivDragImg.style.borderRadius = "8px";
+                        categoryDivDragImg.style.backgroundColor = "var(--highlight)"
+                        categoryDivDragImg.style.width = "60%"
+                        friendsListContent.appendChild(categoryDivDragImg)
+
+                        e.dataTransfer.setDragImage(categoryDivDragImg, (e.clientX - categoryDivBoundingBox.left) / 2, e.clientY - categoryDivBoundingBox.top)
+
+                        setTimeout(() => {
+                            categoryDivDragImg.remove()
+                        }, 0)
+                    })
+
+                    categoryDiv.addEventListener("drag", (e) => {
+                        if (serverCache["Owner"] != currUID) {
+                            return
+                        }
+
+                        categoryDragLocations.forEach((dLocation) => {
+                            const dLocationBoundingBox = dLocation.getBoundingClientRect()
+                            const xValid = e.clientX >= dLocationBoundingBox.left - 16 && e.clientX <= dLocationBoundingBox.right + 16
+                            const Ydist = Math.abs(e.clientY - dLocationBoundingBox.top)
+                            dLocation.style.visibility = "hidden"
+
+                            if (xValid && Ydist < 16) {
+                                dLocation.style.visibility = "visible"
+                            }
+                        })
+                    })
+
+                    categoryDiv.addEventListener("dragend", (e) => {
+                        if (serverCache["Owner"] != currUID) {
+                            return
+                        }
+
+                        let target = null
+
+                        categoryDragLocations.forEach((dLocation) => {
+                            const dLocationBoundingBox = dLocation.getBoundingClientRect()
+                            const xValid = e.clientX >= dLocationBoundingBox.left - 16 && e.clientX <= dLocationBoundingBox.right + 16
+                            const Ydist = Math.abs(e.clientY - dLocationBoundingBox.top)
+                            dLocation.style.visibility = "hidden"
+
+                            if (xValid && Ydist < 16) {
+                                target = dLocation
+                            }
+                        })
+
+                        if (target) {
+                            const categoryIdx = target.dataset["category"]
+                            request(JSON.stringify({"type": "moveCategory", "SID": currServer, "currCate": cIdx, "targetCate": parseInt(categoryIdx)}))
+                        }
+                    })
+
 
                     const categoryHidden = hiddenCategories.includes(currServer + "_" + category["categoryID"])
 
@@ -1804,6 +1881,12 @@
                             channelDragLocations.push(dropLocation)
                             serverChannels.push(dropLocation)
                         }
+                    }
+
+                    if (cIdx == serverCache["Categories"].length - 1) {
+                        const categoryDropLocation = newCategoryDroplocation(cIdx + 1)
+                        categoryDragLocations.push(categoryDropLocation)
+                        serverChannels.push(categoryDropLocation)
                     }
                 }
 
@@ -4928,7 +5011,7 @@
 
                             const elements = document.documentElement.querySelectorAll("*")
                             elements.forEach((e) => {
-                                e.style.border = "1px solid black"
+                                e.style.border = "2px solid black"
                                 e.style.filter = "brightness(175%) blur(1px)"
                             })
                         }, 1)
