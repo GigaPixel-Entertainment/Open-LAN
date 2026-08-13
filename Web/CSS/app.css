@@ -1,3 +1,4 @@
+/* Default Theme */
 :root {
     --bg: #1a3053;
     --acc: #113963;
@@ -15,6 +16,46 @@
     --rose: #e99898;
     --highlighted: #f9e1af;
     --highlighted-transparent: #f9e1af30;
+}
+
+/* Red Theme */
+[data-theme="red"] {
+    --bg: #660000;
+    --acc: #9f2e2e;
+    --acc2: #851111;
+    --acc3: #df6666;
+    --acc4: #670008;
+    --acc5: #ba3631;
+    --acc6: #d7433e;
+    --text: #FFFFFF;
+    --placeholder: #BBBBBB;
+    --button: #e57577;
+    --button-press: #ee7969;
+    --highlight: #ffb9b6;
+    --sendButtonGreen: #f7f18c;
+    --rose: #e99898;
+    --highlighted: #f9e1af;
+    --highlighted-transparent: #f9e1af30;
+}
+
+/* Flashbang */
+[data-theme="flash"] {
+    --bg: white;
+    --acc: #FFFFFF;
+    --acc2: #FFFFFF;
+    --acc3: #FFFFFF;
+    --acc4: #FFFFFF;
+    --acc5: #FFFFFF;
+    --acc6: #FFFFFF;
+    --text: #000000;
+    --placeholder: #FFFFFF;
+    --button: #FFFFFF;
+    --button-press: #FFFFFF;
+    --highlight: #FFFFFF;
+    --sendButtonGreen: #000000;
+    --rose: #FFFFFF;
+    --highlighted: #FFFFFF;
+    --highlighted-transparent: #FFFFFF;
 }
 
 html, body {
@@ -1958,4 +1999,18 @@ footer > a {
 
 input[type="date"]::-webkit-calendar-picker-indicator {
     filter: invert(1);
+}
+
+#flashbang {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: white;
+    visibility: hidden;
+    z-index: 100;
+    pointer-events: none;
+
+    transition: opacity 5s;
 }

@@ -57,7 +57,7 @@
                 <button id="friendsListNewGC" class="font">
                     new groupchat
                     <div id="newGCFriendsList">
-                        <input type="search" id="newGCSearch" placeholder="search friends...">
+                        <input type="search" id="newGCSearch" class="font white" placeholder="search friends...">
                         <div id="newGCSearchRes" class="scroll"></div>
                         <input type="submit" id="newGCCreate" value="Create" class="font">
                     </div>
@@ -310,6 +310,8 @@
             <button id="serverUsrListTransferOwnership" class="rClickMenuOption font white">give ownership</button>
             <button id="serverUsrListKick" class="rClickMenuOption font white">kick user</button>
         </div>
+
+        <div id="flashbang"></div>
     </body>
     <footer>
         Open-LAN is open-source under the <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank">GNU General Public License</a> and available on <a href="https://github.com/GigaPixel-Entertainment/GPE-Open-LAN" target="_blank">Github</a>
@@ -1121,7 +1123,11 @@
             searchResult["results"].sort((a, b) => {
                 aSim = compareTwoStrings(a["username"], search)
                 bSim = compareTwoStrings(b["username"], search)
-                return bSim - aSim
+
+                adSim = compareTwoStrings(a["displayname"], search)
+                bdSim = compareTwoStrings(b["displayname"], search)
+
+                return Math.max(bSim, bdSim) - Math.max(aSim, adSim)
             })
 
             await popSearchResults()
@@ -1512,6 +1518,13 @@
             currChat = newCID
             changedChat = true
             currPage = 0
+
+            if (readMsgs[newCID.toString()] && chatMetaCache[newCID.toString()]) {
+                const numMsgs = chatMetaCache[newCID.toString()]["numMsgs"]
+                const msgsLeft = numMsgs - (readMsgs[newCID.toString()] + 1)
+                currPage = Math.ceil(msgsLeft / 100 + 0.005) - 1
+            }
+
             await fetchChatData()
             await setChatList()
         }
@@ -1525,6 +1538,20 @@
             serverCache = null
             await moveChat(-1, true)
             await setServerList()
+        }
+
+        function newChannelDroplocation(categoryId, categoryIdx) {
+            const dropLocation = document.createElement("hr")
+            dropLocation.style.width = "60%"
+            dropLocation.style.height = "4px"
+            dropLocation.style.backgroundColor = "var(--acc4)"
+            dropLocation.style.margin = "0 auto"
+            dropLocation.style.border = "none"
+            dropLocation.style.borderRadius = "9999px"
+            dropLocation.style.visibility = "hidden"
+            dropLocation.dataset.category = categoryId
+            dropLocation.dataset.categoryIdx = categoryIdx
+            return dropLocation
         }
 
         var settingChatList = false
@@ -1627,6 +1654,10 @@
                         continue
                     }
 
+                    const droplocation0 = newChannelDroplocation(category["categoryID"], 0)
+                    channelDragLocations.push(droplocation0)
+                    serverChannels.push(droplocation0)
+
                     for (let idx = 0; idx < category["Chats"].length; idx++) {
                         const chatID = category["Chats"][idx]
                         let chat = null
@@ -1643,16 +1674,11 @@
                             continue
                         }
 
-                        const dropLocation = document.createElement("hr")
-                        dropLocation.style.width = "60%"
-                        dropLocation.style.height = "4px"
-                        dropLocation.style.backgroundColor = "var(--acc4)"
-                        dropLocation.style.margin = "0 auto"
-                        dropLocation.style.border = "none"
-                        dropLocation.style.borderRadius = "9999px"
-                        dropLocation.style.visibility = "hidden"
-
-                        channelDragLocations.push(dropLocation)
+                        if (idx > 0) {
+                            const dropLocation = newChannelDroplocation(category["categoryID"], idx)
+                            channelDragLocations.push(dropLocation)
+                            serverChannels.push(dropLocation)
+                        }
 
                         const chatDiv = document.createElement("div")
                         chatDiv.style.width = "100%"
@@ -1661,7 +1687,10 @@
                         chatDiv.style.flexDirection = "row"
                         chatDiv.style.alignItems = "center"
                         chatDiv.style.cursor = "pointer"
-                        chatDiv.draggable = true
+
+                        if (serverCache["Owner"] == currUID) {
+                            chatDiv.draggable = true
+                        }
 
                         if (currChat == chatID) {
                             chatDiv.style.backgroundColor = "var(--acc2)"
@@ -1672,19 +1701,69 @@
                             moveChat(chatID)
                         })
 
+                        chatDiv.addEventListener("dragstart", (e) => {
+                            if (serverCache["Owner"] != currUID) {
+                                return
+                            }
+
+                            const chatDivBoundingBox = chatDiv.getBoundingClientRect()
+                            const chatDivDragImg = chatDiv.cloneNode(true)
+                            chatDivDragImg.style.position = "absolute";
+                            chatDivDragImg.style.left = "-99999px";
+                            chatDivDragImg.style.top = "0";
+                            chatDivDragImg.style.borderRadius = "8px";
+                            chatDivDragImg.style.backgroundColor = "var(--highlight)"
+                            chatDivDragImg.style.width = "50%"
+                            friendsListContent.appendChild(chatDivDragImg)
+
+                            e.dataTransfer.setDragImage(chatDivDragImg, (e.clientX - chatDivBoundingBox.left) / 2, e.clientY - chatDivBoundingBox.top)
+
+                            setTimeout(() => {
+                                chatDivDragImg.remove()
+                            }, 0)
+                        })
+
                         chatDiv.addEventListener("drag", (e) => {
+                            if (serverCache["Owner"] != currUID) {
+                                return
+                            }
+
                             channelDragLocations.forEach((dLocation) => {
+                                const dLocationBoundingBox = dLocation.getBoundingClientRect()
+                                const xValid = e.clientX >= dLocationBoundingBox.left - 16 && e.clientX <= dLocationBoundingBox.right + 16
+                                const Ydist = Math.abs(e.clientY - dLocationBoundingBox.top)
                                 dLocation.style.visibility = "hidden"
-                                if (Math.abs(dLocation.getBoundingClientRect().top - e.clientY) < 32) {
+
+                                if (xValid && Ydist < 16) {
                                     dLocation.style.visibility = "visible"
                                 }
                             })
                         })
 
-                        chatDiv.addEventListener("dragend", () => {
+                        chatDiv.addEventListener("dragend", (e) => {
+                            if (serverCache["Owner"] != currUID) {
+                                return
+                            }
+
+                            let target = null
+
                             channelDragLocations.forEach((dLocation) => {
+                                const dLocationBoundingBox = dLocation.getBoundingClientRect()
+                                const xValid = e.clientX >= dLocationBoundingBox.left - 16 && e.clientX <= dLocationBoundingBox.right + 16
+                                const Ydist = Math.abs(e.clientY - dLocationBoundingBox.top)
                                 dLocation.style.visibility = "hidden"
+
+                                if (xValid && Ydist < 16) {
+                                    target = dLocation
+                                }
                             })
+
+                            if (target) {
+                                const categoryId = target.dataset["category"]
+                                const categoryIdx = target.dataset["categoryIdx"]
+
+                                request(JSON.stringify({"type": "moveChannel", "SID": currServer, "currCate": category["categoryID"], "currIdx": idx, "targetCate": parseInt(categoryId), "targetIdx": parseInt(categoryIdx)}))
+                            }
                         })
 
                         const readIndicator = document.createElement("div")
@@ -1696,7 +1775,8 @@
                         const chatIcon = document.createElement("img")
                         chatIcon.style.height = "100%"
                         chatIcon.style.aspectRatio = "1"
-                        chatIcon.src = "Media/textChannel.png"
+
+                        await waitForImg(chatIcon, "Media/textChannel.png")
 
                         const numUnreadMsgs = chat["lastMsg"]["MSGID"] - readMsgs[chatID.toString()]
                         const isRead = numUnreadMsgs == 0 || isNaN(numUnreadMsgs)
@@ -1717,8 +1797,13 @@
                         chatDiv.appendChild(chatIcon)
                         chatDiv.appendChild(channelName)
 
-                        serverChannels.push(dropLocation)
                         serverChannels.push(chatDiv)
+
+                        if (idx == category["Chats"].length - 1) {
+                            const dropLocation = newChannelDroplocation(category["categoryID"], idx + 1)
+                            channelDragLocations.push(dropLocation)
+                            serverChannels.push(dropLocation)
+                        }
                     }
                 }
 
@@ -2153,6 +2238,13 @@
             }
 
             readMsgs[currChat.toString()] = lastMsgId
+
+            setTimeout(() => {
+                if (newMsgSeperator) {
+                    newMsgSeperator.remove()
+                }
+            }, 5000)
+
             request(JSON.stringify({
                 "type": "setRead",
                 "CID": currChat,
@@ -2996,7 +3088,9 @@
         var maxPage = 0
         var currMsgID = -1
 
-        async function newMsg(message, chatDiv2, lastMsg, userInfos) {
+        var newMsgSeperator = null
+
+        async function newMsg(message, chatDiv2, lastMsg, userInfos, showNewMsgSep) {
             if (message["deleted"]) {
                 return
             }
@@ -3050,9 +3144,55 @@
                 }
             }
 
+            if (showNewMsgSep && message["MSGID"] - readMsgs[currChat.toString()] == 1) {
+                if (newMsgSeperator) {
+                    newMsgSeperator.remove()
+                }
+
+                const seperatorWrapper = document.createElement("div")
+                seperatorWrapper.style.width = "95%"
+                seperatorWrapper.style.margin = "0 auto"
+
+                const seperator = document.createElement("hr")
+                seperator.style.position = "absolute"
+                seperator.style.width = "95%"
+                seperator.style.border = "none"
+                seperator.style.height = "4px"
+                seperator.style.borderRadius = "99999px"
+                seperator.style.backgroundColor = "var(--rose)"
+                seperatorWrapper.appendChild(seperator)
+
+                const label = document.createElement("p")
+                label.textContent = "new messages"
+                label.classList = "font white"
+                label.style.backgroundColor = "var(--bg)"
+                label.style.position = "relative"
+                label.style.left = "50%"
+                label.style.width = "fit-content"
+                label.style.transform = "translateX(-50%)"
+                label.style.paddingLeft = "1em"
+                label.style.paddingRight = "1em"
+                seperatorWrapper.appendChild(label)
+                newMsgSeperator = seperatorWrapper
+
+                chatDiv2.push(seperatorWrapper)
+
+                new Promise((r) => {
+                    function check() {
+                        if (!chatFetchInProgress) {
+                            r()
+                        } else {
+                            setTimeout(check, 100)
+                        }
+                    }
+
+                    check()
+                }).then(() => {
+                    seperatorWrapper.scrollIntoView({"behavior": "smooth", "block": "center"})
+                })
+            }
 
             let messageDiv = null
-
 
             if (message["SYSMSG"]) {
                 messageDiv = await genSysMsg(message, messageDate)
@@ -3431,7 +3571,7 @@
                     continue
                 }
 
-                await newMsg(message, chatDiv2, lastMsg, userInfos)
+                await newMsg(message, chatDiv2, lastMsg, userInfos, true)
 
                 lastMsg = message
             }
@@ -4452,7 +4592,7 @@
                                                     const currScroll = chatDiv.scrollTop
                                                     const atBottom = ((currScroll + chatDiv.offsetHeight >= chatDiv.scrollHeight - 8) || changedChat) && !startAtTop
 
-                                                    newMsg(thisMsg, msgList, lastMsg, userInfos).then(() => {
+                                                    newMsg(thisMsg, msgList, lastMsg, userInfos, false).then(() => {
                                                         let lastMsgE = null
                                                         if (lastMsg) {
                                                             lastMsgE = document.querySelector('[data-msgid="MSGID' + lastMsg["MSGID"] + '"]')
@@ -4733,10 +4873,73 @@
             }
         })
 
+        const angyWord = "hell"
+        let angyWordProgress = 0
+        const fixWord = "nvm"
+        let fixWordProgress = 0
+        const flashWord = "flashbang"
+        let flashWordProgress = 0
         document.addEventListener("keydown", (key) => {
-            if (key.key == "/" && textEntry != document.activeElement && !myProfileScreenShown) {
+            if (key.key == "/" && textEntry != document.activeElement && !myProfileScreenShown && !friendReqScreenOpen) {
                 key.preventDefault()
                 textEntry.focus()
+            }
+
+            if (document.activeElement.nodeName != "TEXTAREA" && !(document.activeElement.nodeName === 'INPUT' && ['text', 'search', 'tel', 'url', 'email', 'password'].includes(document.activeElement.type))) {
+                if (key.key == angyWord.charAt(angyWordProgress)) {
+                    angyWordProgress += 1
+
+                    if (angyWordProgress == angyWord.length) {
+                        document.documentElement.dataset.theme = "red"
+                        angyWordProgress = 0
+                    }
+                } else {
+                    angyWordProgress = key.key == angyWord.charAt(0)
+                }
+
+                if (key.key == fixWord.charAt(fixWordProgress)) {
+                    fixWordProgress += 1
+
+                    if (fixWordProgress == fixWord.length) {
+                        document.documentElement.dataset.theme = ""
+                        fixWordProgress = 0
+                    }
+                } else {
+                    fixWordProgress = key.key == fixWord.charAt(0)
+                }
+
+                if (key.key == flashWord.charAt(flashWordProgress)) {
+                    flashWordProgress += 1
+
+                    if (flashWordProgress == flashWord.length) {
+                        document.getElementById("flashbang").style.visibility = "visible"
+                        document.getElementById("flashbang").style.opacity = "0"
+
+                        setTimeout(() => {
+                            document.getElementById("flashbang").style.visibility = "hidden"
+                            document.getElementById("flashbang").style.opacity = "1"
+                        }, 5000);
+
+                        let flashInterval = setInterval(() => {
+                            if (document.documentElement.dataset.theme == "") {
+                                clearInterval(flashInterval)
+                                return
+                            }
+
+                            const elements = document.documentElement.querySelectorAll("*")
+                            elements.forEach((e) => {
+                                e.style.border = "1px solid black"
+                                e.style.filter = "brightness(175%) blur(1px)"
+                            })
+                        }, 1)
+
+                        document.documentElement.dataset.theme = "flash"
+
+                        flashWordProgress = 0
+                    }
+                } else {
+                    flashWordProgress = key.key == flashWord.charAt(0)
+                }
             }
         })
     </script>

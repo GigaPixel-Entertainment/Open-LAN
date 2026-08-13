@@ -12,7 +12,7 @@ import copy
 import math
 import ssl
 
-from websockets.asyncio.server import serve, ServerConnection, Request
+from websockets.asyncio.server import serve, ServerConnection, Request, broadcast
 
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -90,7 +90,8 @@ class WS():
             "leaveServer": self.leaveServer,
             "checkInviteValid": self.checkInviteValid,
             "transferOwnershipGc": self.transferOwnershipGc,
-            "transferOwnershipServer": self.transferOwnershipServer
+            "transferOwnershipServer": self.transferOwnershipServer,
+            "moveChannel": self.moveChannel
         }
 
     def isValidToken(self, authToken: str | None, username=None):
@@ -314,15 +315,11 @@ class WS():
         iv = secrets.token_bytes(12)
         encryptor = Cipher(algorithms.AES256(getattr(ws, "secretKey")), modes.GCM(iv)).encryptor()
         ciphertext = encryptor.update(data) + encryptor.finalize() + encryptor.tag
-
         await ws.send(orjson.dumps({"encryption":"AES","iv":iv.hex(),"body":ciphertext.hex()}), text=True)
 
     async def wsBroadcastEncrypted(self, clients: Iterable[ServerConnection], data: bytes):
-        for client in clients:
-            try:
-                await self.wsSendEncrypted(client, data)
-            except:
-                traceback.print_exc()
+        tasks = [self.wsSendEncrypted(client, data) for client in clients]
+        await asyncio.gather(*tasks)
 
     async def checkAuthTokenEncrypted(self, ws: ServerConnection, authToken: str | None):
         if not self.isValidToken(authToken):
@@ -413,6 +410,7 @@ class WS():
             "name": chat["Name"],
             "icon": chat["Icon"] if "Icon" in chat else random.choice(self.DEFAULT_PFPS),
             "recipients": chat["Recipients"],
+            "numMsgs": len(chat["messages"]),
             "lastMsg": {
                 "time": lastMsg["time"] if lastMsg else chat["Time"],
                 "MSGID": lastMsg["MSGID"] if lastMsg else 0,
@@ -755,7 +753,7 @@ class WS():
 
         results = []
         for usr in self.users:
-            if usernameS.lower() in usr["USRNAME"].lower():
+            if usernameS.lower() in usr["USRNAME"].lower() or usernameS.lower() in usr["Displayname"].lower():
                 results.append(usr)
 
         if len(results) == 0:
@@ -968,12 +966,12 @@ class WS():
             return
 
         cid = -1
-        chatExists = True
         for cht in self.chats:
             if cht["Type"] == "dm" and selfUID in cht["Recipients"] and targetUID in cht["Recipients"]:
                 cid = cht["CID"]
                 break
 
+        chatExists = True
         if cid == -1:
             chatExists = False
             cid = len(self.chats)
@@ -1806,7 +1804,7 @@ class WS():
         selfInfo = self.getUserInfoFromToken(authToken)
         selfUid = self.getUserIdFromUserInfo(selfInfo)
 
-        if chat is None or selfUid not in chat["Recipients"] or chat["Owner"] == decryptedBody["UID"] or decryptedBody["UID"] not in chat["Recipients"]:
+        if chat is None or selfUid != chat["Owner"] or chat["Owner"] == decryptedBody["UID"] or decryptedBody["UID"] not in chat["Recipients"]:
             await self.wsSendEncrypted(ws, orjson.dumps({"type": "transferOwnershipGcFailed"}), trackerId)
             return
 
@@ -1840,7 +1838,7 @@ class WS():
         selfInfo = self.getUserInfoFromToken(authToken)
         selfUid = self.getUserIdFromUserInfo(selfInfo)
 
-        if server is None or selfUid not in server["Users"] or server["Owner"] == decryptedBody["UID"] or decryptedBody["UID"] not in server["Users"]:
+        if server is None or selfUid != server["Owner"] or server["Owner"] == decryptedBody["UID"] or decryptedBody["UID"] not in server["Users"]:
             await self.wsSendEncrypted(ws, orjson.dumps({"type": "transferOwnershipServerFailed"}), trackerId)
             return
 
@@ -1879,6 +1877,65 @@ class WS():
         if chat is not None and newMemberMsg is not None:
             await self.wsBroadcastEncrypted(targetWS2, orjson.dumps({"type": "newMsg", "CID": chat["CID"], "message": newMemberMsg}))
 
+    async def moveChannel(self, ws, decryptedBody, authToken, trackerId):
+        if not self.checkFields(decryptedBody, ["SID", "currCate", "currIdx", "targetCate", "targetIdx"]):
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "moveChannelFailed"}), trackerId)
+            return
+
+        server = self.getServerFromSID(decryptedBody["SID"])
+        selfInfo = self.getUserInfoFromToken(authToken)
+        selfUid = self.getUserIdFromUserInfo(selfInfo)
+
+        if server is None or selfUid != server["Owner"]:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "moveChannelFailed"}), trackerId)
+            return
+
+        if len(server["Categories"]) <= decryptedBody["targetCate"] or len(server["Categories"]) <= decryptedBody["currCate"]:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "moveChannelFailed"}), trackerId)
+            return
+
+        currCate: dict | None = None
+        targetCate: dict | None = None
+        for cate in server["Categories"]:
+            if cate["categoryID"] == decryptedBody["currCate"]:
+                currCate = cate
+            if cate["categoryID"] == decryptedBody["targetCate"]:
+                targetCate = cate
+
+        if currCate is None or targetCate is None:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "moveChannelFailed"}), trackerId)
+            return
+
+        currIdx = decryptedBody["currIdx"]
+        targetIdx = decryptedBody["targetIdx"]
+        cid = -1
+
+        try:
+            cid = currCate["Chats"].pop(currIdx)
+        except IndexError:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "moveChannelFailed"}), trackerId)
+            return
+
+        if cid == -1:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "moveChannelFailed"}), trackerId)
+            return
+
+        if currCate["categoryID"] == targetCate["categoryID"] and currIdx < targetIdx:
+            targetIdx -= 1
+
+        targetCate["Chats"].insert(targetIdx, cid)
+
+        await self.wsSendEncrypted(ws, orjson.dumps({"type": "moveChannelSuccess"}), trackerId)
+
+        targetWS = []
+        for ws2 in self.WS_CLIENTS:
+            wsUID = getattr(ws2, "UID", None)
+            targetInfo = self.getUserInfoFromUserId(wsUID)
+
+            if wsUID is not None and targetInfo is not None and decryptedBody["SID"] in targetInfo["Servers"]:
+                targetWS.append(ws2)
+
+        await self.wsBroadcastEncrypted(targetWS, orjson.dumps({"type": "serverContentUpdate", "SID": server["SID"], "categories": server["Categories"]}))
 
     async def wsHandler(self, ws: ServerConnection):
         self.WS_CLIENTS.add(ws)
@@ -2020,23 +2077,10 @@ class WS():
 
                         if reqType in self.webRequests:
                             await self.webRequests[reqType](ws, decryptedBody, authToken, trackerId)
-                            continue
                         else:
                             logging.warning("Unknown request type %s!", reqType)
                     else:
                         break
-
-
-
-
-
-
-
-
-
-
-                    continue
-
         except:
             traceback.print_exc()
         finally:
