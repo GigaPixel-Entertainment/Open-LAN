@@ -69,7 +69,7 @@ body {
 }
 
 footer {
-    position: absolute;
+    position: fixed;
     bottom: 0;
     left: 0;
     color: white;
@@ -1223,6 +1223,97 @@ footer > a {
     border: 2px solid var(--button-press);
 }
 
+#channelSettings {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 75%;
+    height: 75%;
+    background-color: var(--bg);
+    transform: translate(-50%, -50%);
+
+    display: flex;
+    flex-direction: row;
+}
+
+#channelSettingsLeft {
+    width: 15%;
+    height: 100%;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    background-color: var(--acc);
+}
+
+#channelSettingsLeft > button {
+    margin-top: 8px;
+    width: 95%;
+    font-size: 1.5em;
+    background: none;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+#channelSettingsLeft > button:disabled {
+    background-color: rgba(255, 255, 255, 0.125);
+}
+
+#channelSettingsLeft > button:hover {
+    background-color: rgba(255, 255, 255, 0.25);
+}
+
+#channelSettingsOverview {
+    width: 85%;
+    height: 100%;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#channelSettingsOverviewName {
+    background-color: var(--acc3);
+    border: none;
+    width: 50%;
+    font-size: 2em;
+    outline: none;
+}
+
+#channelSettingsOverviewName::placeholder {
+    color: var(--placeholder);
+}
+
+#channelSettingsUnsaved {
+    position: fixed;
+    left: 57.5%;
+    width: 75%;
+    bottom: 2em;
+    display: flex;
+    flex-direction: row;
+    transform: translateX(-50%);
+    background-color: var(--acc2);
+}
+
+#channelSettingsUnsavedTxt {
+    margin: 0;
+}
+
+#channelSettingsUnsavedUndo {
+    background: none;
+    border: 2px solid var(--button);
+    color: var(--button);
+    flex: none;
+}
+
+#channelSettingsUnsavedSave {
+    background-color: var(--button);
+    border: none;
+    flex: none;
+}
+
 #leaving {
     position: absolute;
     width: 50%;
@@ -1634,6 +1725,58 @@ footer > a {
     background-color: var(--button-press);
 }
 
+#confirmationPopupContents {
+    position: absolute;
+    width: calc(50% - 2em);
+    height: fit-content;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--bg);
+    padding: 1em;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#confirmationPopupTitle {
+    text-align: center;
+    font-size: 2em;
+}
+
+#confirmationPopupContent {
+    text-align: center;
+    font-size: 1.25em;
+}
+
+#confirmationPopupConfirm {
+    width: calc(100% - 2em);
+    font-size: 2em;
+    background-color: var(--button);
+    border: none;
+    cursor: pointer;
+    margin-top: 1em;
+}
+
+#confirmationPopupConfirm:hover {
+    background-color: var(--button-press);
+}
+
+#confirmationPopupCancel {
+    width: calc(100% - 2em);
+    font-size: 2em;
+    background: none;
+    border: 2px solid var(--button);
+    color: var(--button);
+    cursor: pointer;
+    margin-top: 1em;
+}
+
+#confirmationPopupCancel:hover {
+    border: 2px solid var(--button-press);
+    color: var(--button-press);
+}
+
 #usrProfilePopup {
     position: absolute;
     width: 300px;
@@ -1968,6 +2111,10 @@ footer > a {
     border: 4px solid var(--acc4);
     margin: 8px;
     cursor: pointer;
+}
+
+.center {
+    text-align: center;
 }
 
 .green {

@@ -219,6 +219,24 @@
             </div>
         </div>
 
+        <div id="channelSettingsWrapper" class="overlay">
+            <div id="channelSettings">
+                <div id="channelSettingsLeft">
+                    <button class="font white" disabled>Overview</button>
+                </div>
+                <div id="channelSettingsOverview">
+                    <h1 class="font white center" id="channelSettingsOverviewHeading">Overview</h1>
+                    <input type="text" maxlength="100" id="channelSettingsOverviewName" placeholder="channel name..." class="font white">
+                </div>
+
+                <div id="channelSettingsUnsaved">
+                    <p class="font white" id="channelSettingsUnsavedTxt">You have unsaved changed!</p>
+                    <button class="font" id="channelSettingsUnsavedUndo">undo</button>
+                    <button class="font white" id="channelSettingsUnsavedSave">save</button>
+                </div>
+            </div>
+        </div>
+
         <div id="leavingWrapper" class="overlay">
             <div id="leaving">
                 <h1 class="font white" id="leavingHeading">Leaving Open-LAN</h1>
@@ -274,6 +292,15 @@
             </div>
         </div>
 
+        <div id="confirmationPopup" class="overlay">
+            <div id="confirmationPopupContents">
+                <h1 id="confirmationPopupTitle" class="font white"></h1>
+                <p id="confirmationPopupContent" class="font white"></p>
+                <button id="confirmationPopupConfirm" class="font">Confirm</button>
+                <button id="confirmationPopupCancel" class="font">Cancel</button>
+            </div>
+        </div>
+
         <div id="loadingOverlay">
             <img src="Media/Logo.png">
             <p class="font white" id="loadingText">Connecting to server...</p>
@@ -311,6 +338,11 @@
             <button id="serverUsrListKick" class="rClickMenuOption font white">kick user</button>
         </div>
 
+        <div id="channelRClickMenu" class="rClickMenu">
+            <button id="channelEdit" class="rClickMenuOption font white">edit channel</button>
+            <button id="channelDelete" class="rClickMenuOption font white">delete channel</button>
+        </div>
+
         <div id="flashbang"></div>
     </body>
     <footer>
@@ -328,6 +360,12 @@
         const genericPopup = document.getElementById("genericPopup")
         const popupTitle = document.getElementById("popupTitle")
         const popupContent = document.getElementById("popupContent")
+
+        const confirmationPopup = document.getElementById("confirmationPopup")
+        const confirmationPopupTitle = document.getElementById("confirmationPopupTitle")
+        const confirmationPopupContent = document.getElementById("confirmationPopupContent")
+        const confirmationPopupConfirm = document.getElementById("confirmationPopupConfirm")
+        const confirmationPopupCancel = document.getElementById("confirmationPopupCancel")
 
         const loadingOverlay = document.getElementById("loadingOverlay")
 
@@ -414,6 +452,12 @@
         const newCategoryCreate = document.getElementById("newCategoryCreate")
         const newCategoryCancel = document.getElementById("newCategoryCancel")
 
+        const channelSettingsWrapper = document.getElementById("channelSettingsWrapper")
+        const channelSettings = document.getElementById("channelSettings")
+        const channelSettingsLeft = document.getElementById("channelSettingsLeft")
+        const channelSettingsOverview = document.getElementById("channelSettingsOverview")
+        const channelSettingsOverviewName = document.getElementById("channelSettingsOverviewName")
+
         const leavingWrapper = document.getElementById("leavingWrapper")
         const leavingUrl = document.getElementById("leavingUrl")
         const leavingCancel = document.getElementById("leavingCancel")
@@ -496,6 +540,10 @@
 
         const createCategoryRClickMenu = document.getElementById("createCategoryRClickMenu")
         const createCategory = document.getElementById("createCategory")
+
+        const channelRClickMenu = document.getElementById("channelRClickMenu")
+        const channelEdit = document.getElementById("channelEdit")
+        const channelDelete = document.getElementById("channelDelete")
 
         const serverUsrListRClickMenu = document.getElementById("serverUsrListRClickMenu")
         const serverUsrListProfile = document.getElementById("serverUsrListProfile")
@@ -684,6 +732,7 @@
     <script>
         // Popups
         var popupOpen = false
+        var confirmPopupOpen = false
 
         async function openPopup(title, content) {
             if (popupOpen) {
@@ -715,6 +764,47 @@
             setTimeout(() => {
                 genericPopup.style.visibility = "hidden"
                 popupOpen = false
+            }, 250)
+        }
+
+        async function openConfirmPopup(title, content) {
+            if (confirmPopupOpen) {
+                await new Promise((r, _) => {
+                    function checkCPopupOpen() {
+                        if (!confirmPopupOpen) {
+                            r()
+                        } else {
+                            setTimeout(checkCPopupOpen, 100)
+                        }
+                    }
+
+                    checkCPopupOpen()
+                })
+            }
+
+            confirmPopupOpen = true
+
+            confirmationPopupTitle.textContent = title
+            confirmationPopupContent.textContent = content
+
+            confirmationPopup.style.visibility = "visible"
+            confirmationPopup.style.opacity = "1"
+
+            const confirmRes = await new Promise((r, c) => {
+                confirmationPopupConfirm.addEventListener("click", () => r(true), {"once": true})
+                confirmationPopupCancel.addEventListener("click", () => r(false), {"once": true})
+            })
+
+            closeConfirmPopup()
+            return confirmRes
+        }
+
+        function closeConfirmPopup() {
+            confirmationPopup.style.opacity = "0"
+
+            setTimeout(() => {
+                confirmationPopup.style.visibility = "hidden"
+                confirmPopupOpen = false
             }, 250)
         }
     </script>
@@ -935,10 +1025,14 @@
             }
 
             if (usrProfileFriAction == "remove") {
-                request(JSON.stringify({
-                    "type": "removeFriend",
-                    "UID": usrProfileScreenUID
-                }))
+                openConfirmPopup("Remove Friend?", "Are you sure you want to unfriend " + usrProfilePopupDn.textContent + "?").then((r) => {
+                    if (r) {
+                        request(JSON.stringify({
+                            "type": "removeFriend",
+                            "UID": usrProfileScreenUID
+                        }))
+                    }
+                })
             }
         })
 
@@ -1162,6 +1256,7 @@
         var msgRClickMenuMsg = null
         var usrListRClickMenuUsr = null
         var serverUsrListRClickMenuUsr = null
+        var channelRClickMenuChannel = null
         var lastRClickMenuClose = 0
 
         var selected = null
@@ -1217,6 +1312,12 @@
             if (serverUsrListRClickMenu.style.visibility == "visible") {
                 serverUsrListRClickMenu.style.visibility = "hidden"
                 serverUsrListRClickMenuUsr = null
+                lastRClickMenuClose = Date.now()
+            }
+
+            if (channelRClickMenu.style.visibility == "visible") {
+                channelRClickMenu.style.visibility = "hidden"
+                channelRClickMenuChannel = null
                 lastRClickMenuClose = Date.now()
             }
         })
@@ -1522,7 +1623,7 @@
             if (readMsgs[newCID.toString()] && chatMetaCache[newCID.toString()]) {
                 const numMsgs = chatMetaCache[newCID.toString()]["numMsgs"]
                 const msgsLeft = numMsgs - (readMsgs[newCID.toString()] + 1)
-                currPage = Math.ceil(msgsLeft / 100 + 0.005) - 1
+                currPage = Math.max(Math.ceil(msgsLeft / 100 + 0.005) - 1, 0)
             }
 
             await fetchChatData()
@@ -1565,6 +1666,20 @@
             categoryDropLocation.style.visibility = "hidden"
             categoryDropLocation.dataset.category = categoryId
             return categoryDropLocation
+        }
+
+        function moveRClickMenuToCursorPos(rClickMenu, e) {
+            if (e.pageX + rClickMenu.offsetWidth > window.innerWidth) {
+                rClickMenu.style.left = e.pageX - rClickMenu.offsetWidth + "px"
+            } else {
+                rClickMenu.style.left = e.pageX + "px"
+            }
+
+            if (e.pageY + rClickMenu.offsetHeight > window.innerHeight) {
+                rClickMenu.style.top = e.pageY - rClickMenu.offsetHeight + "px"
+            } else {
+                rClickMenu.style.top = e.pageY + "px"
+            }
         }
 
         var settingChatList = false
@@ -1767,6 +1882,71 @@
 
                         if (serverCache["Owner"] == currUID) {
                             chatDiv.draggable = true
+
+                            chatDiv.addEventListener("contextmenu", (e) => {
+                                if (Date.now() - lastRClickMenuClose < 10) {
+                                    return
+                                }
+
+                                e.preventDefault()
+
+                                moveRClickMenuToCursorPos(channelRClickMenu, e)
+                                channelRClickMenuChannel = chat
+                                channelRClickMenu.style.visibility = "visible"
+                            })
+
+                            chatDiv.addEventListener("dragstart", (e) => {
+                                const chatDivBoundingBox = chatDiv.getBoundingClientRect()
+                                const chatDivDragImg = chatDiv.cloneNode(true)
+                                chatDivDragImg.style.position = "absolute";
+                                chatDivDragImg.style.left = "-99999px";
+                                chatDivDragImg.style.top = "0";
+                                chatDivDragImg.style.borderRadius = "8px";
+                                chatDivDragImg.style.backgroundColor = "var(--highlight)"
+                                chatDivDragImg.style.width = "50%"
+                                friendsListContent.appendChild(chatDivDragImg)
+
+                                e.dataTransfer.setDragImage(chatDivDragImg, (e.clientX - chatDivBoundingBox.left) / 2, e.clientY - chatDivBoundingBox.top)
+
+                                setTimeout(() => {
+                                    chatDivDragImg.remove()
+                                }, 0)
+                            })
+
+                            chatDiv.addEventListener("drag", (e) => {
+                                channelDragLocations.forEach((dLocation) => {
+                                    const dLocationBoundingBox = dLocation.getBoundingClientRect()
+                                    const xValid = e.clientX >= dLocationBoundingBox.left - 16 && e.clientX <= dLocationBoundingBox.right + 16
+                                    const Ydist = Math.abs(e.clientY - dLocationBoundingBox.top)
+                                    dLocation.style.visibility = "hidden"
+
+                                    if (xValid && Ydist < 16) {
+                                        dLocation.style.visibility = "visible"
+                                    }
+                                })
+                            })
+
+                            chatDiv.addEventListener("dragend", (e) => {
+                                let target = null
+
+                                channelDragLocations.forEach((dLocation) => {
+                                    const dLocationBoundingBox = dLocation.getBoundingClientRect()
+                                    const xValid = e.clientX >= dLocationBoundingBox.left - 16 && e.clientX <= dLocationBoundingBox.right + 16
+                                    const Ydist = Math.abs(e.clientY - dLocationBoundingBox.top)
+                                    dLocation.style.visibility = "hidden"
+
+                                    if (xValid && Ydist < 16) {
+                                        target = dLocation
+                                    }
+                                })
+
+                                if (target) {
+                                    const categoryId = target.dataset["category"]
+                                    const categoryIdx = target.dataset["categoryIdx"]
+
+                                    request(JSON.stringify({"type": "moveChannel", "SID": currServer, "currCate": category["categoryID"], "currIdx": idx, "targetCate": parseInt(categoryId), "targetIdx": parseInt(categoryIdx)}))
+                                }
+                            })
                         }
 
                         if (currChat == chatID) {
@@ -1778,70 +1958,6 @@
                             moveChat(chatID)
                         })
 
-                        chatDiv.addEventListener("dragstart", (e) => {
-                            if (serverCache["Owner"] != currUID) {
-                                return
-                            }
-
-                            const chatDivBoundingBox = chatDiv.getBoundingClientRect()
-                            const chatDivDragImg = chatDiv.cloneNode(true)
-                            chatDivDragImg.style.position = "absolute";
-                            chatDivDragImg.style.left = "-99999px";
-                            chatDivDragImg.style.top = "0";
-                            chatDivDragImg.style.borderRadius = "8px";
-                            chatDivDragImg.style.backgroundColor = "var(--highlight)"
-                            chatDivDragImg.style.width = "50%"
-                            friendsListContent.appendChild(chatDivDragImg)
-
-                            e.dataTransfer.setDragImage(chatDivDragImg, (e.clientX - chatDivBoundingBox.left) / 2, e.clientY - chatDivBoundingBox.top)
-
-                            setTimeout(() => {
-                                chatDivDragImg.remove()
-                            }, 0)
-                        })
-
-                        chatDiv.addEventListener("drag", (e) => {
-                            if (serverCache["Owner"] != currUID) {
-                                return
-                            }
-
-                            channelDragLocations.forEach((dLocation) => {
-                                const dLocationBoundingBox = dLocation.getBoundingClientRect()
-                                const xValid = e.clientX >= dLocationBoundingBox.left - 16 && e.clientX <= dLocationBoundingBox.right + 16
-                                const Ydist = Math.abs(e.clientY - dLocationBoundingBox.top)
-                                dLocation.style.visibility = "hidden"
-
-                                if (xValid && Ydist < 16) {
-                                    dLocation.style.visibility = "visible"
-                                }
-                            })
-                        })
-
-                        chatDiv.addEventListener("dragend", (e) => {
-                            if (serverCache["Owner"] != currUID) {
-                                return
-                            }
-
-                            let target = null
-
-                            channelDragLocations.forEach((dLocation) => {
-                                const dLocationBoundingBox = dLocation.getBoundingClientRect()
-                                const xValid = e.clientX >= dLocationBoundingBox.left - 16 && e.clientX <= dLocationBoundingBox.right + 16
-                                const Ydist = Math.abs(e.clientY - dLocationBoundingBox.top)
-                                dLocation.style.visibility = "hidden"
-
-                                if (xValid && Ydist < 16) {
-                                    target = dLocation
-                                }
-                            })
-
-                            if (target) {
-                                const categoryId = target.dataset["category"]
-                                const categoryIdx = target.dataset["categoryIdx"]
-
-                                request(JSON.stringify({"type": "moveChannel", "SID": currServer, "currCate": category["categoryID"], "currIdx": idx, "targetCate": parseInt(categoryId), "targetIdx": parseInt(categoryIdx)}))
-                            }
-                        })
 
                         const readIndicator = document.createElement("div")
                         readIndicator.style.height = "50%"
@@ -3436,18 +3552,8 @@
                         serverUsrListTransferOwnership.disabled = true
                     }
 
+                    moveRClickMenuToCursorPos(targetRClickMenu, e)
                     targetRClickMenu.style.visibility = "visible"
-                    if (e.pageX + targetRClickMenu.offsetWidth > window.innerWidth) {
-                        targetRClickMenu.style.left = e.pageX - targetRClickMenu.offsetWidth + "px"
-                    } else {
-                        targetRClickMenu.style.left = e.pageX + "px"
-                    }
-
-                    if (e.pageY + targetRClickMenu.offsetHeight > window.innerHeight) {
-                        targetRClickMenu.style.top = e.pageY - targetRClickMenu.offsetHeight + "px"
-                    } else {
-                        targetRClickMenu.style.top = e.pageY + "px"
-                    }
                     usrListRClickMenuUsr = uid
                     serverUsrListRClickMenuUsr = uid
                 })
@@ -3501,10 +3607,15 @@
                 leaveGc.style.cursor = "pointer"
 
                 leaveGc.addEventListener("click", () => {
-                    request(JSON.stringify({
-                        "type": "leaveGc",
-                        "CID": currChat
-                    }))
+                    openConfirmPopup("Leave GC?", "Are you sure you want to leave " + chatCache["Name"] + "?").then((r) => {
+                        if (r) {
+                            request(JSON.stringify({
+                                "type": "leaveGc",
+                                "CID": currChat
+                            }))
+                        }
+                    })
+
                 })
 
                 userList2.push(addUsr)
@@ -4210,18 +4321,8 @@
 
             e.preventDefault()
 
+            moveRClickMenuToCursorPos(createCategoryRClickMenu, e)
             createCategoryRClickMenu.style.visibility = "visible"
-            if (e.pageX + createCategoryRClickMenu.offsetWidth > window.innerWidth) {
-                createCategoryRClickMenu.style.left = e.pageX - createCategoryRClickMenu.offsetWidth + "px"
-            } else {
-                createCategoryRClickMenu.style.left = e.pageX + "px"
-            }
-
-            if (e.pageY + createCategoryRClickMenu.offsetHeight > window.innerHeight) {
-                createCategoryRClickMenu.style.top = e.pageY - createCategoryRClickMenu.offsetHeight + "px"
-            } else {
-                createCategoryRClickMenu.style.top = e.pageY + "px"
-            }
         })
 
         function openNewCategory() {
@@ -4274,10 +4375,15 @@
         serverSettingsLeave.addEventListener("click", (e) => {
             e.stopPropagation()
             serverSettingsFriendsList.style.visibility = "hidden"
-            request(JSON.stringify({
-                "type": "leaveServer",
-                "SID": currServer
-            }))
+
+            openConfirmPopup("Leave Server?", "Are you sure you want to leave " + serverCache["Name"] + "?").then((r) => {
+                if (r) {
+                    request(JSON.stringify({
+                        "type": "leaveServer",
+                        "SID": currServer
+                    }))
+                }
+            })
         })
     </script>
 
@@ -4785,6 +4891,33 @@
                     }
                 })
             })
+    </script>
+    <script>
+        // Channel Settings
+        function openChannelSettings() {
+            channelSettingsOverviewName.value = channelRClickMenuChannel["name"]
+            channelSettingsWrapper.style.visibility = "visible"
+            channelSettingsWrapper.style.opacity = "1"
+        }
+
+        function closeChannelSettings() {
+            channelSettingsWrapper.style.opacity = "0"
+
+            setTimeout(() => {
+                channelSettingsWrapper.style.visibility = "hidden"
+            }, 250);
+        }
+
+        channelSettingsWrapper.addEventListener("click", closeChannelSettings)
+        channelSettings.addEventListener("click", (e) => e.stopPropagation())
+        channelEdit.addEventListener("mousedown", openChannelSettings)
+        channelDelete.addEventListener("mousedown", (e) => {
+            openConfirmPopup("Delete Channel?", "Are you sure you want to delete " + channelRClickMenuChannel["name"] + "?").then((r) => {
+                if (r) {
+                    openPopup("Oops...", "Too bad!")
+                }
+            })
+        })
     </script>
     <script>
         // Send msg
