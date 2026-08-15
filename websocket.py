@@ -92,7 +92,12 @@ class WS():
             "transferOwnershipGc": self.transferOwnershipGc,
             "transferOwnershipServer": self.transferOwnershipServer,
             "moveChannel": self.moveChannel,
-            "moveCategory": self.moveCategory
+            "moveCategory": self.moveCategory,
+            "editChannelInfo": self.editChannelInfo,
+            "deleteChannel": self.deleteChannel,
+            "editCategoryInfo": self.editCategoryInfo,
+            "deleteCategory": self.deleteCategory,
+            "moveServerIcon": self.moveServerIcon
         }
 
     def isValidToken(self, authToken: str | None, username=None):
@@ -1981,6 +1986,192 @@ class WS():
 
         await self.wsBroadcastEncrypted(targetWS, orjson.dumps({"type": "serverContentUpdate", "SID": server["SID"], "categories": server["Categories"]}))
 
+    async def editChannelInfo(self, ws, decryptedBody, authToken, trackerId):
+        if not self.checkFields(decryptedBody, ["CID", "name"]):
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "editChannelInfoFailed"}), trackerId)
+            return
+
+        chat = self.getChatFromCID(decryptedBody["CID"])
+
+        if chat is None:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "editChannelInfoFailed"}), trackerId)
+            return
+
+        server = self.getServerFromSID(chat["Server"])
+        selfUid = self.getUserIdFromAuthToken(authToken)
+
+        if server is None or selfUid != server["Owner"]:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "editChannelInfoFailed"}), trackerId)
+            return
+
+        newName = decryptedBody["name"].strip()
+        if len(newName) == 0 or len(newName) > 100:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "editChannelInfoFailed"}), trackerId)
+            return
+
+        chat["Name"] = newName
+
+        await self.wsSendEncrypted(ws, orjson.dumps({"type": "editChannelInfoSuccess"}), trackerId)
+
+        targetWS = []
+        for ws2 in self.WS_CLIENTS:
+            wsUID = getattr(ws2, "UID", None)
+            targetInfo = self.getUserInfoFromUserId(wsUID)
+
+            if wsUID is not None and targetInfo is not None and server["SID"] in targetInfo["Servers"]:
+                targetWS.append(ws2)
+
+        await self.wsBroadcastEncrypted(targetWS, orjson.dumps({"type": "chatNameUpdate", "CID": chat["CID"], "name": chat["Name"]}))
+
+    async def deleteChannel(self, ws, decryptedBody, authToken, trackerId):
+        if not self.checkFields(decryptedBody, ["CID"]):
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "deleteChannelFailed"}), trackerId)
+            return
+
+        chat = self.getChatFromCID(decryptedBody["CID"])
+
+        if chat is None:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "deleteChannelFailed"}), trackerId)
+            return
+
+        server = self.getServerFromSID(chat["Server"])
+        selfUid = self.getUserIdFromAuthToken(authToken)
+
+        if server is None or selfUid != server["Owner"]:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "deleteChannelFailed"}), trackerId)
+            return
+
+        self.delChat(chat)
+
+        if decryptedBody["CID"] == server["AnnouncementChat"]:
+            server["AnnouncementChat"] = -1
+
+        done = False
+        for cate in server["Categories"]:
+            for cht in cate["Chats"]:
+                if cht == decryptedBody["CID"]:
+                    cate["Chats"].remove(cht)
+                    done = True
+                    break
+            if done:
+                break
+
+        await self.wsSendEncrypted(ws, orjson.dumps({"type": "deleteChannelSuccess"}), trackerId)
+
+        targetWS = []
+        for ws2 in self.WS_CLIENTS:
+            wsUID = getattr(ws2, "UID", None)
+            targetInfo = self.getUserInfoFromUserId(wsUID)
+
+            if wsUID is not None and targetInfo is not None and server["SID"] in targetInfo["Servers"]:
+                targetWS.append(ws2)
+
+        await self.wsBroadcastEncrypted(targetWS, orjson.dumps({"type": "serverContentUpdate", "SID": server["SID"], "categories": server["Categories"], "newAnnouncementChat": server["AnnouncementChat"]}))
+
+    async def editCategoryInfo(self, ws, decryptedBody, authToken, trackerId):
+        if not self.checkFields(decryptedBody, ["SID", "categoryID", "name"]):
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "editCategoryInfoFailed"}), trackerId)
+            return
+
+        server = self.getServerFromSID(decryptedBody["SID"])
+        selfUid = self.getUserIdFromAuthToken(authToken)
+
+        if server is None or selfUid != server["Owner"]:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "editCategoryInfoFailed"}), trackerId)
+            return
+
+        newName = decryptedBody["name"].strip()
+        if len(newName) == 0 or len(newName) > 100:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "editCategoryInfoFailed"}), trackerId)
+            return
+
+        for cate in server["Categories"]:
+            if cate["categoryID"] == decryptedBody["categoryID"]:
+                cate["name"] = newName
+                break
+
+        await self.wsSendEncrypted(ws, orjson.dumps({"type": "editCategoryInfoSuccess"}), trackerId)
+
+        targetWS = []
+        for ws2 in self.WS_CLIENTS:
+            wsUID = getattr(ws2, "UID", None)
+            targetInfo = self.getUserInfoFromUserId(wsUID)
+
+            if wsUID is not None and targetInfo is not None and server["SID"] in targetInfo["Servers"]:
+                targetWS.append(ws2)
+
+        await self.wsBroadcastEncrypted(targetWS, orjson.dumps({"type": "serverContentUpdate", "SID": server["SID"], "categories": server["Categories"]}))
+
+    async def deleteCategory(self, ws, decryptedBody, authToken, trackerId):
+        if not self.checkFields(decryptedBody, ["SID", "categoryID"]):
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "deleteCategoryFailed"}), trackerId)
+            return
+
+        server = self.getServerFromSID(decryptedBody["SID"])
+        selfUid = self.getUserIdFromAuthToken(authToken)
+
+        if server is None or selfUid != server["Owner"]:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "deleteCategoryFailed"}), trackerId)
+            return
+
+        for cate in server["Categories"]:
+            if cate["categoryID"] == decryptedBody["categoryID"]:
+                for cht in cate["Chats"]:
+                    if cht == server["AnnouncementChat"]:
+                        server["AnnouncementChat"] = -1
+                    chat = self.getChatFromCID(cht)
+
+                    if chat:
+                        self.delChat(chat)
+
+                cate["name"] = "[deleted]"
+                cate["Chats"] = []
+                cate["deleted"] = True
+                break
+
+        await self.wsSendEncrypted(ws, orjson.dumps({"type": "deleteCategorySuccess"}), trackerId)
+
+        targetWS = []
+        for ws2 in self.WS_CLIENTS:
+            wsUID = getattr(ws2, "UID", None)
+            targetInfo = self.getUserInfoFromUserId(wsUID)
+
+            if wsUID is not None and targetInfo is not None and server["SID"] in targetInfo["Servers"]:
+                targetWS.append(ws2)
+
+        await self.wsBroadcastEncrypted(targetWS, orjson.dumps({"type": "serverContentUpdate", "SID": server["SID"], "categories": server["Categories"], "newAnnouncementChat": server["AnnouncementChat"]}))
+
+    async def moveServerIcon(self, ws, decryptedBody, authToken, trackerId):
+        if not self.checkFields(decryptedBody, ["currInd", "targetInd"]):
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "moveServerIconFailed"}), trackerId)
+            return
+
+        selfInfo = self.getUserInfoFromToken(authToken)
+
+        if selfInfo is None:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "moveServerIconFailed"}), trackerId)
+            return
+
+        currIcon: dict | None = None
+        try:
+            currIcon = selfInfo["Servers"].pop(decryptedBody["currInd"])
+        except IndexError:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "moveServerIconFailed"}), trackerId)
+            return
+
+        if currIcon is None:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "moveServerIconFailed"}), trackerId)
+            return
+
+        targetInd = decryptedBody["targetInd"]
+
+        if decryptedBody["currInd"] < targetInd:
+            targetInd -= 1
+
+        selfInfo["Servers"].insert(targetInd, currIcon)
+
+        await self.wsSendEncrypted(ws, orjson.dumps({"type": "updateServers", "servers": selfInfo["Servers"]}), trackerId)
+
     async def wsHandler(self, ws: ServerConnection):
         self.WS_CLIENTS.add(ws)
 
@@ -2123,6 +2314,7 @@ class WS():
                             await self.webRequests[reqType](ws, decryptedBody, authToken, trackerId)
                         else:
                             logging.warning("Unknown request type %s!", reqType)
+                            await self.wsSendEncrypted(ws, orjson.dumps({"type": "unknownRequest"}), trackerId)
                     else:
                         break
         except:

@@ -11,7 +11,7 @@
         <title>Open-LAN</title>
     </head>
     <body>
-        <div id="serverList"></div>
+        <div id="serverList" class="noScrollbar"></div>
         <div id="msgBoxHeader">
             <img id="ChatIcon" src="Media/LogoSquare.png">
             <p class="font" id="ChatName">The Void</p>
@@ -220,19 +220,39 @@
         </div>
 
         <div id="channelSettingsWrapper" class="overlay">
-            <div id="channelSettings">
-                <div id="channelSettingsLeft">
-                    <button class="font white" disabled>Overview</button>
+            <div id="channelSettings" class="genericSettings">
+                <div id="channelSettingsLeft" class="genericSettingsLeft">
+                    <button class="genericSettingsLeftItem font white" disabled>Overview</button>
                 </div>
-                <div id="channelSettingsOverview">
-                    <h1 class="font white center" id="channelSettingsOverviewHeading">Overview</h1>
-                    <input type="text" maxlength="100" id="channelSettingsOverviewName" placeholder="channel name..." class="font white">
+                <div id="channelSettingsOverview" class="genericSettingsView">
+                    <h1 class="genericSettingsHeading font white center">Overview</h1>
+                    <input type="text" maxlength="100" id="channelSettingsOverviewName" class="genericSettingsTextInput font white" placeholder="channel name...">
                 </div>
 
-                <div id="channelSettingsUnsaved">
-                    <p class="font white" id="channelSettingsUnsavedTxt">You have unsaved changed!</p>
-                    <button class="font" id="channelSettingsUnsavedUndo">undo</button>
-                    <button class="font white" id="channelSettingsUnsavedSave">save</button>
+                <div id="channelSettingsUnsaved" class="genericSettingsUnsaved">
+                    <img class="genericSettingsUnsavedIcon" src="Media/add.png">
+                    <p class="genericSettingsUnsavedTxt font white">You have unsaved changes!</p>
+                    <button class="genericSettingsUnsavedUndo font white" id="channelSettingsUnsavedUndo">undo</button>
+                    <button class="genericSettingsUnsavedSave font" id="channelSettingsUnsavedSave">save</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="categorySettingsWrapper" class="overlay">
+            <div id="categorySettings" class="genericSettings">
+                <div id="categorySettingsLeft" class="genericSettingsLeft">
+                    <button class="genericSettingsLeftItem font white" disabled>Overview</button>
+                </div>
+                <div id="categorySettingsOverview" class="genericSettingsView">
+                    <h1 class="genericSettingsHeading font white center">Overview</h1>
+                    <input type="text" maxlength="100" id="categorySettingsOverviewName" class="genericSettingsTextInput font white" placeholder="category name...">
+                </div>
+
+                <div id="categorySettingsUnsaved" class="genericSettingsUnsaved">
+                    <img class="genericSettingsUnsavedIcon" src="Media/add.png">
+                    <p class="genericSettingsUnsavedTxt font white">You have unsaved changes!</p>
+                    <button class="genericSettingsUnsavedUndo font white" id="categorySettingsUnsavedUndo">undo</button>
+                    <button class="genericSettingsUnsavedSave font" id="categorySettingsUnsavedSave">save</button>
                 </div>
             </div>
         </div>
@@ -341,6 +361,11 @@
         <div id="channelRClickMenu" class="rClickMenu">
             <button id="channelEdit" class="rClickMenuOption font white">edit channel</button>
             <button id="channelDelete" class="rClickMenuOption font white">delete channel</button>
+        </div>
+
+        <div id="categoryRClickMenu" class="rClickMenu">
+            <button id="categoryEdit" class="rClickMenuOption font white">edit category</button>
+            <button id="categoryDelete" class="rClickMenuOption font white">delete category</button>
         </div>
 
         <div id="flashbang"></div>
@@ -457,6 +482,18 @@
         const channelSettingsLeft = document.getElementById("channelSettingsLeft")
         const channelSettingsOverview = document.getElementById("channelSettingsOverview")
         const channelSettingsOverviewName = document.getElementById("channelSettingsOverviewName")
+        const channelSettingsUnsaved = document.getElementById("channelSettingsUnsaved")
+        const channelSettingsUnsavedUndo = document.getElementById("channelSettingsUnsavedUndo")
+        const channelSettingsUnsavedSave = document.getElementById("channelSettingsUnsavedSave")
+
+        const categorySettingsWrapper = document.getElementById("categorySettingsWrapper")
+        const categorySettings = document.getElementById("categorySettings")
+        const categorySettingsLeft = document.getElementById("categorySettingsLeft")
+        const categorySettingsOverview = document.getElementById("categorySettingsOverview")
+        const categorySettingsOverviewName = document.getElementById("categorySettingsOverviewName")
+        const categorySettingsUnsaved = document.getElementById("categorySettingsUnsaved")
+        const categorySettingsUnsavedUndo = document.getElementById("categorySettingsUnsavedUndo")
+        const categorySettingsUnsavedSave = document.getElementById("categorySettingsUnsavedSave")
 
         const leavingWrapper = document.getElementById("leavingWrapper")
         const leavingUrl = document.getElementById("leavingUrl")
@@ -544,6 +581,10 @@
         const channelRClickMenu = document.getElementById("channelRClickMenu")
         const channelEdit = document.getElementById("channelEdit")
         const channelDelete = document.getElementById("channelDelete")
+
+        const categoryRClickMenu = document.getElementById("categoryRClickMenu")
+        const categoryEdit = document.getElementById("categoryEdit")
+        const categoryDelete = document.getElementById("categoryDelete")
 
         const serverUsrListRClickMenu = document.getElementById("serverUsrListRClickMenu")
         const serverUsrListProfile = document.getElementById("serverUsrListProfile")
@@ -1257,6 +1298,7 @@
         var usrListRClickMenuUsr = null
         var serverUsrListRClickMenuUsr = null
         var channelRClickMenuChannel = null
+        var categoryRClickMenuCategory = null
         var lastRClickMenuClose = 0
 
         var selected = null
@@ -1318,6 +1360,12 @@
             if (channelRClickMenu.style.visibility == "visible") {
                 channelRClickMenu.style.visibility = "hidden"
                 channelRClickMenuChannel = null
+                lastRClickMenuClose = Date.now()
+            }
+
+            if (categoryRClickMenu.style.visibility == "visible") {
+                categoryRClickMenu.style.visibility = "hidden"
+                categoryRClickMenuChannel = null
                 lastRClickMenuClose = Date.now()
             }
         })
@@ -1400,14 +1448,24 @@
         })
 
         usrListTransferOwnership.addEventListener("mousedown", () => {
+            const targetUsr = serverUsrListRClickMenuUsr
             if (usrListRClickMenu && usrListRClickMenuUsr != null && usrListRClickMenuUsr != currUID && currUID == chatCache["Owner"]) {
-                request(JSON.stringify({"type": "transferOwnershipGc", "CID": currChat, "UID": usrListRClickMenuUsr}))
+                openConfirmPopup("Transfer Ownership", "Are you sure you want to transfer ownership of " + chatCache["Name"]).then((r) => {
+                    if (r) {
+                        request(JSON.stringify({"type": "transferOwnershipGc", "CID": currChat, "UID": targetUsr}))
+                    }
+                })
             }
         })
 
         serverUsrListTransferOwnership.addEventListener("mousedown", () => {
+            const targetUsr = serverUsrListRClickMenuUsr
             if (serverUsrListRClickMenu && serverUsrListRClickMenuUsr != null && serverUsrListRClickMenuUsr != currUID && currUID == serverCache["Owner"]) {
-                request(JSON.stringify({"type": "transferOwnershipServer", "SID": currServer, "UID": serverUsrListRClickMenuUsr}))
+                openConfirmPopup("Transfer Ownership", "Are you sure you want to transfer ownership of " + serverCache["Name"]).then((r) => {
+                    if (r) {
+                        request(JSON.stringify({"type": "transferOwnershipServer", "SID": currServer, "UID": targetUsr}))
+                    }
+                })
             }
         })
 
@@ -1717,6 +1775,10 @@
                 for (let cIdx = 0; cIdx < serverCache["Categories"].length; cIdx++) {
                     const category = serverCache["Categories"][cIdx]
 
+                    if (category["deleted"]) {
+                        continue
+                    }
+
                     const categoryDropLocation = newCategoryDroplocation(cIdx)
                     categoryDragLocations.push(categoryDropLocation)
 
@@ -1732,7 +1794,70 @@
 
                     if (serverCache["Owner"] == currUID) {
                         categoryDiv.draggable = true
+
+                        categoryDiv.addEventListener("dragstart", (e) => {
+                            const categoryDivBoundingBox = categoryDiv.getBoundingClientRect()
+                            const categoryDivDragImg = categoryDiv.cloneNode(true)
+                            categoryDivDragImg.style.position = "absolute";
+                            categoryDivDragImg.style.left = "-99999px";
+                            categoryDivDragImg.style.top = "0";
+                            categoryDivDragImg.style.borderRadius = "8px";
+                            categoryDivDragImg.style.backgroundColor = "var(--highlight)"
+                            categoryDivDragImg.style.width = "60%"
+                            friendsListContent.appendChild(categoryDivDragImg)
+
+                            e.dataTransfer.setDragImage(categoryDivDragImg, (e.clientX - categoryDivBoundingBox.left) / 2, e.clientY - categoryDivBoundingBox.top)
+
+                            setTimeout(() => {
+                                categoryDivDragImg.remove()
+                            }, 0)
+                        })
+
+                        categoryDiv.addEventListener("drag", (e) => {
+                            categoryDragLocations.forEach((dLocation) => {
+                                const dLocationBoundingBox = dLocation.getBoundingClientRect()
+                                const xValid = e.clientX >= dLocationBoundingBox.left - 16 && e.clientX <= dLocationBoundingBox.right + 16
+                                const Ydist = Math.abs(e.clientY - dLocationBoundingBox.top)
+                                dLocation.style.visibility = "hidden"
+
+                                if (xValid && Ydist < 16) {
+                                    dLocation.style.visibility = "visible"
+                                }
+                            })
+                        })
+
+                        categoryDiv.addEventListener("dragend", (e) => {
+                            let target = null
+
+                            categoryDragLocations.forEach((dLocation) => {
+                                const dLocationBoundingBox = dLocation.getBoundingClientRect()
+                                const xValid = e.clientX >= dLocationBoundingBox.left - 16 && e.clientX <= dLocationBoundingBox.right + 16
+                                const Ydist = Math.abs(e.clientY - dLocationBoundingBox.top)
+                                dLocation.style.visibility = "hidden"
+
+                                if (xValid && Ydist < 16) {
+                                    target = dLocation
+                                }
+                            })
+
+                            if (target) {
+                                const categoryIdx = target.dataset["category"]
+                                request(JSON.stringify({"type": "moveCategory", "SID": currServer, "currCate": cIdx, "targetCate": parseInt(categoryIdx)}))
+                            }
+                        })
                     }
+
+                    categoryDiv.addEventListener("contextmenu", (e) => {
+                        if (Date.now() - lastRClickMenuClose < 10) {
+                            return
+                        }
+
+                        e.preventDefault()
+
+                        moveRClickMenuToCursorPos(categoryRClickMenu, e)
+                        categoryRClickMenuCategory = category
+                        categoryRClickMenu.style.visibility = "visible"
+                    })
 
                     categoryDiv.addEventListener("click", () => {
                         const categoryIndex = hiddenCategories.indexOf(currServer + "_" + category["categoryID"])
@@ -1745,68 +1870,6 @@
                         setChatList()
                     })
 
-                    categoryDiv.addEventListener("dragstart", (e) => {
-                        if (serverCache["Owner"] != currUID) {
-                            return
-                        }
-
-                        const categoryDivBoundingBox = categoryDiv.getBoundingClientRect()
-                        const categoryDivDragImg = categoryDiv.cloneNode(true)
-                        categoryDivDragImg.style.position = "absolute";
-                        categoryDivDragImg.style.left = "-99999px";
-                        categoryDivDragImg.style.top = "0";
-                        categoryDivDragImg.style.borderRadius = "8px";
-                        categoryDivDragImg.style.backgroundColor = "var(--highlight)"
-                        categoryDivDragImg.style.width = "60%"
-                        friendsListContent.appendChild(categoryDivDragImg)
-
-                        e.dataTransfer.setDragImage(categoryDivDragImg, (e.clientX - categoryDivBoundingBox.left) / 2, e.clientY - categoryDivBoundingBox.top)
-
-                        setTimeout(() => {
-                            categoryDivDragImg.remove()
-                        }, 0)
-                    })
-
-                    categoryDiv.addEventListener("drag", (e) => {
-                        if (serverCache["Owner"] != currUID) {
-                            return
-                        }
-
-                        categoryDragLocations.forEach((dLocation) => {
-                            const dLocationBoundingBox = dLocation.getBoundingClientRect()
-                            const xValid = e.clientX >= dLocationBoundingBox.left - 16 && e.clientX <= dLocationBoundingBox.right + 16
-                            const Ydist = Math.abs(e.clientY - dLocationBoundingBox.top)
-                            dLocation.style.visibility = "hidden"
-
-                            if (xValid && Ydist < 16) {
-                                dLocation.style.visibility = "visible"
-                            }
-                        })
-                    })
-
-                    categoryDiv.addEventListener("dragend", (e) => {
-                        if (serverCache["Owner"] != currUID) {
-                            return
-                        }
-
-                        let target = null
-
-                        categoryDragLocations.forEach((dLocation) => {
-                            const dLocationBoundingBox = dLocation.getBoundingClientRect()
-                            const xValid = e.clientX >= dLocationBoundingBox.left - 16 && e.clientX <= dLocationBoundingBox.right + 16
-                            const Ydist = Math.abs(e.clientY - dLocationBoundingBox.top)
-                            dLocation.style.visibility = "hidden"
-
-                            if (xValid && Ydist < 16) {
-                                target = dLocation
-                            }
-                        })
-
-                        if (target) {
-                            const categoryIdx = target.dataset["category"]
-                            request(JSON.stringify({"type": "moveCategory", "SID": currServer, "currCate": cIdx, "targetCate": parseInt(categoryIdx)}))
-                        }
-                    })
 
 
                     const categoryHidden = hiddenCategories.includes(currServer + "_" + category["categoryID"])
@@ -2173,15 +2236,32 @@
             settingChatList = false
         }
 
+        function newServerListSeperator(iconInd) {
+            const sep = document.createElement("hr")
+            sep.style.width = "calc(100% - 8px)"
+            sep.style.height = "4px"
+            sep.style.margin = "2px"
+            sep.style.backgroundColor = "var(--acc4)"
+            sep.style.border = "none"
+            sep.style.borderRadius = "9999px"
+            sep.style.visibility = "hidden"
+            sep.dataset.iconInd = iconInd
+            return sep
+        }
+
         var servers = []
+        var serverListSeperators = []
         const ServerMetaCache = []
         async function setServerList() {
+            serverListSeperators = []
+
             const dmIcon = document.createElement("img")
+            dmIcon.style.marginTop = "3px"
             dmIcon.classList = "serverIcon"
             await waitForImg(dmIcon, "Media/LogoSquare.png")
 
             if (currServer == -1) {
-                dmIcon.style.border = "4px solid var(--highlight)"
+                dmIcon.style.border = "3px solid var(--highlight)"
             }
 
             dmIcon.addEventListener("click", () => {
@@ -2208,19 +2288,86 @@
                     ServerMetaCache[SID.toString()] = serverMeta
                 }
 
+                const seperator = newServerListSeperator(ind)
+                serverList2.push(seperator)
+                serverListSeperators.push(seperator)
+
                 const serverIcon = document.createElement("img")
                 serverIcon.classList = "serverIcon"
                 await waitForImg(serverIcon, serverMeta["icon"])
                 if (SID == currServer) {
-                    serverIcon.style.border = "4px solid var(--highlight)"
+                    serverIcon.style.border = "3px solid var(--highlight)"
                 }
 
                 serverIcon.addEventListener("click", () => {
                     moveServer(SID)
                 })
 
+                serverIcon.addEventListener("dragstart", (e) => {
+                    const serverIconBoundingBox = serverIcon.getBoundingClientRect()
+                    const serverIconDragImg = serverIcon.cloneNode(true)
+                    serverIconDragImg.style.position = "relative"
+                    serverIconDragImg.style.width = "75%"
+                    serverIconDragImg.style.opacity = "0.01"
+                    serverList.appendChild(serverIconDragImg)
+
+                    e.dataTransfer.setDragImage(serverIconDragImg, (e.clientX - serverIconBoundingBox.left) / 2, e.clientY - serverIconBoundingBox.top)
+
+                    setTimeout(() => {
+                        serverIconDragImg.remove()
+                    }, 0)
+                })
+
+                serverIcon.addEventListener("drag", (e) => {
+                    serverListSeperators.forEach((dLocation) => {
+                        const dLocationBoundingBox = dLocation.getBoundingClientRect()
+                        const xValid = e.clientX >= dLocationBoundingBox.left - 16 && e.clientX <= dLocationBoundingBox.right + 16
+                        const Ydist = Math.abs(e.clientY - dLocationBoundingBox.top)
+                        dLocation.style.visibility = "hidden"
+
+                        if (xValid && Ydist < 16) {
+                            dLocation.style.visibility = "visible"
+                        }
+                    })
+                })
+
+                serverIcon.addEventListener("dragend", (e) => {
+                    let target = null
+
+                    serverListSeperators.forEach((dLocation) => {
+                        const dLocationBoundingBox = dLocation.getBoundingClientRect()
+                        const xValid = e.clientX >= dLocationBoundingBox.left - 16 && e.clientX <= dLocationBoundingBox.right + 16
+                        const Ydist = Math.abs(e.clientY - dLocationBoundingBox.top)
+                        dLocation.style.visibility = "hidden"
+
+                        if (xValid && Ydist < 16) {
+                            target = dLocation
+                        }
+                    })
+
+                    if (target) {
+                        const targetInd = target.dataset.iconInd
+                        request(JSON.stringify({
+                            "type": "moveServerIcon",
+                            "currInd": ind,
+                            "targetInd": parseInt(targetInd)
+                        }))
+                    }
+                })
+
                 serverList2.push(serverIcon)
+
+                if (ind == servers.length - 1) {
+                    const seperator2 = newServerListSeperator(ind + 1)
+                    serverList2.push(seperator2)
+                    serverListSeperators.push(seperator2)
+                }
             }
+
+            const seperator3 = document.createElement("hr")
+            seperator3.style.width = "calc(100% - 16px)"
+            seperator3.style.border = "2px solid var(--acc)"
+            serverList2.push(seperator3)
 
             const newServer = document.createElement("img")
             newServer.classList = "serverIcon"
@@ -3096,24 +3243,54 @@
                 targetInfo = await reqUsrInfo(message["TARGET"])
 
                 if (targetInfo) {
-                    msgP.innerHTML = "<b>" + sanitizeHTML(targetInfo["displayname"]) + "</b> changed the group name/icon"
+                    const targetNameE = document.createElement("b")
+                    targetNameE.textContent = targetInfo["displayname"]
+                    msgP.appendChild(targetNameE)
+                    msgP.append(" changed the group name/icon")
                 }
             } else if (message["TYPE"] == "addUsrToGc") {
                 targetInfo = await reqUsrInfo(message["TARGET"])
 
                 if (targetInfo) {
+                    const arrowE = document.createElement("span")
+                    arrowE.classList = "green"
+                    arrowE.textContent = "->"
+
+                    const targetNameE = document.createElement("b")
+                    targetNameE.textContent = targetInfo["displayname"]
+                    msgP.appendChild(arrowE)
+                    msgP.append(" ")
+                    msgP.appendChild(targetNameE)
+                    msgP.append(" added ")
+
                     if (message["TARGETS"].length == 1) {
-                        otherInfo = await reqUsrInfo(message["TARGETS"][0])
-                        msgP.innerHTML = "<span class='green'>-></span> <b>" + sanitizeHTML(targetInfo["displayname"]) + "</b> added <b>" + sanitizeHTML(otherInfo["displayname"]) + "</b> to this chat"
+                        const otherInfo = await reqUsrInfo(message["TARGETS"][0])
+                        const otherNameE = document.createElement("b")
+                        otherNameE.textContent = otherInfo["displayname"]
+                        msgP.appendChild(otherNameE)
                     } else {
-                        msgP.innerHTML = "<span class='green'>-></span> <b>" + sanitizeHTML(targetInfo["displayname"]) + "</b> added <b>" + message["TARGETS"].length + "</b> people to this chat"
+                        const numOthersE = document.createElement("b")
+                        numOthersE.textContent = message["TARGETS"].length
+                        msgP.appendChild(numOthersE)
+                        msgP.append(" people")
                     }
+
+                    msgP.append(" to this chat")
                 }
             } else if (message["TYPE"] == "usrLeaveGc") {
                 targetInfo = await reqUsrInfo(message["TARGET"])
 
                 if (targetInfo) {
-                    msgP.innerHTML = "<span class='red'><-</span> <b>" + sanitizeHTML(targetInfo["displayname"]) + "</b> left the chat"
+                    const arrowE = document.createElement("span")
+                    arrowE.classList = "red"
+                    arrowE.textContent = "<-"
+
+                    const targetNameE = document.createElement("b")
+                    targetNameE.textContent = targetInfo["displayname"]
+                    msgP.appendChild(arrowE)
+                    msgP.append(" ")
+                    msgP.appendChild(targetNameE)
+                    msgP.append(" left the chat")
                 }
             } else if (message["TYPE"] == "usrRemovedGc") {
                 infos = await reqMultiUsrInfo([message["TARGET"], message["TARGET2"]])
@@ -3121,7 +3298,22 @@
                 if (infos) {
                     owner = infos[0]
                     victim = infos[1]
-                    msgP.innerHTML = "<span class='red'><-</span> <b>" + sanitizeHTML(victim["displayname"]) + "</b> was removed by <b>" + sanitizeHTML(owner["displayname"]) + "</b>"
+
+                    const arrowE = document.createElement("span")
+                    arrowE.classList = "red"
+                    arrowE.textContent = "<-"
+
+                    const victimE = document.createElement("b")
+                    victimE.textContent = victim["displayname"]
+
+                    const ownerE = document.createElement("b")
+                    ownerE.textContent = owner["displayname"]
+
+                    msgP.appendChild(arrowE)
+                    msgP.append(" ")
+                    msgP.appendChild(victimE)
+                    msgP.append(" was removed by ")
+                    msgP.appendChild(ownerE)
                 }
             } else if (message["TYPE"] == "serverInvite") {
                 let serverMeta = null
@@ -3145,7 +3337,6 @@
                             inviteInvalid = !(await request(JSON.stringify({"type": "checkInviteValid", "inviteID": message["ID"]})))["isValid"]
                         }
                     }
-
 
                     const inviteFrame = document.createElement("div")
                     inviteFrame.style.width = "25vw"
@@ -3261,13 +3452,25 @@
                 targetInfo = await reqUsrInfo(message["TARGET"])
 
                 if (targetInfo) {
-                    msgP.innerHTML = "<span class='green'>-></span> <b>" + sanitizeHTML(targetInfo["displayname"]) + "</b> joined the chat!"
+                    const arrowE = document.createElement("span")
+                    arrowE.classList = "green"
+                    arrowE.textContent = "->"
+
+                    const targetNameE = document.createElement("b")
+                    targetNameE.textContent = targetInfo["displayname"]
+                    msgP.appendChild(arrowE)
+                    msgP.append(" ")
+                    msgP.appendChild(targetNameE)
+                    msgP.append(" joined the chat!")
                 }
             } else if (message["TYPE"] == "transferOwnership") {
                 targetInfo = await reqUsrInfo(message["TARGET"])
 
                 if (targetInfo) {
-                    msgP.innerHTML = "<b>" + sanitizeHTML(targetInfo["displayname"]) + "</b> is the new owner!"
+                    const targetNameE = document.createElement("b")
+                    targetNameE.textContent = targetInfo["displayname"]
+                    msgP.appendChild(targetNameE)
+                    msgP.append(" is the new owner!")
                 }
             }
 
@@ -3699,6 +3902,14 @@
 
             textEntryOverlay.style.visibility = "visible"
 
+            if (embeddedFiles.length > 0) {
+                embedList.style.visibility = "visible"
+            }
+
+            if (replyingMsgId != -1) {
+                replying.style.visibility = "visible"
+            }
+
             if (chat["messages"].length > 100) {
                 const len = chat["messages"].length
 
@@ -3813,6 +4024,8 @@
             userListCounter.textContent = ""
             userListContent.replaceChildren()
             textEntryOverlay.style.visibility = "hidden"
+            embedList.style.visibility = "hidden"
+            replying.style.visibility = "hidden"
 
             chatDiv.replaceChildren()
 
@@ -4385,6 +4598,10 @@
                 }
             })
         })
+
+        serverList.addEventListener("dragover", (e) => {
+            e.stopPropagation()
+        })
     </script>
 
     <script>
@@ -4626,7 +4843,7 @@
                                         respBody = JSON.parse(data)
                                         trackerId = respBody["trackerID"]
 
-                                        //console.log(respBody)
+                                        console.log(respBody)
 
                                         if (respBody["type"] == "auth_expired") {
                                             window.location.assign(protocol + "//" + domainURL + "/login.html?errT=Login%20Expired&errC=Your%20session%20has%20expired.%20Please%20try%20logging%20in%20again.")
@@ -4671,6 +4888,14 @@
                                             })
                                         }
 
+                                        if (respBody["type"] == "chatNameUpdate") {
+                                            if (chatMetaCache[respBody["CID"].toString()]) {
+                                                chatMetaCache[respBody["CID"].toString()]["name"] = respBody["name"]
+                                            }
+
+                                            setChatList()
+                                        }
+
                                         if (respBody["type"] == "serverOwnerUpdate") {
                                             if (currServer == respBody["SID"]) {
                                                 if (serverCache) {
@@ -4695,7 +4920,22 @@
                                             if (currServer == respBody["SID"]) {
                                                 if (serverCache) {
                                                     serverCache["Categories"] = respBody["categories"]
+
+                                                    if (respBody["newAnnouncementChat"]) {
+                                                        serverCache["AnnouncementChat"] = respBody["newAnnouncementChat"]
+                                                    }
+
+                                                    const currChatsInServer = []
+                                                    for (let i = 0; i < serverCache["Categories"].length; i++) {
+                                                        const cate = serverCache["Categories"][i];
+                                                        currChatsInServer.push(...cate["Chats"])
+                                                    }
+
+                                                    if (!currChatsInServer.includes(currChat)) {
+                                                        moveChat(-1)
+                                                    }
                                                 }
+
 
                                                 setChatList()
                                             }
@@ -4894,13 +5134,32 @@
     </script>
     <script>
         // Channel Settings
+        var origChannelName = ""
+        var editingChannelCID = -1
+        var unsaved = false
         function openChannelSettings() {
-            channelSettingsOverviewName.value = channelRClickMenuChannel["name"]
+            origChannelName = channelRClickMenuChannel["name"]
+            editingChannelCID = channelRClickMenuChannel["CID"]
+            unsaved = false
+
+            channelSettingsOverviewName.value = origChannelName
             channelSettingsWrapper.style.visibility = "visible"
             channelSettingsWrapper.style.opacity = "1"
         }
 
         function closeChannelSettings() {
+            if (unsaved) {
+                channelSettingsUnsaved.style.boxShadow = "red 0 0 16px"
+
+                setTimeout(() => {
+                    channelSettingsUnsaved.style.boxShadow = ""
+                }, 1000);
+
+                return
+            }
+
+            editingChannelCID = -1
+            origChannelName = ""
             channelSettingsWrapper.style.opacity = "0"
 
             setTimeout(() => {
@@ -4912,11 +5171,193 @@
         channelSettings.addEventListener("click", (e) => e.stopPropagation())
         channelEdit.addEventListener("mousedown", openChannelSettings)
         channelDelete.addEventListener("mousedown", (e) => {
+            let cid = channelRClickMenuChannel["CID"]
             openConfirmPopup("Delete Channel?", "Are you sure you want to delete " + channelRClickMenuChannel["name"] + "?").then((r) => {
                 if (r) {
-                    openPopup("Oops...", "Too bad!")
+                    request(JSON.stringify({
+                        "type": "deleteChannel",
+                        "CID": cid
+                    })).then((r) => {
+                        if (r["type"] != "deleteChannelSuccess") {
+                            openPopup("Error", "Failed to delete channel!")
+                        }
+                    })
                 }
             })
+        })
+
+        function hideChannelUnsaved() {
+            channelSettingsUnsaved.style.opacity = "0"
+            setTimeout(() => {
+                if (unsaved) {
+                    return
+                }
+
+                channelSettingsUnsaved.style.visibility = "hidden"
+            }, 250)
+        }
+
+        function showChannelUnsaved() {
+            channelSettingsUnsaved.style.visibility = "visible"
+            channelSettingsUnsaved.style.opacity = "1"
+        }
+
+        channelSettingsOverviewName.addEventListener("input", () => {
+            if (channelSettingsOverviewName.value == origChannelName) {
+                unsaved = false
+                hideChannelUnsaved()
+            } else {
+                unsaved = true
+                showChannelUnsaved()
+            }
+        })
+
+        channelSettingsUnsavedSave.addEventListener("click", () => {
+            const newChannelName = channelSettingsOverviewName.value.trim()
+
+            if (newChannelName.length == 0 || newChannelName.length > 100) {
+                channelSettingsOverviewName.style.border = "2px solid red"
+                channelSettingsOverviewName.scrollIntoView({"behavior": "smooth", "block": "center"})
+
+                setTimeout(() => {
+                    channelSettingsOverviewName.style.border = ""
+                }, 2500)
+
+                return
+            }
+
+            request(JSON.stringify({
+                "type": "editChannelInfo",
+                "CID": editingChannelCID,
+                "name": newChannelName
+            })).then((r) => {
+                if (r["type"] == "editChannelInfoSuccess") {
+                    unsaved = false
+                    hideChannelUnsaved()
+                } else {
+                    openPopup("Error", "Failed to save channel info!")
+                }
+            })
+        })
+
+        channelSettingsUnsavedUndo.addEventListener("click", () => {
+            channelSettingsOverviewName.value = origChannelName
+            unsaved = false
+            hideChannelUnsaved()
+        })
+
+        var origCategoryName = ""
+        var editingCategoryID = -1
+        var categoryUnsaved = false
+        function openCategorySettings() {
+            origCategoryName = categoryRClickMenuCategory["name"]
+            editingCategoryID = categoryRClickMenuCategory["categoryID"]
+            categoryUnsaved = false
+
+            categorySettingsOverviewName.value = origCategoryName
+            categorySettingsWrapper.style.visibility = "visible"
+            categorySettingsWrapper.style.opacity = "1"
+        }
+
+        function closeCategorySettings() {
+            if (categoryUnsaved) {
+                categorySettingsUnsaved.style.boxShadow = "red 0 0 16px"
+
+                setTimeout(() => {
+                    categorySettingsUnsaved.style.boxShadow = ""
+                }, 1000);
+
+                return
+            }
+
+            editingCategoryID = -1
+            origCategoryName = ""
+            categorySettingsWrapper.style.opacity = "0"
+
+            setTimeout(() => {
+                categorySettingsWrapper.style.visibility = "hidden"
+            }, 250);
+        }
+
+        categorySettingsWrapper.addEventListener("click", closeCategorySettings)
+        categorySettings.addEventListener("click", (e) => e.stopPropagation())
+        categoryEdit.addEventListener("mousedown", openCategorySettings)
+        categoryDelete.addEventListener("mousedown", (e) => {
+            let categoryID = categoryRClickMenuCategory["categoryID"]
+            openConfirmPopup("Delete Category?", "Are you sure you want to delete " + categoryRClickMenuCategory["name"] + " and ALL its chats?").then((r) => {
+                if (r) {
+                    request(JSON.stringify({
+                        "type": "deleteCategory",
+                        "SID": currServer,
+                        "categoryID": categoryID
+                    })).then((r) => {
+                        if (r["type"] != "deleteCategorySuccess") {
+                            openPopup("Error", "Failed to delete category!")
+                        }
+                    })
+                }
+            })
+        })
+
+        function hideCategoryUnsaved() {
+            categorySettingsUnsaved.style.opacity = "0"
+            setTimeout(() => {
+                if (categoryUnsaved) {
+                    return
+                }
+
+                categorySettingsUnsaved.style.visibility = "hidden"
+            }, 250)
+        }
+
+        function showCategoryUnsaved() {
+            categorySettingsUnsaved.style.visibility = "visible"
+            categorySettingsUnsaved.style.opacity = "1"
+        }
+
+        categorySettingsOverviewName.addEventListener("input", () => {
+            if (categorySettingsOverviewName.value == origCategoryName) {
+                categoryUnsaved = false
+                hideCategoryUnsaved()
+            } else {
+                categoryUnsaved = true
+                showCategoryUnsaved()
+            }
+        })
+
+        categorySettingsUnsavedSave.addEventListener("click", () => {
+            const newCategoryName = categorySettingsOverviewName.value.trim()
+
+            if (newCategoryName.length == 0 || newCategoryName.length > 100) {
+                categorySettingsOverviewName.style.border = "2px solid red"
+                categorySettingsOverviewName.scrollIntoView({"behavior": "smooth", "block": "center"})
+
+                setTimeout(() => {
+                    categorySettingsOverviewName.style.border = ""
+                }, 2500)
+
+                return
+            }
+
+            request(JSON.stringify({
+                "type": "editCategoryInfo",
+                "SID": currServer,
+                "categoryID": editingCategoryID,
+                "name": newCategoryName
+            })).then((r) => {
+                if (r["type"] == "editCategoryInfoSuccess") {
+                    categoryUnsaved = false
+                    hideCategoryUnsaved()
+                } else {
+                    openPopup("Error", "Failed to save category info!")
+                }
+            })
+        })
+
+        categorySettingsUnsavedUndo.addEventListener("click", () => {
+            categorySettingsOverviewName.value = origCategoryName
+            categoryUnsaved = false
+            hideCategoryUnsaved()
         })
     </script>
     <script>

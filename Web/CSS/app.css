@@ -1223,7 +1223,8 @@ footer > a {
     border: 2px solid var(--button-press);
 }
 
-#channelSettings {
+
+.genericSettings {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -1236,7 +1237,7 @@ footer > a {
     flex-direction: row;
 }
 
-#channelSettingsLeft {
+.genericSettingsLeft {
     width: 15%;
     height: 100%;
     flex: none;
@@ -1247,7 +1248,7 @@ footer > a {
     background-color: var(--acc);
 }
 
-#channelSettingsLeft > button {
+.genericSettingsLeftItem {
     margin-top: 8px;
     width: 95%;
     font-size: 1.5em;
@@ -1257,15 +1258,15 @@ footer > a {
     cursor: pointer;
 }
 
-#channelSettingsLeft > button:disabled {
+.genericSettingsLeftItem:disabled {
     background-color: rgba(255, 255, 255, 0.125);
 }
 
-#channelSettingsLeft > button:hover {
+.genericSettingsLeftItem:hover {
     background-color: rgba(255, 255, 255, 0.25);
 }
 
-#channelSettingsOverview {
+.genericSettingsView {
     width: 85%;
     height: 100%;
     flex: none;
@@ -1274,44 +1275,63 @@ footer > a {
     align-items: center;
 }
 
-#channelSettingsOverviewName {
+.genericSettingsTextInput {
     background-color: var(--acc3);
     border: none;
-    width: 50%;
+    width: 75%;
     font-size: 2em;
     outline: none;
 }
 
-#channelSettingsOverviewName::placeholder {
+.genericSettingsTextInput::placeholder {
     color: var(--placeholder);
 }
 
-#channelSettingsUnsaved {
+.genericSettingsUnsaved {
     position: fixed;
     left: 57.5%;
-    width: 75%;
+    width: 50%;
+    height: 5%;
     bottom: 2em;
     display: flex;
     flex-direction: row;
     transform: translateX(-50%);
     background-color: var(--acc2);
+    align-items: center;
+
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 250ms linear;
 }
 
-#channelSettingsUnsavedTxt {
-    margin: 0;
-}
-
-#channelSettingsUnsavedUndo {
-    background: none;
-    border: 2px solid var(--button);
-    color: var(--button);
+.genericSettingsUnsavedIcon {
     flex: none;
+    height: 100%;
 }
 
-#channelSettingsUnsavedSave {
+.genericSettingsUnsavedTxt {
+    margin: 0;
+    font-size: 1.25em;
+    flex-grow: 1;
+}
+
+.genericSettingsUnsavedUndo {
+    background: none;
+    border: none;
+    flex-shrink: 0;
+    text-decoration: underline;
+    cursor: pointer;
+    margin: .25em;
+    align-self: stretch;
+}
+
+.genericSettingsUnsavedSave {
     background-color: var(--button);
     border: none;
-    flex: none;
+    flex-shrink: 0;
+    cursor: pointer;
+    margin: .25em;
+    align-self: stretch;
 }
 
 #leaving {
@@ -2106,10 +2126,12 @@ footer > a {
 }
 
 .serverIcon {
-    width: calc(100% - 24px);
+    width: calc(100% - 12px);
     border-radius: 16px;
-    border: 4px solid var(--acc4);
-    margin: 8px;
+    border: 3px solid var(--acc4);
+    margin: 0;
+    margin-left: 6px;
+    margin-right: 6px;
     cursor: pointer;
 }
 
@@ -2142,6 +2164,15 @@ footer > a {
 
 ::-webkit-scrollbar-thumb:hover {
     background: #111;
+}
+
+.noScrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.noScrollbar::-webkit-scrollbar {
+    display: none;
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator {
