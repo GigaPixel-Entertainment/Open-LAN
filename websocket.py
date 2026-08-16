@@ -760,7 +760,16 @@ class WS():
             return
 
         pfp = decryptedBody["pfp"]
+
+        if len(pfp) > config.MAX_PFP_SIZE:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type":"updatePfpFailed"}), trackerId)
+            return
+
         pfpResized = self.resizePfp(pfp)
+
+        if len(pfpResized) > config.MAX_PFP_SIZE:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type":"updatePfpFailed"}), trackerId)
+            return
 
         if not self.setUserProperty(self.getUserIdFromAuthToken(authToken), "PFP", pfpResized):
             await self.wsSendEncrypted(ws, orjson.dumps({"type": "updatePfpFailed"}), trackerId)

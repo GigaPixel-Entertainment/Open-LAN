@@ -1650,18 +1650,17 @@
             }, 250);
 
             if (selected) {
-                currPFP.src = selected
-
                 request(JSON.stringify({
                     "type": "updatePfp",
                     "pfp": selected
                 })).then((res) => {
-                    if (res["type"] == "updatePfpFailed") {
-                        console.log("Failed to update pfp!")
+                    if (res["type"] == "updatePfpSuccess") {
+                        currPFP.src = selected
+                    } else {
+                        openPopup("Error", "Failed to update Pfp!")
                     }
+                    selected = null
                 })
-
-                selected = null
             }
         }
 
@@ -2219,12 +2218,11 @@
                         }
                     }
 
-                    if (cIdx == serverCache["Categories"].length - 1) {
-                        const categoryDropLocation = newCategoryDroplocation(cIdx + 1)
-                        categoryDragLocations.push(categoryDropLocation)
-                        serverChannels.push(categoryDropLocation)
-                    }
                 }
+
+                const categoryDropLocation = newCategoryDroplocation(serverCache["Categories"].length)
+                categoryDragLocations.push(categoryDropLocation)
+                serverChannels.push(categoryDropLocation)
 
                 friendsListNewGC.style.visibility = "hidden"
                 friendsListNewGC.style.position = "absolute"

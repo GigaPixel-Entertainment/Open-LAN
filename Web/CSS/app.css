@@ -368,10 +368,9 @@ footer > a {
     cursor: auto;
 }
 #serverSettingsFriendsList > input {
-    width: 95%;
+    width: calc(100% - 1em);
     height: 2em;
-    margin-top: .5em;
-    margin-bottom: .5em;
+    margin: .5em;
     background-color: var(--button);
     border: none;
     border-radius: 0;

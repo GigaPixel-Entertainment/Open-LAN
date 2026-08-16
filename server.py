@@ -36,7 +36,7 @@ import ssl
 
 from cryptography.fernet import Fernet
 
-from PIL import Image
+from PIL import Image, ImageSequence
 import msgpack
 
 import config
@@ -425,17 +425,26 @@ def isValidRedirectToken(redirectToken):
 
     return None
 
-def isValidGif(fileStream: BytesIO):
-    try:
-        img = Image.open(fileStream)
+def resizeGif(img: Image.Image, outputStream: BytesIO):
+    duration = img.info.get("duration", 100)
+    loop = img.info.get("loop", 0)
 
-        if img.format != "GIF":
-            return False
+    frames = []
+    for frame in ImageSequence.Iterator(img):
+        resized_frame = frame.convert('RGBA').resize((256, 256), Image.Resampling.LANCZOS)
+        frames.append(resized_frame)
 
-        img.verify()
-        return True
-    except:
-        return False
+    if frames:
+        frames[0].save(
+            outputStream,
+            save_all=True,
+            append_images=frames[1:],
+            optimize=True,
+            duration=duration,
+            loop=loop,
+            disposal=2,
+            format=img.format if img.format else "GIF"
+        )
 
 def resizePfpBytes(pfpBytes: bytes):
     pfpStream = BytesIO(pfpBytes)
@@ -445,9 +454,14 @@ def resizePfpBytes(pfpBytes: bytes):
 
     img = Image.open(pfpStream)
     imgFormat = img.format if img.format else "JPEG"
-    resized = img.resize((256, 256), Image.Resampling.LANCZOS)
+
     outputStream = BytesIO()
-    resized.save(outputStream, format=imgFormat)
+    if imgFormat == "GIF":
+        resizeGif(img, outputStream)
+    else:
+        resized = img.resize((256, 256), Image.Resampling.LANCZOS)
+        resized.save(outputStream, format=imgFormat)
+
     resizedBytes = outputStream.getvalue()
     resizedPfp = base64.b64encode(resizedBytes).decode("utf-8")
     return f"data:image/{imgFormat.lower()};base64,{resizedPfp}"
