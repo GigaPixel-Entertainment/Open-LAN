@@ -257,6 +257,36 @@
             </div>
         </div>
 
+        <div id="fullServerSettingsWrapper" class="overlay">
+            <div id="fullServerSettings" class="genericSettings">
+                <div id="fullServerSettingsLeft" class="genericSettingsLeft">
+                    <button class="genericSettingsLeftItem font white" disabled>Overview</button>
+                </div>
+                <div id="fullServerSettingsOverview" class="genericSettingsView">
+                    <h1 class="genericSettingsHeading font white center">Overview</h1>
+                    <div id="fullServerSettingsOverviewImgNameSection" class="genericSettingsSection">
+                        <div id="fullServerSettingsOverviewIcon">
+                            <img id="fullServerSettingsOverviewIconImg" src="Media/LogoSquare.png">
+                            <input id="fullServerSettingsOverviewIconFile" type="file">
+                            <div id="fullServerSettingsOverviewIconOverlay"></div>
+                        </div>
+                        <input type="text" maxlength="100" id="fullServerSettingsOverviewName" class="genericSettingsTextInput font white" placeholder="server name...">
+                    </div>
+                    <div id="fullServerSettingsOverviewAnnouncementChannelSection" class="genericSettingsSection jcCenter">
+                        <p id="fullServerSettingsOverviewAnnouncementChannelLabel" class="font white">Announcement Channel: </p>
+                        <select id="fullServerSettingsOverviewAnnouncementChannel" class="font"></select>
+                    </div>
+                </div>
+
+                <div id="fullServerSettingsUnsaved" class="genericSettingsUnsaved">
+                    <img class="genericSettingsUnsavedIcon" src="Media/add.png">
+                    <p class="genericSettingsUnsavedTxt font white">You have unsaved changes!</p>
+                    <button class="genericSettingsUnsavedUndo font white" id="fullServerSettingsUnsavedUndo">undo</button>
+                    <button class="genericSettingsUnsavedSave font" id="fullServerSettingsUnsavedSave">save</button>
+                </div>
+            </div>
+        </div>
+
         <div id="leavingWrapper" class="overlay">
             <div id="leaving">
                 <h1 class="font white" id="leavingHeading">Leaving Open-LAN</h1>
@@ -495,6 +525,21 @@
         const categorySettingsUnsavedUndo = document.getElementById("categorySettingsUnsavedUndo")
         const categorySettingsUnsavedSave = document.getElementById("categorySettingsUnsavedSave")
 
+        const fullServerSettingsWrapper = document.getElementById("fullServerSettingsWrapper")
+        const fullServerSettings = document.getElementById("fullServerSettings")
+        const fullServerSettingsLeft = document.getElementById("fullServerSettingsLeft")
+        const fullServerSettingsOverview = document.getElementById("fullServerSettingsOverview")
+        const fullServerSettingsOverviewIcon = document.getElementById("fullServerSettingsOverviewIcon")
+        const fullServerSettingsOverviewIconImg = document.getElementById("fullServerSettingsOverviewIconImg")
+        const fullServerSettingsOverviewIconFile = document.getElementById("fullServerSettingsOverviewIconFile")
+        const fullServerSettingsOverviewIconOverlay = document.getElementById("fullServerSettingsOverviewIconOverlay")
+        const fullServerSettingsOverviewName = document.getElementById("fullServerSettingsOverviewName")
+        const fullServerSettingsOverviewAnnouncementChannelSection = document.getElementById("fullServerSettingsOverviewAnnouncementChannelSection")
+        const fullServerSettingsOverviewAnnouncementChannel = document.getElementById("fullServerSettingsOverviewAnnouncementChannel")
+        const fullServerSettingsUnsaved = document.getElementById("fullServerSettingsUnsaved")
+        const fullServerSettingsUnsavedUndo = document.getElementById("fullServerSettingsUnsavedUndo")
+        const fullServerSettingsUnsavedSave = document.getElementById("fullServerSettingsUnsavedSave")
+
         const leavingWrapper = document.getElementById("leavingWrapper")
         const leavingUrl = document.getElementById("leavingUrl")
         const leavingCancel = document.getElementById("leavingCancel")
@@ -679,6 +724,7 @@
         async function reqUsrInfo(UID) {
             for (let index = 0; index < userInfoCache.length; index++) {
                 const userInfo = userInfoCache[index];
+
                 if (userInfo["UID"] == UID) {
                     return userInfo
                 }
@@ -698,8 +744,11 @@
         }
 
         async function reqMultiUsrInfo(UidList) {
-            const requiredUIDs = []
+            if (UidList.length == 0) {
+                return []
+            }
 
+            const requiredUIDs = []
             UidList.forEach((uid) => {
                 if (!requiredUIDs.includes(uid)) {
                     cached = false
@@ -734,6 +783,106 @@
             }
 
             return finalUserinfoList
+        }
+
+        async function reqChatMeta(CID) {
+            let chat = null
+
+            if (chatMetaCache[CID.toString()]) {
+                chat = chatMetaCache[CID.toString()]
+            } else {
+                chat = (await request(JSON.stringify({"type": "reqChatMeta", "CID": CID})))["chat"]
+                chatMetaCache[CID.toString()] = chat
+            }
+
+            return chat
+        }
+
+        async function reqMultiChatMeta(chatIds) {
+            if (chatIds.length == 0) {
+                return []
+            }
+
+            const requiredMetas = []
+            for (let CID = 0; CID < chatIds.length; CID++) {
+                const cid = chatIds[CID];
+
+                if (!chatMetaCache[cid.toString()]) {
+                    requiredMetas.push(cid)
+                }
+            }
+
+            if (requiredMetas.length > 0) {
+                const chatMetas = await request(JSON.stringify({"type": "reqChatMetas", "CIDs": requiredMetas}))
+
+                if (chatMetas["type"] != "reqChatMetasSuccess") {
+                    return
+                }
+
+                for (let chat = 0; chat < chatMetas["metas"].length; chat++) {
+                    const cht = chatMetas["metas"][chat];
+                    chatMetaCache[cht["CID"].toString()] = cht
+                }
+            }
+
+            const finalOutput = []
+
+            for (let chat = 0; chat < chatIds.length; chat++) {
+                const cid = chatIds[chat];
+                finalOutput.push(await reqChatMeta(cid))
+            }
+
+            return finalOutput
+        }
+
+        async function reqServerMeta(SID) {
+            let server = null
+
+            if (ServerMetaCache[SID.toString()]) {
+                server = ServerMetaCache[SID.toString()]
+            } else {
+                server = (await request(JSON.stringify({"type": "reqServerMeta", "SID": SID})))["server"]
+                ServerMetaCache[SID.toString()] = server
+            }
+
+            return server
+        }
+
+        async function reqMultiServerMeta(serverIds) {
+            if (serverIds.length == 0) {
+                return []
+            }
+
+            const requiredMetas = []
+            for (let SID = 0; SID < serverIds.length; SID++) {
+                const sid = serverIds[SID];
+
+                if (!ServerMetaCache[sid.toString()]) {
+                    requiredMetas.push(sid)
+                }
+            }
+
+            if (requiredMetas.length > 0) {
+                const serverMetas = await request(JSON.stringify({"type": "reqServerMetas", "SIDs": requiredMetas}))
+
+                if (serverMetas["type"] != "reqServerMetasSuccess") {
+                    return
+                }
+
+                for (let server = 0; server < serverMetas["metas"].length; server++) {
+                    const srv = serverMetas["metas"][server];
+                    ServerMetaCache[srv["SID"].toString()] = srv
+                }
+            }
+
+            const finalOutput = []
+
+            for (let SRV = 0; SRV < serverIds.length; SRV++) {
+                const srv = serverIds[SRV];
+                finalOutput.push(await reqServerMeta(srv))
+            }
+
+            return finalOutput
         }
     </script>
     <script>
@@ -1520,144 +1669,154 @@
             request(JSON.stringify({"type": "logout"}))
         }
 
-        function setFriendReqs() {
+        async function setFriendReqs() {
             friendCount.textContent = "friends (" + friends.length + ")"
 
             const incomingBuffer = []
             const outgoingBuffer = []
 
-            friendReqs.forEach((req) => {
+            const requiredUIDs = []
+
+            for (let i = 0; i < friendReqs.length; i++) {
+                requiredUIDs.push(friendReqs[i]["UID"])
+            }
+
+            await reqMultiUsrInfo(requiredUIDs)
+
+            for (let i = 0; i < friendReqs.length; i++) {
+                const req = friendReqs[i];
                 const uid = req["UID"]
-                reqUsrInfo(uid).then((uInfo) => {
-                    const reqDiv = document.createElement("div")
-                    reqDiv.style.width = "100%"
-                    reqDiv.style.height = "60px"
-                    reqDiv.style.overflow = "hidden"
-                    reqDiv.style.display = "flex"
-                    reqDiv.style.flexDirection = "row"
-                    reqDiv.style.marginBottom = "1em"
 
-                    const pfpDiv = document.createElement("div")
-                    pfpDiv.style.width = "56px"
-                    pfpDiv.style.height = "56px"
+                const uInfo = await reqUsrInfo(uid)
+                const reqDiv = document.createElement("div")
+                reqDiv.style.width = "100%"
+                reqDiv.style.height = "60px"
+                reqDiv.style.overflow = "hidden"
+                reqDiv.style.display = "flex"
+                reqDiv.style.flexDirection = "row"
+                reqDiv.style.marginBottom = "1em"
 
-                    const pfpImg = document.createElement("img")
-                    pfpImg.style.width = "100%"
-                    pfpImg.style.height = "100%"
-                    pfpImg.style.borderRadius = "99999px"
-                    pfpImg.style.border = "2px solid var(--acc4)"
-                    pfpImg.src = uInfo["pfp"]
+                const pfpDiv = document.createElement("div")
+                pfpDiv.style.width = "56px"
+                pfpDiv.style.height = "56px"
+                pfpDiv.style.flexShrink = "0"
 
-                    const infoDiv = document.createElement("div")
-                    infoDiv.style.width = "70%"
-                    infoDiv.style.height = "100%"
-                    infoDiv.style.marginLeft = "1em"
+                const pfpImg = document.createElement("img")
+                pfpImg.style.width = "100%"
+                pfpImg.style.height = "100%"
+                pfpImg.style.borderRadius = "99999px"
+                pfpImg.style.border = "2px solid var(--acc4)"
+                pfpImg.src = uInfo["pfp"]
 
-                    const displayname = document.createElement("h1")
-                    displayname.style.width = "100%"
-                    displayname.style.height = "75%"
-                    displayname.style.margin = "0"
-                    displayname.style.background = "linear-gradient(to right, white 0%, white 80%, transparent 100%)"
-                    displayname.style.backgroundClip = "text"
-                    displayname.style.color = "transparent"
-                    displayname.style.whiteSpace = "nowrap"
-                    displayname.classList = "font"
-                    displayname.textContent = uInfo["displayname"]
+                const infoDiv = document.createElement("div")
+                infoDiv.style.width = "70%"
+                infoDiv.style.height = "100%"
+                infoDiv.style.marginLeft = "1em"
 
-                    const extraInfo = document.createElement("p")
-                    extraInfo.style.width = "100%"
-                    extraInfo.style.height = "25%"
-                    extraInfo.style.margin = "0"
-                    extraInfo.classList = "font white"
-                    extraInfo.textContent = uInfo["username"] + " | ID: " + uInfo["UID"]
+                const displayname = document.createElement("h1")
+                displayname.style.width = "100%"
+                displayname.style.height = "75%"
+                displayname.style.margin = "0"
+                displayname.style.background = "linear-gradient(to right, white 0%, white 80%, transparent 100%)"
+                displayname.style.backgroundClip = "text"
+                displayname.style.color = "transparent"
+                displayname.style.whiteSpace = "nowrap"
+                displayname.classList = "font"
+                displayname.textContent = uInfo["displayname"]
+
+                const extraInfo = document.createElement("p")
+                extraInfo.style.width = "100%"
+                extraInfo.style.height = "25%"
+                extraInfo.style.margin = "0"
+                extraInfo.classList = "font white"
+                extraInfo.textContent = uInfo["username"] + " | ID: " + uInfo["UID"]
+
+                const sep = document.createElement("div")
+                sep.style.width = "4px"
+                sep.style.height = "100%"
+                sep.style.backgroundColor = "var(--acc4)"
+                sep.style.borderRadius = "9999px"
+
+                const actionDiv = document.createElement("div")
+                actionDiv.style.width = "30%"
+                actionDiv.style.height = "100%"
+                actionDiv.style.display = "flex"
+                actionDiv.style.flexDirection = "row"
+                actionDiv.style.alignItems = "center"
+
+                pfpDiv.appendChild(pfpImg)
+
+                infoDiv.appendChild(displayname)
+                infoDiv.appendChild(extraInfo)
+
+                reqDiv.appendChild(pfpDiv)
+                reqDiv.appendChild(infoDiv)
+                reqDiv.appendChild(sep)
+                reqDiv.appendChild(actionDiv)
+
+                if (req["type"] == "incoming") {
+                    const checkBtn = document.createElement("button")
+                    checkBtn.style.width = "50%"
+                    checkBtn.style.height = "100%"
+                    checkBtn.style.background = "none"
+                    checkBtn.style.fontSize = "2em"
+                    checkBtn.style.color = "lime"
+                    checkBtn.style.cursor = "pointer"
+                    checkBtn.style.border = "none"
+                    checkBtn.classList = "font"
+                    checkBtn.textContent = "✓"
 
                     const sep = document.createElement("div")
                     sep.style.width = "4px"
-                    sep.style.height = "100%"
+                    sep.style.height = "75%"
                     sep.style.backgroundColor = "var(--acc4)"
                     sep.style.borderRadius = "9999px"
 
-                    const actionDiv = document.createElement("div")
-                    actionDiv.style.width = "30%"
-                    actionDiv.style.height = "100%"
-                    actionDiv.style.display = "flex"
-                    actionDiv.style.flexDirection = "row"
-                    actionDiv.style.alignItems = "center"
+                    const xBtn = document.createElement("button")
+                    xBtn.style.width = "50%"
+                    xBtn.style.height = "100%"
+                    xBtn.style.background = "none"
+                    xBtn.style.fontSize = "2em"
+                    xBtn.style.color = "red"
+                    xBtn.style.cursor = "pointer"
+                    xBtn.style.border = "none"
+                    xBtn.classList = "font"
+                    xBtn.textContent = "X"
 
-                    pfpDiv.appendChild(pfpImg)
-
-                    infoDiv.appendChild(displayname)
-                    infoDiv.appendChild(extraInfo)
-
-                    reqDiv.appendChild(pfpDiv)
-                    reqDiv.appendChild(infoDiv)
-                    reqDiv.appendChild(sep)
-                    reqDiv.appendChild(actionDiv)
-
-                    if (req["type"] == "incoming") {
-                        const checkBtn = document.createElement("button")
-                        checkBtn.style.width = "50%"
-                        checkBtn.style.height = "100%"
-                        checkBtn.style.background = "none"
-                        checkBtn.style.fontSize = "2em"
-                        checkBtn.style.color = "lime"
-                        checkBtn.style.cursor = "pointer"
-                        checkBtn.style.border = "none"
-                        checkBtn.classList = "font"
-                        checkBtn.textContent = "✓"
-
-                        const sep = document.createElement("div")
-                        sep.style.width = "4px"
-                        sep.style.height = "75%"
-                        sep.style.backgroundColor = "var(--acc4)"
-                        sep.style.borderRadius = "9999px"
-
-                        const xBtn = document.createElement("button")
-                        xBtn.style.width = "50%"
-                        xBtn.style.height = "100%"
-                        xBtn.style.background = "none"
-                        xBtn.style.fontSize = "2em"
-                        xBtn.style.color = "red"
-                        xBtn.style.cursor = "pointer"
-                        xBtn.style.border = "none"
-                        xBtn.classList = "font"
-                        xBtn.textContent = "X"
-
-                        checkBtn.onclick = () => {
-                            request(JSON.stringify({"type": "acceptFriendReq", "UID": uInfo["UID"]}))
-                        }
-
-                        xBtn.onclick = () => {
-                            request(JSON.stringify({"type": "declineFriendReq", "UID": uInfo["UID"]}))
-                        }
-
-                        actionDiv.appendChild(checkBtn)
-                        actionDiv.appendChild(sep)
-                        actionDiv.appendChild(xBtn)
-
-                        incomingBuffer.push(reqDiv)
-                    } else {
-                        const xBtn = document.createElement("button")
-                        xBtn.style.width = "100%"
-                        xBtn.style.height = "100%"
-                        xBtn.style.background = "none"
-                        xBtn.style.fontSize = "2em"
-                        xBtn.style.color = "red"
-                        xBtn.style.cursor = "pointer"
-                        xBtn.style.border = "none"
-                        xBtn.classList = "font"
-                        xBtn.textContent = "X"
-
-                        xBtn.onclick = () => {
-                            request(JSON.stringify({"type": "cancelFriendReq", "UID": uInfo["UID"]}))
-                        }
-
-                        actionDiv.appendChild(xBtn)
-
-                        outgoingBuffer.push(reqDiv)
+                    checkBtn.onclick = () => {
+                        request(JSON.stringify({"type": "acceptFriendReq", "UID": uInfo["UID"]}))
                     }
-                })
-            })
+
+                    xBtn.onclick = () => {
+                        request(JSON.stringify({"type": "declineFriendReq", "UID": uInfo["UID"]}))
+                    }
+
+                    actionDiv.appendChild(checkBtn)
+                    actionDiv.appendChild(sep)
+                    actionDiv.appendChild(xBtn)
+
+                    incomingBuffer.push(reqDiv)
+                } else {
+                    const xBtn = document.createElement("button")
+                    xBtn.style.width = "100%"
+                    xBtn.style.height = "100%"
+                    xBtn.style.background = "none"
+                    xBtn.style.fontSize = "2em"
+                    xBtn.style.color = "red"
+                    xBtn.style.cursor = "pointer"
+                    xBtn.style.border = "none"
+                    xBtn.classList = "font"
+                    xBtn.textContent = "X"
+
+                    xBtn.onclick = () => {
+                        request(JSON.stringify({"type": "cancelFriendReq", "UID": uInfo["UID"]}))
+                    }
+
+                    actionDiv.appendChild(xBtn)
+
+                    outgoingBuffer.push(reqDiv)
+                }
+            }
 
             replaceChildren(incomingList, incomingBuffer)
             replaceChildren(outgoingList, outgoingBuffer)
@@ -1772,6 +1931,13 @@
                     return
                 }
 
+                const serverChats = []
+                for (let cIdx = 0; cIdx < serverCache["Categories"].length; cIdx++) {
+                    serverChats.push(...serverCache["Categories"][cIdx]["Chats"])
+                }
+
+                await reqMultiChatMeta(serverChats)
+
                 for (let cIdx = 0; cIdx < serverCache["Categories"].length; cIdx++) {
                     const category = serverCache["Categories"][cIdx]
 
@@ -1870,8 +2036,6 @@
                         setChatList()
                     })
 
-
-
                     const categoryHidden = hiddenCategories.includes(currServer + "_" + category["categoryID"])
 
                     const categoryName = document.createElement("h2")
@@ -1915,14 +2079,7 @@
 
                     for (let idx = 0; idx < category["Chats"].length; idx++) {
                         const chatID = category["Chats"][idx]
-                        let chat = null
-
-                        if (chatMetaCache[chatID.toString()]) {
-                            chat = chatMetaCache[chatID.toString()]
-                        } else {
-                            chat = (await request(JSON.stringify({"type": "reqChatMeta", "CID": chatID})))["chat"]
-                            chatMetaCache[chatID.toString()] = chat
-                        }
+                        let chat = await reqChatMeta(chatID)
 
                         if (chat == null) {
                             console.log("Failed to fetch chat " + chatID + ", pretending it doesn't exist")
@@ -2094,16 +2251,11 @@
 
             const unreadMsgs = []
             const activeMsgs = []
+
+            await reqMultiChatMeta(chats)
             for (let chatInd = 0; chatInd < chats.length; chatInd++) {
                 const chatID = chats[chatInd]
-                let chat = null
-
-                if (chatMetaCache[chatID.toString()]) {
-                    chat = chatMetaCache[chatID.toString()]
-                } else {
-                    chat = (await request(JSON.stringify({"type": "reqChatMeta", "CID": chatID})))["chat"]
-                    chatMetaCache[chatID.toString()] = chat
-                }
+                let chat = await reqChatMeta(chatID)
 
                 if (chat == null) {
                     console.log("Failed to fetch chat " + chatID + ", pretending it doesn't exist")
@@ -2274,19 +2426,10 @@
 
             const serverList2 = [dmIcon, seperator]
 
+            await reqMultiServerMeta(servers)
             for (let ind = 0; ind < servers.length; ind++) {
                 const SID = servers[ind];
-                let serverMeta = null
-
-                if (ServerMetaCache[SID.toString()]) {
-                    serverMeta = ServerMetaCache[SID.toString()]
-                } else {
-                    serverMeta = (await request(JSON.stringify({
-                        "type": "reqServerMeta",
-                        "SID": SID
-                    })))["server"]
-                    ServerMetaCache[SID.toString()] = serverMeta
-                }
+                let serverMeta = await reqServerMeta(SID)
 
                 const seperator = newServerListSeperator(ind)
                 serverList2.push(seperator)
@@ -3316,17 +3459,7 @@
                     msgP.appendChild(ownerE)
                 }
             } else if (message["TYPE"] == "serverInvite") {
-                let serverMeta = null
-
-                if (ServerMetaCache[message["TARGET"].toString()]) {
-                    serverMeta = ServerMetaCache[message["TARGET"].toString()]
-                } else {
-                    serverMeta = (await request(JSON.stringify({
-                        "type": "reqServerMeta",
-                        "SID": message["TARGET"]
-                    })))["server"]
-                    ServerMetaCache[message["TARGET"].toString()] = serverMeta
-                }
+                let serverMeta = await reqServerMeta(message["TARGET"])
 
                 if (serverMeta) {
                     let inviteInvalid = true
@@ -3685,6 +3818,8 @@
         }
 
         async function createUserList(users, currOwner) {
+            await reqMultiUsrInfo(users)
+
             const userList2 = []
             for (let i = 0; i < users.length; i++) {
                 const uid = users[i];
@@ -3770,6 +3905,38 @@
             return userList2
         }
 
+        async function setChatNameAndIcon() {
+            if (currServer == -1) {
+                if (currChat == -1) {
+                    chatName.textContent = ""
+                    chatIcon.src = "Media/LogoSquare.png"
+                    return
+                }
+
+                if (chatCache["Type"] == "gc") {
+                    chatName.textContent = chatCache["Name"]
+                    chatIcon.src = chatCache["Icon"]
+                } else if (chatCache["Type"] == "dm") {
+                    const other = chatCache["Recipients"].filter(item => item != currUID)[0]
+                    const usrInfo = await reqUsrInfo(other)
+
+                    chatName.textContent = usrInfo["displayname"]
+                    chatIcon.src = usrInfo["pfp"]
+                }
+                return
+            }
+
+            if (currChat == -1) {
+                chatName.textContent = serverCache["Name"]
+                chatIcon.src = serverCache["Icon"]
+                setEmptyChat()
+                return
+            }
+
+            chatName.textContent = serverCache["Name"] + " > " + chatCache["Name"]
+            chatIcon.src = serverCache["Icon"]
+        }
+
         async function setMemberList() {
             const chat = chatCache
             const currChatName = chat["Name"]
@@ -3777,10 +3944,9 @@
             const currOwner = chat["Owner"]
             const currChatType = chat["Type"]
 
-            if (currChatType == "gc") {
-                chatName.textContent = currChatName
-                chatIcon.src = chat["Icon"] || "Media/LogoSquare.png"
+            await setChatNameAndIcon()
 
+            if (currChatType == "gc") {
                 const userList2 = await createUserList(chat["Recipients"], currOwner)
                 const addUsr = document.createElement("button")
                 addUsr.style.width = "90%"
@@ -3833,9 +3999,6 @@
                 const other = currRecipients.filter(item => item != currUID)[0]
                 const usrInfo = await reqUsrInfo(other)
 
-                chatName.textContent = usrInfo["displayname"]
-                chatIcon.src = usrInfo["pfp"]
-
                 userListContent.replaceChildren()
                 userListCounter.style.visibility = "hidden"
                 userListCounter.style.position = "absolute"
@@ -3883,9 +4046,6 @@
                     })
                 }
             } else if (currChatType == "channel") {
-                chatName.textContent = serverCache["Name"] + " > " + currChatName
-                chatIcon.src = serverCache["Icon"]
-
                 const userList2 = await createUserList(serverCache["Users"], serverCache["Owner"])
                 userListCounter.style.position = ""
                 userListCounter.style.visibility = "visible"
@@ -4048,23 +4208,13 @@
             chatDiv.appendChild(content)
 
             if (currServer == -1) {
-                chatName.textContent = "The Void"
+                chatName.textContent = ""
                 chatIcon.src = "Media/LogoSquare.png"
                 logo.src = "Media/Logo.png"
                 heading.textContent = "Welcome to Open-LAN"
                 content.textContent = "To get started, simply open the sidebar on the right."
             } else {
-                let serverMeta = null
-
-                if (ServerMetaCache[currServer.toString()]) {
-                    serverMeta = ServerMetaCache[currServer.toString()]
-                } else {
-                    serverMeta = (await request(JSON.stringify({
-                        "type": "reqServerMeta",
-                        "SID": currServer
-                    })))["server"]
-                    ServerMetaCache[currServer.toString()] = serverMeta
-                }
+                let serverMeta = await reqServerMeta(currServer)
 
                 chatName.textContent = serverMeta["name"]
                 chatIcon.src = serverMeta["icon"]
@@ -4114,6 +4264,11 @@
             const searchQuery = newGCSearch.value
             const searchRes = []
 
+            const requiredUids = []
+            for (let i = 0; i < friends.length; i++) {
+                requiredUids.push(friends[i]["UID"])
+            }
+            await reqMultiUsrInfo(requiredUids)
             for (let i = 0; i < friends.length; i++) {
                 const f = friends[i];
                 const usrInfo = await reqUsrInfo(f["UID"])
@@ -4340,6 +4495,11 @@
             const searchQuery = addUserSearch.value
             const searchRes = []
 
+            const requiredUids = []
+            for (let i = 0; i < friends.length; i++) {
+                requiredUids.push(friends[i]["UID"])
+            }
+            await reqMultiUsrInfo(requiredUids)
             for (let i = 0; i < friends.length; i++) {
                 const f = friends[i];
                 const usrInfo = await reqUsrInfo(f["UID"])
@@ -4521,6 +4681,10 @@
 
         friendsListContent.addEventListener("contextmenu", (e) => {
             if (currServer == -1) {
+                return
+            }
+
+            if (currUID != serverCache["Owner"]) {
                 return
             }
 
@@ -4894,6 +5058,11 @@
                                             }
 
                                             setChatList()
+
+                                            if (currChat == respBody["CID"]) {
+                                                chatCache["Name"] = respBody["name"]
+                                                setChatNameAndIcon()
+                                            }
                                         }
 
                                         if (respBody["type"] == "serverOwnerUpdate") {
@@ -5073,6 +5242,21 @@
                                         if (respBody["type"] == "updateServers") {
                                             servers = respBody["servers"]
                                             setServerList()
+                                        }
+
+                                        if (respBody["type"] == "serverUpdate") {
+                                            if (ServerMetaCache[respBody["SID"].toString()]) {
+                                                ServerMetaCache[respBody["SID"].toString()]["name"] = respBody["name"]
+                                                ServerMetaCache[respBody["SID"].toString()]["icon"] = respBody["icon"]
+                                            }
+
+                                            if (currServer == respBody["SID"]) {
+                                                serverCache["Name"] = respBody["name"]
+                                                serverCache["Icon"] = respBody["icon"]
+                                                serverCache["AnnouncementChat"] = respBody["ac"]
+                                                setChatNameAndIcon()
+                                                setServerList()
+                                            }
                                         }
 
                                         if (respBody["type"] == "newChat") {
@@ -5358,6 +5542,175 @@
             categorySettingsOverviewName.value = origCategoryName
             categoryUnsaved = false
             hideCategoryUnsaved()
+        })
+
+
+        var origServerName = ""
+        var origServerIcon = ""
+        var origServerAC = ""
+        var editingSID = -1
+        var serverUnsaved = false
+        var serverIconChanged = false
+        async function openServerSettings() {
+            origServerName = serverCache["Name"]
+            origServerIcon = serverCache["Icon"]
+            origServerAC = serverCache["AnnouncementChat"]
+            editingSID = currServer
+            serverUnsaved = false
+            serverIconChanged = false
+
+            fullServerSettingsOverviewName.value = origServerName
+            fullServerSettingsOverviewIconImg.src = origServerIcon
+            fullServerSettingsOverviewAnnouncementChannel.replaceChildren()
+
+            const noneOptionE = document.createElement("option")
+            noneOptionE.textContent = "-"
+            noneOptionE.value = -1
+            fullServerSettingsOverviewAnnouncementChannel.appendChild(noneOptionE)
+
+            const serverChats = []
+            for (let i = 0; i < serverCache["Categories"].length; i++) {
+                serverChats.push(...serverCache["Categories"][i]["Chats"])
+            }
+
+            await reqMultiChatMeta(serverChats)
+            for (let i = 0; i < serverChats.length; i++) {
+                const cht = serverChats[i];
+                const chat = await reqChatMeta(cht)
+
+                const optionE = document.createElement("option")
+                optionE.textContent = chat["name"]
+                optionE.value = cht
+                fullServerSettingsOverviewAnnouncementChannel.appendChild(optionE)
+            }
+
+            fullServerSettingsOverviewAnnouncementChannel.value = origServerAC
+
+            fullServerSettingsWrapper.style.visibility = "visible"
+            fullServerSettingsWrapper.style.opacity = "1"
+        }
+
+        function closeServerSettings() {
+            if (serverUnsaved) {
+                fullServerSettingsUnsaved.style.boxShadow = "red 0 0 16px"
+
+                setTimeout(() => {
+                    fullServerSettingsUnsaved.style.boxShadow = ""
+                }, 1000);
+
+                return
+            }
+
+            editingSID = -1
+            origServerName = ""
+            origServerIcon = ""
+            origServerAC = ""
+            fullServerSettingsWrapper.style.opacity = "0"
+
+            setTimeout(() => {
+                fullServerSettingsWrapper.style.visibility = "hidden"
+            }, 250);
+        }
+
+        serverSettingsSettings.addEventListener("click", (e) => {
+            e.stopPropagation()
+            serverSettingsFriendsList.style.visibility = "hidden"
+            openServerSettings()
+        })
+        fullServerSettingsWrapper.addEventListener("click", closeServerSettings)
+        fullServerSettings.addEventListener("click", (e) => e.stopPropagation())
+
+        function hideServerUnsaved() {
+            fullServerSettingsUnsaved.style.opacity = "0"
+            setTimeout(() => {
+                if (serverUnsaved) {
+                    return
+                }
+
+                fullServerSettingsUnsaved.style.visibility = "hidden"
+            }, 250)
+        }
+
+        function showServerUnsaved() {
+            fullServerSettingsUnsaved.style.visibility = "visible"
+            fullServerSettingsUnsaved.style.opacity = "1"
+        }
+
+        function fullServerSettingsOnInput() {
+            if (fullServerSettingsOverviewName.value == origServerName && fullServerSettingsOverviewAnnouncementChannel.value == origServerAC && !serverIconChanged) {
+                serverUnsaved = false
+                hideServerUnsaved()
+            } else {
+                serverUnsaved = true
+                showServerUnsaved()
+            }
+        }
+
+        fullServerSettingsOverviewName.addEventListener("input", fullServerSettingsOnInput)
+        fullServerSettingsOverviewAnnouncementChannel.addEventListener("change", fullServerSettingsOnInput)
+
+        fullServerSettingsUnsavedSave.addEventListener("click", () => {
+            const newServerName = fullServerSettingsOverviewName.value.trim()
+            const newServerIcon = fullServerSettingsOverviewIconImg.src
+            const newServerAc = fullServerSettingsOverviewAnnouncementChannel.value
+
+            if (newServerName.length == 0 || newServerName.length > 100) {
+                fullServerSettingsOverviewName.style.border = "2px solid red"
+                fullServerSettingsOverviewName.scrollIntoView({"behavior": "smooth", "block": "center"})
+
+                setTimeout(() => {
+                    fullServerSettingsOverviewName.style.border = ""
+                }, 2500)
+
+                return
+            }
+
+            request(JSON.stringify({
+                "type": "editServerInfo",
+                "SID": editingSID,
+                "name": newServerName,
+                "icon": newServerIcon,
+                "ac": parseInt(newServerAc)
+            })).then((r) => {
+                if (r["type"] == "editServerInfoSuccess") {
+                    serverUnsaved = false
+                    serverIconChanged = false
+                    hideServerUnsaved()
+                } else {
+                    openPopup("Error", "Failed to save server info!")
+                }
+            })
+        })
+
+        fullServerSettingsUnsavedUndo.addEventListener("click", () => {
+            fullServerSettingsOverviewName.value = origServerName
+            fullServerSettingsOverviewIconImg.src = origServerIcon
+            fullServerSettingsOverviewAnnouncementChannel.value = origServerAC
+            serverUnsaved = false
+            serverIconChanged = false
+            hideServerUnsaved()
+        })
+
+        fullServerSettingsOverviewIconFile.addEventListener("mouseenter", () => {
+            fullServerSettingsOverviewIconOverlay.style.visibility = "visible"
+        })
+
+        fullServerSettingsOverviewIconFile.addEventListener("mouseleave", () => {
+            fullServerSettingsOverviewIconOverlay.style.visibility = "hidden"
+        })
+
+        fullServerSettingsOverviewIconFile.addEventListener("change", (e) => {
+            const files = e.target.files
+
+            if (files && files.length == 1) {
+                const file = files[0]
+                convertFileToBase64(file).then((b64) => {
+                    fullServerSettingsOverviewIconImg.src = b64
+                    unsaved = true
+                    serverIconChanged = true
+                    showServerUnsaved()
+                })
+            }
         })
     </script>
     <script>

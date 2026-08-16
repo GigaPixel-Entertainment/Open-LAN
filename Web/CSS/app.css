@@ -24,7 +24,8 @@
     --acc: #9f2e2e;
     --acc2: #851111;
     --acc3: #df6666;
-    --acc4: #670008;
+    /*--acc4: #670008;*/
+    --acc4: #660000;
     --acc5: #ba3631;
     --acc6: #d7433e;
     --text: #FFFFFF;
@@ -658,6 +659,10 @@ footer > a {
     opacity: .5;
     pointer-events: all;
     opacity: 0;
+    cursor: pointer;
+}
+
+#currPFPFile::file-selector-button {
     cursor: pointer;
 }
 
@@ -1632,6 +1637,59 @@ footer > a {
     margin-top: .5em;
 }
 
+.genericSettingsSection {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-evenly;
+    align-items: center;
+}
+
+#fullServerSettingsOverviewIcon {
+    position: relative;
+    width: 10%;
+    aspect-ratio: 1;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 4px solid var(--acc4);
+}
+
+#fullServerSettingsOverviewIconImg {
+    position: absolute;
+    width: 100%;
+    aspect-ratio: 1;
+}
+
+#fullServerSettingsOverviewIconFile {
+    position: absolute;
+    width: 100%;
+    aspect-ratio: 1;
+    opacity: 0.01;
+    cursor: pointer;
+}
+
+#fullServerSettingsOverviewIconFile::file-selector-button {
+    cursor: pointer;
+}
+
+#fullServerSettingsOverviewIconOverlay {
+    position: absolute;
+    width: 100%;
+    aspect-ratio: 1;
+    background-color: rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+    visibility: hidden;
+}
+
+#fullServerSettingsOverviewName {
+    height: fit-content;
+    width: 80%;
+}
+
+#fullServerSettingsOverviewAnnouncementChannelLabel {
+    font-size: 1.25em;
+}
+
 #imageOverlayImg {
     position: absolute;
     top: 50%;
@@ -2135,6 +2193,10 @@ footer > a {
     cursor: pointer;
 }
 
+.jcCenter {
+    justify-content: center;
+}
+
 .center {
     text-align: center;
 }
@@ -2191,4 +2253,34 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     pointer-events: none;
 
     transition: opacity 5s;
+}
+
+select {
+    min-width: 10%;
+    outline: none;
+    margin-left: 1em;
+    margin-right: 1em;
+    font-size: 1.25em;
+    color: var(--text);
+    background-color: var(--acc);
+    border-radius: 8px;
+}
+
+::picker(select) {
+    border-radius: 8px;
+    background-color: var(--acc);
+    color: var(--text);
+}
+
+select::picker-icon {
+    transition: 100ms rotate linear;
+}
+
+select:open::picker-icon {
+    rotate: 180deg;
+}
+
+select, ::picker(select) {
+    appearance: base-select;
+    border: 1px solid var(--placeholder);
 }
