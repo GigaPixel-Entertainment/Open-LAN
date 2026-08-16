@@ -12,7 +12,7 @@ import copy
 import math
 import ssl
 
-from websockets.asyncio.server import serve, ServerConnection, Request, broadcast
+from websockets.asyncio.server import serve, ServerConnection, Request
 
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -1004,13 +1004,13 @@ class WS():
         alreadyFriends = False
         for fri in selfInfo["Friends"]:
             if fri["UID"] == targetUID:
-                alreadyRequested = True
+                alreadyFriends = True
                 break
 
         if not alreadyFriends:
             for fri in targetInfo["Friends"]:
                 if fri["UID"] == selfUID:
-                    alreadyRequested = True
+                    alreadyFriends = True
                     break
 
         if alreadyFriends:
