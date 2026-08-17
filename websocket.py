@@ -55,7 +55,6 @@ class WS():
 
         self.webRequests = {
             "reqUser": self.reqUser,
-            "reqChatMeta": self.reqChatMeta,
             "reqChatMetas": self.reqChatMetas,
             "reqChat": self.reqChat,
             "reqMsg": self.reqMsg,
@@ -83,7 +82,6 @@ class WS():
             "rmUsrFromChat": self.rmUsrFromChat,
             "setRead": self.setRead,
             "createServer": self.createServer,
-            "reqServerMeta": self.reqServerMeta,
             "reqServerMetas": self.reqServerMetas,
             "reqServer": self.reqServer,
             "newChannel": self.newChannel,
@@ -202,14 +200,13 @@ class WS():
         if UID is None:
             return False
 
-        success = False
-        for usr in self.users:
-            if usr["UID"] == UID:
-                usr[propertyName] = value
-                success = True
-                break
+        usrInfo = self.getUserInfoFromUserId(UID)
 
-        return success
+        if usrInfo is None:
+            return False
+
+        usrInfo[propertyName] = value
+        return True
 
     def tokenInChat(self, token: str | None, CID: int) -> bool:
         if CID < 0 or CID >= len(self.chats):
@@ -394,41 +391,6 @@ class WS():
             "type": "reqUserSuccess",
             "user": userinfo
         }), trackerId)
-
-    async def reqChatMeta(self, ws, decryptedBody, authToken, trackerId):
-        if not self.checkFields(decryptedBody, ["CID"]):
-            await self.wsSendEncrypted(ws, orjson.dumps({"type": "reqChatMetaFailed", "message": "Request error. Please contact the server owner for help."}), trackerId)
-            return
-
-        if not self.tokenInChat(authToken, decryptedBody["CID"]):
-            await self.wsSendEncrypted(ws, orjson.dumps({"type":"reqChatMetaFailed","message": "User not in chat!"}), trackerId)
-            return
-
-        chat = self.getChatFromCID(decryptedBody["CID"])
-
-        if chat is None:
-            await self.wsSendEncrypted(ws, orjson.dumps({"type":"reqChatMetaFailed","message":"Chat not found!"}), trackerId)
-            return
-
-        lastMsg = chat["messages"][-1] if len(chat["messages"]) > 0 else None
-        lastRealMsg = None
-        for msg in chat["messages"]:
-            if not "SYSMSG" in msg and not "deleted" in msg:
-                lastRealMsg = msg
-
-        await self.wsSendEncrypted(ws, orjson.dumps({"type":"reqChatMetaSuccess", "chat": {
-            "CID": chat["CID"],
-            "type": chat["Type"],
-            "name": chat["Name"],
-            "icon": chat["Icon"] if "Icon" in chat else random.choice(self.DEFAULT_PFPS),
-            "recipients": chat["Recipients"],
-            "numMsgs": len(chat["messages"]),
-            "lastMsg": {
-                "time": lastMsg["time"] if lastMsg else chat["Time"],
-                "MSGID": lastMsg["MSGID"] if lastMsg else 0,
-                "content": lastRealMsg["content"] if lastRealMsg else ""
-            }
-        }}), trackerId)
 
     async def reqChatMetas(self, ws, decryptedBody, authToken, trackerId):
         if not self.checkFields(decryptedBody, ["CIDs"]):
@@ -1533,26 +1495,6 @@ class WS():
         await self.wsSendEncrypted(ws, orjson.dumps({
             "type": "updateServers",
             "servers": selfInfo["Servers"]
-        }), trackerId)
-
-    async def reqServerMeta(self, ws, decryptedBody, authToken, trackerId):
-        if not self.checkFields(decryptedBody, ["SID"]):
-            await self.wsSendEncrypted(ws, orjson.dumps({"type": "reqServerMetaFailed"}), trackerId)
-            return
-
-        server = self.getServerFromSID(decryptedBody["SID"])
-
-        if not server:
-            await self.wsSendEncrypted(ws, orjson.dumps({"type": "reqServerMetaFailed"}), trackerId)
-            return
-
-        await self.wsSendEncrypted(ws, orjson.dumps({
-            "type": "reqServerMetaSuccess",
-            "server": {
-                "SID": server["SID"],
-                "icon": server["Icon"],
-                "name": server["Name"]
-            }
         }), trackerId)
 
     async def reqServerMetas(self, ws, decryptedBody, authToken, trackerId):

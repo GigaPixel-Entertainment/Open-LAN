@@ -824,11 +824,15 @@
             if (chatMetaCache[CID.toString()]) {
                 chat = chatMetaCache[CID.toString()]
             } else {
-                chat = (await request(JSON.stringify({"type": "reqChatMeta", "CID": CID})))["chat"]
-                chatMetaCache[CID.toString()] = chat
+                metas = (await request(JSON.stringify({"type": "reqChatMetas", "CIDs": [CID]})))["metas"]
+
+                if (metas && metas.length > 0) {
+                    chat = metas[0]
+                    chatMetaCache[CID.toString()] = chat
+                }
             }
 
-            return chat
+            return chat??{}
         }
 
         async function reqMultiChatMeta(chatIds) {
@@ -874,11 +878,15 @@
             if (ServerMetaCache[SID.toString()]) {
                 server = ServerMetaCache[SID.toString()]
             } else {
-                server = (await request(JSON.stringify({"type": "reqServerMeta", "SID": SID})))["server"]
-                ServerMetaCache[SID.toString()] = server
+                metas = (await request(JSON.stringify({"type": "reqServerMetas", "SIDs": [SID]})))["metas"]
+
+                if (metas && metas.length > 0) {
+                    server = metas[0]
+                    ServerMetaCache[SID.toString()] = server
+                }
             }
 
-            return server
+            return server??{}
         }
 
         async function reqMultiServerMeta(serverIds) {
