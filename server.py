@@ -431,8 +431,8 @@ def resizeGif(img: Image.Image, outputStream: BytesIO):
 
     frames = []
     for frame in ImageSequence.Iterator(img):
-        resized_frame = frame.convert('RGBA').resize((256, 256), Image.Resampling.LANCZOS)
-        frames.append(resized_frame)
+        resizedFrame = frame.convert('RGBA').resize((256, 256), Image.Resampling.LANCZOS)
+        frames.append(resizedFrame)
 
     if frames:
         frames[0].save(

@@ -60,12 +60,12 @@
             <input type="text" placeholder="username" class="font smallEntry" required id="username">
             <p class="font text" title="Your password, keep this secure!">password</p>
             <div id="pwdWrapper">
-                <input type="password" placeholder="password" class="font smallEntry" id="password" required>
+                <input type="password" placeholder="password" class="font smallEntry" id="password" autocomplete="new-password" required>
                 <button class="showPwd2" id="showPwd" type="button" onclick="togglePwd()"><img src="Media/eyeOpen.png" class="showPwdImg" id="showPwdImg"></button>
             </div>
             <p class="font text" title="Confirm your password">confirm password</p>
             <div id="pwdWrapper">
-                <input type="password" placeholder="confirm password" class="font smallEntry" id="confirmPassword" required>
+                <input type="password" placeholder="confirm password" class="font smallEntry" id="confirmPassword" autocomplete="new-password" required>
                 <button class="showPwd2" id="showConfirmPwd" type="button" onclick="toggleConfirmPwd()"><img src="Media/eyeOpen.png" class="showPwdImg" id="showConfirmPwdImg"></button>
             </div>
             <p class="font text" title="This answer will be used to verify who you are when resetting your password">recovery key</p>

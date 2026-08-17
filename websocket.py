@@ -47,6 +47,7 @@ class WS():
             encoding=serialization.Encoding.X962,
             format=serialization.PublicFormat.UncompressedPoint
         )
+        self.RESET_PWD_TOKENS: list[dict] = []
 
         mimetypes.add_type("application/java-archive", ".jar")
         mimetypes.add_type("text/plain", ".log")
@@ -100,7 +101,9 @@ class WS():
             "editCategoryInfo": self.editCategoryInfo,
             "deleteCategory": self.deleteCategory,
             "moveServerIcon": self.moveServerIcon,
-            "editServerInfo": self.editServerInfo
+            "editServerInfo": self.editServerInfo,
+            "reqResetPwdToken": self.reqResetPwdToken,
+            "resetPwd": self.resetPwd
         }
 
     def isValidToken(self, authToken: str | None, username=None):
@@ -2247,7 +2250,7 @@ class WS():
 
     async def editServerInfo(self, ws, decryptedBody, authToken, trackerId):
         if not self.checkFields(decryptedBody, ["SID", "name", "icon", "ac"]):
-            await self.wsSendEncrypted(ws, orjson.dumps({"type": "editServerInfoFailed", "resp": decryptedBody}), trackerId)
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "editServerInfoFailed"}), trackerId)
             return
 
         server = self.getServerFromSID(decryptedBody["SID"])
@@ -2289,6 +2292,76 @@ class WS():
 
         await self.wsBroadcastEncrypted(targetWS, orjson.dumps({"type": "serverUpdate", "SID": server["SID"], "name": newName, "icon": newIcon, "ac": newAC}))
 
+    async def reqResetPwdToken(self, ws, decryptedBody, authToken, trackerId):
+        if not self.checkFields(decryptedBody, ["pwd"]):
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "reqResetPwdTokenFailed"}), trackerId)
+            return
+
+        usrInfo = self.getUserInfoFromToken(authToken)
+        usrId = self.getUserIdFromUserInfo(usrInfo)
+        usrPwd = base64.b64decode(decryptedBody["pwd"])
+
+        if usrInfo is None or usrId is None:
+            bcrypt.checkpw(usrPwd, self.DUMMY_HASH)
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "reqResetPwdTokenFailed"}), trackerId)
+            return
+
+        if not bcrypt.checkpw(usrPwd, usrInfo["PWD"].encode("utf-8")):
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "reqResetPwdTokenFailed"}), trackerId)
+            return
+
+        token = secrets.token_urlsafe(256)
+        foundOld = False
+
+        for tk in self.RESET_PWD_TOKENS:
+            if tk["UID"] == usrId:
+                tk["TK"] = token
+                tk["EXPIRE"] = time.time() + config.RESET_PWD_TOKEN_EXPIRE_SEC
+                foundOld = True
+                break
+
+        if not foundOld:
+            self.RESET_PWD_TOKENS.append({
+                "UID": usrId,
+                "TK": token,
+                "EXPIRE": time.time() + config.RESET_PWD_TOKEN_EXPIRE_SEC
+            })
+
+        await self.wsSendEncrypted(ws, orjson.dumps({"type": "reqResetPwdTokenSuccess", "tk": token}), trackerId)
+        return
+
+    async def resetPwd(self, ws, decryptedBody, authToken, trackerId):
+        if not self.checkFields(decryptedBody, ["pwd", "tk"]):
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "resetPwdFailed"}), trackerId)
+            return
+
+        usrInfo = self.getUserInfoFromToken(authToken)
+        usrId = self.getUserIdFromUserInfo(usrInfo)
+        usrPwd = base64.b64decode(decryptedBody["pwd"])
+        token = decryptedBody["tk"]
+        allow = False
+
+        if usrInfo is None or usrId is None:
+            bcrypt.checkpw(usrPwd, self.DUMMY_HASH)
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "reqResetPwdTokenFailed"}), trackerId)
+            return
+
+        for tk in self.RESET_PWD_TOKENS:
+            if tk["UID"] == usrId and tk["TK"] == token and tk["EXPIRE"] - time.time() > 0:
+                self.RESET_PWD_TOKENS.remove(tk)
+                allow = True
+                break
+
+        if not allow:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "resetPwdFailed"}), trackerId)
+            return
+
+        pwdHashed = bcrypt.hashpw(usrPwd, bcrypt.gensalt(config.NUM_ENCRYPT_ROUNDS)).decode("utf-8")
+        usrInfo["PWD"] = pwdHashed
+
+        await self.wsSendEncrypted(ws, orjson.dumps({"type": "resetPwdSuccess"}), trackerId)
+
+
     async def wsHandler(self, ws: ServerConnection):
         self.WS_CLIENTS.add(ws)
 
@@ -2327,19 +2400,19 @@ class WS():
 
                         for usr in self.users:
                             if usr["USRNAME"] == decryptedBody["username"]:
+                                found = True
                                 if bcrypt.checkpw(usrPwd, usr["PWD"].encode("utf-8")):
                                     token = secrets.token_urlsafe(32)
                                     self.SHORT_REDIRECT_TOKENS[usr["USRNAME"]] = {"TOKEN":token,"EXPIRES": time.time() + config.REDIRECT_TOKEN_EXPIRES_SEC}
                                     await self.wsSendEncrypted(ws, orjson.dumps({"type":"loginSuccess","redirect":f"/api/login?TK={token}"}))
-                                    found = True
                                 else:
                                     await self.wsSendEncrypted(ws, orjson.dumps({"type":"loginFailed"}))
-                                    found = True
                                 break
 
                         if not found:
                             bcrypt.checkpw(usrPwd, self.DUMMY_HASH)
                             await self.wsSendEncrypted(ws, data=orjson.dumps({"type":"loginFailed"}))
+                        continue
 
                     if decryptedBody["type"] == "signup":
                         if not self.checkFields(decryptedBody, ["realname", "username", "password", "securityKey"]):
@@ -2403,8 +2476,6 @@ class WS():
                             targetWS = []
                             for ws2 in self.WS_CLIENTS:
                                 wsUID = getattr(ws2, "UID", None)
-                                targetInfo = self.getUserInfoFromUserId(wsUID)
-
                                 if wsUID is not None and wsUID in chat0["Recipients"]:
                                     targetWS.append(ws2)
 
@@ -2413,6 +2484,7 @@ class WS():
                         self.RATELIMITED_IPS.append({"ip": ws.remote_address[0], "expire": time.time() + config.ACC_CREATION_COOLDOWN_SEC})
 
                         await self.wsSendEncrypted(ws, orjson.dumps({"type": "signupSuccess", "redirect": "/signupSuccess.html"}))
+                        continue
 
                     if decryptedBody["type"] == "logout":
                         usrName = self.getUsernameFromAuthToken(authToken)

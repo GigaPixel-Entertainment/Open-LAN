@@ -122,6 +122,7 @@
                         <input type="text" disabled class="font gray" id="currPronouns" maxlength="10" spellcheck="false">
                         <button class="font black editBtn" id="editPronouns">edit</button>
                     </div>
+                    <button class="font" id="changePwd">change password</button>
                 </div>
 
                 <div id="rightSideActions">
@@ -198,6 +199,26 @@
                 <div id="addUserSearchRes" class="scroll"></div>
                 <input type="submit" id="addUserAdd" value="Invite" class="font" disabled>
                 <input type="submit" id="addUserCancel" value="Cancel" class="font">
+            </div>
+        </div>
+
+        <div id="changePwdScreenWrapper" class="overlay">
+            <div id="changePwdPlsWait">
+                <h1 class="font white">please wait...</h1>
+            </div>
+            <div id="changePwdScreen">
+                <!-- For some reason, chrome autofill is filling out the SEARCH BOX FOR FRIEND REQ SCREEN when filling the password -->
+                <!-- No I don't know why -->
+                <!-- Please send help -->
+                <h1 class="font white" id="changePwdScreenHeading">change password</h1>
+                <input type="password" id="changePwdScreenOrigPwd" placeholder="current password..." class="font white" autocomplete="new-password">
+                <button id="changePwdScreenOrigPwdSubmit" class="font">submit</button>
+            </div>
+            <div id="newPwdScreen">
+                <h1 class="font white" id="newPwdScreenHeading">change password</h1>
+                <input type="password" id="newPwdScreenNewPwd" placeholder="new password..." class="font white" autocomplete="new-password">
+                <input type="password" id="newPwdScreenConfirmPwd" placeholder="confirm password..." class="font white" autocomplete="new-password">
+                <button id="newPwdScreenSubmit" class="font">submit</button>
             </div>
         </div>
 
@@ -495,6 +516,16 @@
         const addUserAdd = document.getElementById("addUserAdd")
         const addUserCancel = document.getElementById("addUserCancel")
 
+        const changePwdScreenWrapper = document.getElementById("changePwdScreenWrapper")
+        const changePwdScreen = document.getElementById("changePwdScreen")
+        const changePwdScreenOrigPwd = document.getElementById("changePwdScreenOrigPwd")
+        const changePwdScreenOrigPwdSubmit = document.getElementById("changePwdScreenOrigPwdSubmit")
+        const newPwdScreen = document.getElementById("newPwdScreen")
+        const newPwdScreenNewPwd = document.getElementById("newPwdScreenNewPwd")
+        const newPwdScreenConfirmPwd = document.getElementById("newPwdScreenConfirmPwd")
+        const newPwdScreenSubmit = document.getElementById("newPwdScreenSubmit")
+        const changePwdPlsWait = document.getElementById("changePwdPlsWait")
+
         const newChannelWrapper = document.getElementById("newChannelWrapper")
         const newChannel = document.getElementById("newChannel")
         const newChannelName = document.getElementById("newChannelName")
@@ -552,6 +583,8 @@
         const editCurrBirthday = document.getElementById("editBirthday")
         const currPronounsI = document.getElementById("currPronouns")
         const editCurrPronouns = document.getElementById("editPronouns")
+
+        const editPwdBtn = document.getElementById("changePwd")
 
         const friendCount = document.getElementById("friendCount")
         const friendsList = document.getElementById("friendsList")
@@ -5709,6 +5742,105 @@
                     showServerUnsaved()
                 })
             }
+        })
+    </script>
+    <script>
+        // Edit Pwd
+        let resetPwdToken = null
+
+        function openChangePwdScreen() {
+            resetPwdTokenIV = null
+            resetPwdToken = null
+
+            changePwdScreen.style.visibility = "visible"
+            newPwdScreen.style.visibility = "hidden"
+            changePwdPlsWait.style.visibility = "hidden"
+
+            changePwdScreenWrapper.style.visibility = "visible"
+            changePwdScreenWrapper.style.opacity = "1"
+        }
+
+        function closeChangePwdScreen() {
+            resetPwdTokenIV = null
+            resetPwdToken = null
+
+            changePwdScreenWrapper.style.opacity = "0"
+
+            setTimeout(() => {
+                changePwdScreenWrapper.style.visibility = "hidden"
+            }, 250)
+        }
+
+        editPwdBtn.addEventListener("click", openChangePwdScreen)
+        changePwdScreenWrapper.addEventListener("click", closeChangePwdScreen)
+        changePwdScreen.addEventListener("click", (e) => e.stopPropagation())
+        newPwdScreen.addEventListener("click", (e) => e.stopPropagation())
+        changePwdPlsWait.addEventListener("click", (e) => e.stopPropagation())
+
+        changePwdScreenOrigPwdSubmit.addEventListener("click", () => {
+            changePwdPlsWait.style.visibility = "visible"
+            changePwdScreen.style.visibility = "hidden"
+            newPwdScreen.style.visibility = "hidden"
+
+            request(JSON.stringify({
+                "type": "reqResetPwdToken",
+                "pwd": btoa(changePwdScreenOrigPwd.value)
+            })).then((r) => {
+                if (r["type"] == "reqResetPwdTokenSuccess") {
+                    resetPwdToken = r["tk"]
+                    changePwdPlsWait.style.visibility = "hidden"
+                    changePwdScreen.style.visibility = "hidden"
+                    newPwdScreen.style.visibility = "visible"
+                } else {
+                    changePwdPlsWait.style.visibility = "hidden"
+                    changePwdScreen.style.visibility = "visible"
+                    newPwdScreen.style.visibility = "hidden"
+
+                    openPopup("Error", "Incorrect password!")
+                }
+            })
+
+            changePwdScreenOrigPwd.value = ""
+        })
+
+        newPwdScreenSubmit.addEventListener("click", () => {
+            if (newPwdScreenNewPwd.value != newPwdScreenConfirmPwd.value) {
+                openPopup("Error", "Passwords must match!")
+                return
+            }
+
+            if (resetPwdToken == null) {
+                changePwdPlsWait.style.visibility = "hidden"
+                changePwdScreen.style.visibility = "visible"
+                newPwdScreen.style.visibility = "hidden"
+                openPopup("Error", "Please input your current password first!")
+                return
+            }
+
+            changePwdPlsWait.style.visibility = "visible"
+            changePwdScreen.style.visibility = "hidden"
+            newPwdScreen.style.visibility = "hidden"
+
+            request(JSON.stringify({
+                "type": "resetPwd",
+                "pwd": btoa(newPwdScreenNewPwd.value),
+                "tk": resetPwdToken
+            })).then((r) => {
+                if (r["type"] == "resetPwdSuccess") {
+                    closeChangePwdScreen()
+                    openPopup("Success", "Your password was changed!")
+                } else {
+                    changePwdPlsWait.style.visibility = "hidden"
+                    changePwdScreen.style.visibility = "visible"
+                    newPwdScreen.style.visibility = "hidden"
+
+                    openPopup("Error", "Token expired, please try again.")
+                }
+            })
+
+            newPwdScreenNewPwd.value = ""
+            newPwdScreenConfirmPwd.value = ""
+            resetPwdToken = null
         })
     </script>
     <script>

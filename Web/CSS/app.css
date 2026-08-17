@@ -676,6 +676,7 @@ footer > a {
 #myProfileEditingList {
     display: flex;
     flex-direction: column;
+    align-items: end;
 }
 
 #myProfileEditingList > div {
@@ -705,6 +706,15 @@ footer > a {
     padding: .25em;
 }
 
+#changePwd {
+    width: 75%;
+    font-size: 1.5em;
+    background-color: var(--rose);
+    border: none;
+    cursor: pointer;
+    margin-right: .5em;
+}
+
 .editBtn {
     font-size: 2em;
     width: 4em;
@@ -713,6 +723,7 @@ footer > a {
     border-radius: 0;
     cursor: pointer;
     margin-right: .5em;
+    flex: 0;
 }
 
 .saveBtn {
@@ -1085,6 +1096,85 @@ footer > a {
 #addUserCancel:hover {
     color: var(--button-press);
     border: 2px solid var(--button-press);
+}
+
+#changePwdPlsWait {
+    position: absolute;
+    width: 40%;
+    height: 25%;
+    top: 50%;
+    left: 50%;
+    background-color: var(--bg);
+    transform: translate(-50%, -50%);
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    visibility: hidden;
+}
+
+#changePwdScreen {
+    position: absolute;
+    width: 40%;
+    height: 25%;
+    top: 50%;
+    left: 50%;
+    background-color: var(--bg);
+    transform: translate(-50%, -50%);
+
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+
+    align-items: center;
+    visibility: hidden;
+}
+
+#changePwdScreenHeading, #newPwdScreenHeading {
+    margin: 0;
+}
+
+#changePwdScreenOrigPwd, #newPwdScreenNewPwd, #newPwdScreenConfirmPwd {
+    background-color: var(--acc3);
+    border: none;
+    font-size: 1.5em;
+    width: 90%;
+    outline: none;
+}
+
+#changePwdScreenOrigPwd::placeholder, #newPwdScreenNewPwd::placeholder, #newPwdScreenConfirmPwd::placeholder {
+    color: var(--placeholder);
+}
+
+#changePwdScreenOrigPwdSubmit, #newPwdScreenSubmit {
+    background-color: var(--button);
+    border: none;
+    font-size: 1.5em;
+    outline: none;
+    width: 90%;
+    cursor: pointer;
+}
+
+#changePwdScreenOrigPwdSubmit:hover, #newPwdScreenSubmit:hover {
+    background-color: var(--button-press);
+}
+
+#newPwdScreen {
+    position: absolute;
+    width: 40%;
+    height: 25%;
+    top: 50%;
+    left: 50%;
+    background-color: var(--bg);
+    transform: translate(-50%, -50%);
+
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+
+    align-items: center;
+    visibility: hidden;
 }
 
 #newChannel {
