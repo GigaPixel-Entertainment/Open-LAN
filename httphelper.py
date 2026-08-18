@@ -134,7 +134,7 @@ def formatHttpRange(fileContents: bytes, rangeStr: str) -> bytes | None:
     }).encode("utf-8") + b"\r\n" + fileContents
 
 def formatHttpResponse(parsed: HTTPRequestParser | None, filePath: pathlib.Path, fernet: Fernet | None = None, extraHeaders: dict | None = None) -> bytes:
-    if not filePath.is_file():
+    if not filePath.is_file() or not isSafePath(filePath):
         logging.warning("[MAIN] Invalid fetch %s!", filePath)
 
         return formatHttpHeader(404)
@@ -222,8 +222,6 @@ def formatHttpResponse(parsed: HTTPRequestParser | None, filePath: pathlib.Path,
             fileContents = brotli.compress(fileContents, quality=config.BROTLI_COMPRESSION_LEVEL)
         elif encoding == "gzip":
             fileContents = gzip.compress(fileContents, compresslevel=config.GZIP_COMPRESSION_LEVEL)
-
-
 
     header = {"Content-Type": mime, "Content-Length": len(fileContents), "Accept-Ranges": "bytes", "Connection": "close"}
 

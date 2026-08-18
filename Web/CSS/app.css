@@ -39,6 +39,26 @@
     --highlighted-transparent: #f9e1af30;
 }
 
+/* Grass Theme */
+[data-theme="grass"] {
+    --bg: #2d6a20;
+    --acc: #298117;
+    --acc2: #5f9a45;
+    --acc3: #55aa44;
+    --acc4: #476d36;
+    --acc5: #09570a;
+    --acc6: #a5d73e;
+    --text: #FFFFFF;
+    --placeholder: #BBBBBB;
+    --button: #abc8a1;
+    --button-press: #759769;
+    --highlight: #66bc55;
+    --sendButtonGreen: #92c37c;
+    --rose: #f8f2c1;
+    --highlighted: #b3fcaf;
+    --highlighted-transparent: #90eb8b30;
+}
+
 /* Flashbang */
 [data-theme="flash"] {
     --bg: white;
@@ -49,7 +69,7 @@
     --acc5: #FFFFFF;
     --acc6: #FFFFFF;
     --text: #000000;
-    --placeholder: #FFFFFF;
+    --placeholder: #000000;
     --button: #FFFFFF;
     --button-press: #FFFFFF;
     --highlight: #FFFFFF;

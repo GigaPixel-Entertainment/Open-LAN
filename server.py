@@ -322,7 +322,8 @@ def formatLoginResponse(username: str, cloudflare: bool):
     if not username:
         return httphelper.formatHttpHeader(500)
 
-    token = secrets.token_urlsafe(256)
+    randTk = secrets.token_urlsafe(256)
+    token = f"{base64.urlsafe_b64encode(username.encode("utf-8")).decode("utf-8")}.{randTk}"
     VALID_TOKENS[username] = {"TOKEN": token, "EXPIRES": time.time() + config.TOKEN_EXPIRES_SEC}
 
     return httphelper.formatHttpHeader(308, {

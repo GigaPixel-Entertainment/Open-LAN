@@ -2546,11 +2546,6 @@
                 }
             }
 
-            const seperator3 = document.createElement("hr")
-            seperator3.style.width = "calc(100% - 16px)"
-            seperator3.style.border = "2px solid var(--acc)"
-            serverList2.push(seperator3)
-
             const newServer = document.createElement("img")
             newServer.classList = "serverIcon"
             await waitForImg(newServer, "Media/add.png")
@@ -5776,6 +5771,9 @@
 
             setTimeout(() => {
                 changePwdScreenWrapper.style.visibility = "hidden"
+                changePwdPlsWait.style.visibility = "hidden"
+                changePwdScreen.style.visibility = "hidden"
+                newPwdScreen.style.visibility = "hidden"
             }, 250)
         }
 
@@ -6023,6 +6021,8 @@
 
         const angyWord = "hell"
         let angyWordProgress = 0
+        const grassWord = "grass"
+        let grassWordProgress = 0
         const fixWord = "nvm"
         let fixWordProgress = 0
         const flashWord = "flashbang"
@@ -6043,6 +6043,17 @@
                     }
                 } else {
                     angyWordProgress = key.key == angyWord.charAt(0)
+                }
+
+                if (key.key == grassWord.charAt(grassWordProgress)) {
+                    grassWordProgress += 1
+
+                    if (grassWordProgress == grassWord.length) {
+                        document.documentElement.dataset.theme = "grass"
+                        grassWordProgress = 0
+                    }
+                } else {
+                    grassWordProgress = key.key == angyWord.charAt(0)
                 }
 
                 if (key.key == fixWord.charAt(fixWordProgress)) {
