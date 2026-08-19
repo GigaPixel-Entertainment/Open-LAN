@@ -9,6 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions: read-all
     strategy:
       matrix:
         python-version: ["3.13", "3.14"]
