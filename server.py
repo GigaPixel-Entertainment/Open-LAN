@@ -585,6 +585,7 @@ if __name__ == "__main__":
         sys.exit(-1)
 
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
     context.load_cert_chain(certfile=config.SERVER_CERT_FILE, keyfile=config.SERVER_KEY_FILE)
 
     ws = websocket.WS(VALID_TOKENS, SHORT_REDIRECT_TOKENS, DEFAULT_PFPS, chats, users, servers, invites, fernet, resizePfpBytes)

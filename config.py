@@ -9,8 +9,8 @@ import os
 
 from dotenv import load_dotenv
 
-DEV = False
-VER = "0.1.0"
+DEV = True
+VER = "0.1.1"
 STAGE = "beta"
 
 CWD = pathlib.Path(__file__).resolve().parent
