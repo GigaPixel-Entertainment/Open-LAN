@@ -52,10 +52,8 @@ class HttpHandler:
         self.listenerThread: threading.Thread | None = None
         self.keepListening: bool = False
 
-        self.context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        self.context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         self.context.minimum_version = ssl.TLSVersion.TLSv1_2
-        self.context.options |= ssl.OP_NO_TLSv1_1
-        self.context.options |= ssl.OP_NO_TLSv1
         self.context.load_cert_chain(certfile=config.SERVER_CERT_FILE, keyfile=config.SERVER_KEY_FILE)
 
     def handleRequest(self, sk: socket.socket):

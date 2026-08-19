@@ -584,10 +584,8 @@ if __name__ == "__main__":
         logging.fatal("[MAIN] No valid network interfaces found! Please connect to a network")
         sys.exit(-1)
 
-    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
     context.minimum_version = ssl.TLSVersion.TLSv1_2
-    context.options |= ssl.OP_NO_TLSv1_1
-    context.options |= ssl.OP_NO_TLSv1
     context.load_cert_chain(certfile=config.SERVER_CERT_FILE, keyfile=config.SERVER_KEY_FILE)
 
     ws = websocket.WS(VALID_TOKENS, SHORT_REDIRECT_TOKENS, DEFAULT_PFPS, chats, users, servers, invites, fernet, resizePfpBytes)
