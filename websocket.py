@@ -628,7 +628,7 @@ class WS():
             if self.tokenInChat(cAuthToken, decryptedBody["CID"]):
                 broadcastClients.append(client)
 
-        await self.wsBroadcastEncrypted(broadcastClients, orjson.dumps({"type":"metaChatUpdate", "chat": chat}))
+        await self.wsBroadcastEncrypted(broadcastClients, orjson.dumps({"type": "delMsg", "CID": chat["CID"], "MSGID": message["MSGID"]}))
 
     async def editMsg(self, ws, decryptedBody, authToken, trackerId):
         if not self.checkFields(decryptedBody, ["CID", "MSGID", "new"]):
@@ -668,7 +668,7 @@ class WS():
             if self.tokenInChat(cAuthToken, decryptedBody["CID"]):
                 broadcastClients.append(client)
 
-        await self.wsBroadcastEncrypted(broadcastClients, orjson.dumps({"type":"metaChatUpdate", "chat": chat}))
+        await self.wsBroadcastEncrypted(broadcastClients, orjson.dumps({"type": "editMsg", "CID": chat["CID"], "MSGID": message["MSGID"], "new": message["content"]}))
 
     async def updateDisplayname(self, ws, decryptedBody, authToken, trackerId):
         if not self.checkFields(decryptedBody, ["displayname"]):

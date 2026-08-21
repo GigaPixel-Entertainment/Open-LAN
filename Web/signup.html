@@ -199,8 +199,8 @@
 
             var encrypted = false
 
-            const hexToBytes = hex => Uint8Array.from(hex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
-            const bytesToHex = bytes => Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+            const hexToBytes = hex => Uint8Array.fromHex(hex);
+            const bytesToHex = bytes => bytes.toHex();
             const textEncode = (text) => new TextEncoder().encode(text);
             const textDecode = (text) => new TextDecoder().decode(text);
             var sharedSecretKey = null

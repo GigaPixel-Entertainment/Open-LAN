@@ -2218,7 +2218,6 @@
                             moveChat(chatID)
                         })
 
-
                         const readIndicator = document.createElement("div")
                         readIndicator.style.height = "50%"
                         readIndicator.style.aspectRatio = "1"
@@ -2232,7 +2231,7 @@
                         await waitForImg(chatIcon, "Media/textChannel.png")
 
                         const numUnreadMsgs = chat["lastMsg"]["MSGID"] - readMsgs[chatID.toString()]
-                        const isRead = numUnreadMsgs == 0 || isNaN(numUnreadMsgs)
+                        const isRead = numUnreadMsgs <= 0 || isNaN(numUnreadMsgs)
                         readIndicator.style.visibility = isRead ? "hidden" : "visible"
 
                         const channelName = document.createElement("h2")
@@ -2365,7 +2364,7 @@
                 chatExtInfo.classList = "font"
 
                 const numUnreadMsgs = chat["lastMsg"]["MSGID"] - readMsgs[chatID.toString()]
-                const isRead = numUnreadMsgs == 0 || isNaN(numUnreadMsgs)
+                const isRead = numUnreadMsgs <= 0 || isNaN(numUnreadMsgs)
 
                 if (isRead) {
                     chatExtInfo.textContent = chat["lastMsg"]["content"]
@@ -3016,6 +3015,8 @@
                 msgT.style.backgroundColor = "rgba(0, 0, 0, 0)"
                 msgT.style.border = "4px solid var(--acc4)"
                 msgT.style.width = "90%"
+                msgT.style.fieldSizing = "content"
+                msgT.style.maxHeight = "10em"
                 msgT.style.resize = "none"
                 msgT.style.outline = "none"
                 msgT.id = "currEditing"
@@ -3045,8 +3046,7 @@
             msgP.style.margin = "0"
             msgP.classList = "font white"
 
-            const msgNoNl = message["content"].replaceAll("\n", "\n\n")
-            const markdownParsed = (new DOMParser()).parseFromString(DOMPurify.sanitize(marked.parse(msgNoNl), {"breaks": true, "gfm": true}), "text/html")
+            const markdownParsed = (new DOMParser()).parseFromString(DOMPurify.sanitize(marked.parse(message["content"], {"breaks": true, "gfm": true})), "text/html")
             if (markdownParsed) {
                 const children = Array.from(markdownParsed.body.children)
                 for (let i = 0; i < children.length; i++) {
@@ -3652,6 +3652,7 @@
         var chatFetchInProgress = false
         var changedChat = true
         var startAtTop = false
+        var noNewMsg = false
         var highlightMsg = -1
         var currPage = 0
         var maxPage = 0
@@ -3659,7 +3660,7 @@
 
         var newMsgSeperator = null
 
-        async function newMsg(message, chatDiv2, lastMsg, userInfos, showNewMsgSep) {
+        async function newMsg(message, chatDiv2, lastMsg, userInfos) {
             if (message["deleted"]) {
                 return
             }
@@ -3713,7 +3714,7 @@
                 }
             }
 
-            if (showNewMsgSep && message["MSGID"] - readMsgs[currChat.toString()] == 1) {
+            if (!noNewMsg && message["MSGID"] - readMsgs[currChat.toString()] == 1) {
                 if (newMsgSeperator) {
                     newMsgSeperator.remove()
                 }
@@ -3760,6 +3761,7 @@
                     seperatorWrapper.scrollIntoView({"behavior": "smooth", "block": "center"})
                 })
             }
+            noNewMsg = true
 
             let messageDiv = null
 
@@ -4170,7 +4172,7 @@
                     continue
                 }
 
-                await newMsg(message, chatDiv2, lastMsg, userInfos, true)
+                await newMsg(message, chatDiv2, lastMsg, userInfos)
 
                 lastMsg = message
             }
@@ -5190,68 +5192,63 @@
                                                 }
 
                                                 if (chatCache["messages"].length > 100) {
-                                                    const msgid = chatCache["messages"][0]["MSGID"]
                                                     chatCache["messages"].splice(0, 1)
-
-                                                    const msgDiv = document.querySelector('[data-msgid="MSGID' + msgid + '"]')
-
-                                                    if (msgDiv) {
-                                                        msgDiv.remove()
-                                                    }
                                                 }
 
-                                                requiredUIDs = []
-                                                chatCache["messages"].forEach(message => {
-                                                    if (message["UID"]) {
-                                                        requiredUIDs.push(message["UID"])
-                                                    }
-                                                });
-
-                                                userInfos = reqMultiUsrInfo(requiredUIDs).then((userInfos) => {
-                                                    let lastMsg = null
-                                                    const thisMsg = chatCache["messages"][chatCache["messages"].length - 1]
-
-                                                    chatCache["messages"].forEach((msg) => {
-                                                        if (!msg["deleted"] && msg != thisMsg) {
-                                                            lastMsg = msg
-                                                        }
-                                                    })
-
-                                                    currMsgID = thisMsg["MSGID"]
-
-                                                    let msgList = []
-
-                                                    const currScroll = chatDiv.scrollTop
-                                                    const atBottom = ((currScroll + chatDiv.offsetHeight >= chatDiv.scrollHeight - 8) || changedChat) && !startAtTop
-
-                                                    newMsg(thisMsg, msgList, lastMsg, userInfos, false).then(() => {
-                                                        let lastMsgE = null
-                                                        if (lastMsg) {
-                                                            lastMsgE = document.querySelector('[data-msgid="MSGID' + lastMsg["MSGID"] + '"]')
-                                                        }
-
-                                                        let lastE = chatDiv.firstChild
-                                                        if (lastMsgE) {
-                                                            lastE = lastMsgE
-                                                        }
-
-                                                        msgList.forEach((e) => {
-                                                            lastE.after(e)
-                                                            lastE = e
-                                                        })
-
-                                                        attemptScroll(atBottom, startAtTop, currScroll)
-                                                    })
-                                                })
+                                                noNewMsg = true
+                                                refreshCachedChat()
                                             }
                                         }
 
                                         if (respBody["type"] == "delMsg") {
-                                            if (currChat == respBody["CID"]) {
-                                                const msg = document.querySelector('[data-msgid="MSGID' + respBody["MSGID"] + '"]')
+                                            stringCID = respBody["CID"].toString()
+                                            if (stringCID in chatMetaCache && chatMetaCache[stringCID]["lastMsg"]["MSGID"] == respBody["MSGID"]) {
+                                                delete chatMetaCache[stringCID]
+                                                setChatList()
+                                            }
 
-                                                if (msg) {
-                                                    msg.remove()
+                                            if (currChat == respBody["CID"]) {
+                                                changed = false
+
+                                                for (let i = 0; i < chatCache["messages"].length; i++) {
+                                                    const msg = chatCache["messages"][i];
+                                                    if (msg["MSGID"] == respBody["MSGID"]) {
+                                                        msg["content"] = "[message deleted]"
+                                                        msg["embed"] = []
+                                                        msg["deleted"] = true
+                                                        changed = true
+                                                        break
+                                                    }
+                                                }
+
+                                                if (changed) {
+                                                    refreshCachedChat()
+                                                }
+                                            }
+                                        }
+
+                                        if (respBody["type"] == "editMsg") {
+                                            stringCID = respBody["CID"].toString()
+                                            if (stringCID in chatMetaCache && chatMetaCache[stringCID]["lastMsg"]["MSGID"] == respBody["MSGID"]) {
+                                                chatMetaCache[stringCID]["lastMsg"]["content"] = respBody["new"]
+                                                setChatList()
+                                            }
+
+                                            if (currChat == respBody["CID"]) {
+                                                changed = false
+
+                                                for (let i = 0; i < chatCache["messages"].length; i++) {
+                                                    const msg = chatCache["messages"][i];
+                                                    if (msg["MSGID"] == respBody["MSGID"]) {
+                                                        msg["content"] = respBody["new"]
+                                                        msg["edited"] = true
+                                                        changed = true
+                                                        break
+                                                    }
+                                                }
+
+                                                if (changed) {
+                                                    refreshCachedChat()
                                                 }
                                             }
                                         }
