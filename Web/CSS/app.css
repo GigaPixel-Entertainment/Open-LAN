@@ -59,6 +59,46 @@
     --highlighted-transparent: #90eb8b30;
 }
 
+/* Yellow Theme */
+[data-theme="yellow"] {
+    --bg: #cec51c;
+    --acc: #837d08;
+    --acc2: #928b14;
+    --acc3: #c1ba3e;
+    --acc4: #5b5707;
+    --acc5: #b0a811;
+    --acc6: #a5b216;
+    --text: #FFFFFF;
+    --placeholder: #BBBBBB;
+    --button: #bcc8a1;
+    --button-press: #b0b790;
+    --highlight: #f7ff9b;
+    --sendButtonGreen: #7c8042;
+    --rose: #fff200;
+    --highlighted: #f9e1af;
+    --highlighted-transparent: #f9e1af30;
+}
+
+/* Arch Theme */
+[data-theme="arch"] {
+    --bg: #1d93d1;
+    --acc: #393939;
+    --acc2: #1277ab;
+    --acc3: #0c86c7;
+    --acc4: #0f628e;
+    --acc5: #262525;
+    --acc6: #717171;
+    --text: #FFFFFF;
+    --placeholder: #BBBBBB;
+    --button: #a1c3c8;
+    --button-press: #90b2b7;
+    --highlight: #6ea6db;
+    --sendButtonGreen: #2ba3e2;
+    --rose: #2ba3e2;
+    --highlighted: #7cadc7;
+    --highlighted-transparent: #f9e1af30;
+}
+
 /* Flashbang */
 [data-theme="flash"] {
     --bg: white;
@@ -85,7 +125,7 @@ html, body {
 }
 
 body {
-    background-color: var(--bg);
+    background: var(--bg);
     margin: 0;
 }
 
@@ -107,7 +147,7 @@ footer > a {
 #serverList {
     width: 5%;
     height: 100%;
-    background-color: var(--acc2);
+    background: var(--acc2);
 
     display: flex;
     flex-direction: column;
@@ -120,7 +160,7 @@ footer > a {
     left: 5%;
     width: 95%;
     height: calc(40px + 1.25em);
-    background-color: var(--acc4);
+    background: var(--acc4);
 
     display: flex;
     flex-direction: row;
@@ -160,7 +200,7 @@ footer > a {
     flex-shrink: 0;
     border: none;
     border-radius: 0;
-    background-color: var(--acc3);
+    background: var(--acc3);
     cursor: pointer;
     font-size: 1.25em;
 }
@@ -170,7 +210,7 @@ footer > a {
     width: calc(85% * 0.95 + 12px);
     top: 3.75em;
     left: 5%;
-    background-color: var(--acc5);
+    background: var(--acc5);
     z-index: 2;
     display: flex;
     flex-direction: row;
@@ -188,14 +228,14 @@ footer > a {
 }
 
 #lookingAtOldMsgs > button {
-    background-color: var(--button);
+    background: var(--button);
     border: none;
     cursor: pointer;
     margin: .25em;
 }
 
 #lookingAtOldMsgs > button:hover {
-    background-color: var(--button-press);
+    background: var(--button-press);
 }
 
 #msgBox {
@@ -204,7 +244,7 @@ footer > a {
     height: calc(100% - 40px - 1.25em);
     bottom: 0;
     left: 5%;
-    background-color: var(--bg);
+    background: var(--bg);
     overflow-x: hidden;
 }
 
@@ -214,7 +254,7 @@ footer > a {
     height: calc(100% - 40px - 1.25em);
     right: 0;
     bottom: 0;
-    background-color: var(--acc);
+    background: var(--acc);
     overflow-x: hidden;
 
     display: flex;
@@ -243,13 +283,13 @@ footer > a {
     display: flex;
     flex-direction: row;
     align-items: center;
-    background-color: transparent;
+    background: transparent;
     cursor: pointer;
     border-left: 2px solid transparent;
 }
 
 .userDiv:hover {
-    background-color: var(--acc2);
+    background: var(--acc2);
 }
 
 #friendsHeader {
@@ -259,7 +299,7 @@ footer > a {
     right: 0;
     width: 100%;
     height: 10%;
-    background-color: var(--highlight);
+    background: var(--highlight);
     justify-content: center;
     align-items: center;
     flex-direction: row;
@@ -268,7 +308,7 @@ footer > a {
 #friendsHeader > img {
     width: 4em;
     height: 4em;
-    background-color: var(--acc2);
+    background: var(--acc2);
     margin: .5em;
 }
 
@@ -283,7 +323,7 @@ footer > a {
     position: absolute;
     width: 100%;
     height: 90%;
-    background-color: var(--acc3);
+    background: var(--acc3);
     right: 0;
     top: 10%;
 
@@ -300,12 +340,12 @@ footer > a {
     margin-bottom: .5em;
     border: none;
     border-radius: 0;
-    background-color: var(--button);
+    background: var(--button);
     cursor: pointer;
 }
 
 #friendsListNewGC:hover {
-    background-color: var(--button-press);
+    background: var(--button-press);
 }
 
 #newGCFriendsList {
@@ -313,7 +353,7 @@ footer > a {
     width: 90%;
     left: 5%;
     height: 20%;
-    background-color: var(--acc4);
+    background: var(--acc4);
     visibility: hidden;
     display: flex;
     flex-direction: column;
@@ -326,7 +366,7 @@ footer > a {
     width: 95%;
     height: 15%;
     outline: none;
-    background-color: var(--acc3);
+    background: var(--acc3);
     border: none;
     border-radius: 0;
 }
@@ -339,13 +379,13 @@ footer > a {
 #newGCSearchRes {
     width: 95%;
     height: 60%;
-    background-color: var(--acc3);
+    background: var(--acc3);
 }
 
 #newGCCreate {
     width: 95%;
     height: 15%;
-    background-color: var(--button);
+    background: var(--button);
     border: none;
     border-radius: 0;
 }
@@ -355,7 +395,7 @@ footer > a {
 }
 
 #newGCCreate:enabled:hover {
-    background-color: var(--button-press);
+    background: var(--button-press);
 }
 
 #friendsListServerSettings {
@@ -367,19 +407,19 @@ footer > a {
     margin-bottom: .5em;
     border: none;
     border-radius: 0;
-    background-color: var(--button);
+    background: var(--button);
     cursor: pointer;
 }
 
 #friendsListServerSettings:hover {
-    background-color: var(--button-press);
+    background: var(--button-press);
 }
 
 #serverSettingsFriendsList {
     position: absolute;
     width: 90%;
     left: 5%;
-    background-color: var(--acc4);
+    background: var(--acc4);
     visibility: hidden;
     display: flex;
     flex-direction: column;
@@ -391,7 +431,7 @@ footer > a {
     width: calc(100% - 1em);
     height: 2em;
     margin: .5em;
-    background-color: var(--button);
+    background: var(--button);
     border: none;
     border-radius: 0;
 }
@@ -401,7 +441,7 @@ footer > a {
 }
 
 #serverSettingsFriendsList > input:enabled:hover {
-    background-color: var(--button-press);
+    background: var(--button-press);
 }
 
 #friendsListContent {
@@ -418,7 +458,7 @@ footer > a {
     position: absolute;
     width: 75%;
     height: fit-content;
-    background-color: var(--acc);
+    background: var(--acc);
     bottom: 2.5%;
     left: 7.5%;
     padding: 0;
@@ -433,7 +473,7 @@ footer > a {
     margin: .25em;
     padding: .25em;
     border: none;
-    background-color: var(--acc5);
+    background: var(--acc5);
     color: var(--text);
     outline: none;
     max-height: 16vh;
@@ -447,14 +487,14 @@ footer > a {
     margin: .25em auto;
     border: none;
     border-radius: 0;
-    background-color: var(--acc5);
+    background: var(--acc5);
     color: var(--sendButtonGreen);
     font-weight: bolder;
     cursor: pointer;
 }
 
 #sendMsg:hover {
-    background-color: var(--bg);
+    background: var(--bg);
 }
 
 #addFile {
@@ -465,7 +505,7 @@ footer > a {
     margin: .25em auto;
     border: none;
     border-radius: 0;
-    background-color: var(--acc5);
+    background: var(--acc5);
     color: var(--sendButtonGreen);
     font-weight: bolder;
     cursor: pointer;
@@ -475,7 +515,7 @@ footer > a {
 }
 
 #addFile:hover {
-    background-color: var(--bg);
+    background: var(--bg);
 }
 
 #addFileInput {
@@ -486,7 +526,7 @@ footer > a {
     position: absolute;
     width: 100%;
     height: 15vh;
-    background-color: var(--acc);
+    background: var(--acc);
     top: 0;
     transform: translateY(-100%);
     overflow-y: hidden;
@@ -501,7 +541,7 @@ footer > a {
     position: absolute;
     width: 100%;
     height: 2.5vh;
-    background-color: var(--acc);
+    background: var(--acc);
     top: 0;
     transform: translateY(-100%);
     overflow: hidden;
@@ -537,14 +577,14 @@ footer > a {
     aspect-ratio: 1;
     height: 100%;
     color: black;
-    background-color: var(--button);
+    background: var(--button);
     border: none;
     border-radius: 9999px;
     cursor: pointer;
 }
 
 #replying > button:hover {
-    background-color: var(--button-press);
+    background: var(--button-press);
 }
 
 .smallTime {
@@ -585,7 +625,7 @@ footer > a {
     font-size: 2em;
     border: none;
     border-radius: 0;
-    background-color: var(--acc6);
+    background: var(--acc6);
     font-weight: 700;
     text-align: center;
     cursor: pointer;
@@ -599,7 +639,7 @@ footer > a {
     top: 0;
     left: 0;
     z-index: 3;
-    background-color: var(--bg);
+    background: var(--bg);
     box-shadow: 0px 0px 4px 4px rgba(0, 0, 0, .5);
     transform: translateY(calc(-100% - 8px));
 
@@ -612,7 +652,7 @@ footer > a {
     left: 0;
     width: 100%;
     height: calc(40px + 1.25em);
-    background-color: var(--acc4);
+    background: var(--acc4);
     display: flex;
 }
 
@@ -633,7 +673,7 @@ footer > a {
     flex-shrink: 0;
     border: none;
     border-radius: 0;
-    background-color: var(--acc3);
+    background: var(--acc3);
     cursor: pointer;
     font-size: 1.25em;
 }
@@ -722,14 +762,14 @@ footer > a {
     width: 15em;
     border: none;
     border-radius: 0;
-    background-color: var(--acc5);
+    background: var(--acc5);
     padding: .25em;
 }
 
 #changePwd {
     width: 75%;
     font-size: 1.5em;
-    background-color: var(--rose);
+    background: var(--rose);
     border: none;
     cursor: pointer;
     margin-right: .5em;
@@ -738,7 +778,7 @@ footer > a {
 .editBtn {
     font-size: 2em;
     width: 4em;
-    background-color: var(--rose);
+    background: var(--rose);
     border: none;
     border-radius: 0;
     cursor: pointer;
@@ -749,7 +789,7 @@ footer > a {
 .saveBtn {
     font-size: 2em;
     width: 4em;
-    background-color: var(--sendButtonGreen);
+    background: var(--sendButtonGreen);
     border: none;
     border-radius: 0;
     cursor: pointer;
@@ -767,7 +807,7 @@ footer > a {
 }
 
 #logoutBtn {
-    background-color: black;
+    background: black;
     border: none;
     font-size: 2em;
     font-weight: 700;
@@ -784,7 +824,7 @@ footer > a {
     width: 50%;
     height: 75%;
     transform: translate(-50%, -50%);
-    background-color: var(--acc2);
+    background: var(--acc2);
 }
 
 #pfpPreview {
@@ -817,12 +857,12 @@ footer > a {
 }
 
 #pfpPreviewActionsSet {
-    background-color: var(--button);
+    background: var(--button);
     border: none;
 }
 
 #pfpPreviewActionsSet:hover {
-    background-color: var(--button-press);
+    background: var(--button-press);
 }
 
 #pfpPreviewActionsCancel {
@@ -843,7 +883,7 @@ footer > a {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: var(--bg);
+    background: var(--bg);
 }
 
 #editGcIcon {
@@ -879,7 +919,7 @@ footer > a {
     height: 60%;
     aspect-ratio: 1;
     border-radius: 9999px;
-    background-color: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.5);
     border: 4px solid transparent;
     visibility: hidden;
 
@@ -896,7 +936,7 @@ footer > a {
     outline: none;
     border: none;
     border-radius: 0;
-    background-color: var(--acc);
+    background: var(--acc);
 
     transform: translateX(-50%);
 }
@@ -921,12 +961,12 @@ footer > a {
 }
 
 #editGcActionsSet {
-    background-color: var(--button);
+    background: var(--button);
     border: none;
 }
 
 #editGcActionsSet:hover {
-    background-color: var(--button-press);
+    background: var(--button-press);
 }
 
 #editGcActionsCancel {
@@ -947,7 +987,7 @@ footer > a {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: var(--bg);
+    background: var(--bg);
 }
 
 #createServerIcon {
@@ -983,7 +1023,7 @@ footer > a {
     height: 60%;
     aspect-ratio: 1;
     border-radius: 9999px;
-    background-color: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.5);
     border: 4px solid transparent;
     visibility: hidden;
 
@@ -1000,7 +1040,7 @@ footer > a {
     outline: none;
     border: none;
     border-radius: 0;
-    background-color: var(--acc);
+    background: var(--acc);
 
     transform: translateX(-50%);
 }
@@ -1025,12 +1065,12 @@ footer > a {
 }
 
 #createServerCreate {
-    background-color: var(--button);
+    background: var(--button);
     border: none;
 }
 
 #createServerCreate:hover {
-    background-color: var(--button-press);
+    background: var(--button-press);
 }
 
 #createServerCancel {
@@ -1050,7 +1090,7 @@ footer > a {
     height: 75%;
     top: 50%;
     left: 50%;
-    background-color: var(--bg);
+    background: var(--bg);
     transform: translate(-50%, -50%);
 
     display: flex;
@@ -1064,7 +1104,7 @@ footer > a {
     font-size: 2em;
     width: 95%;
     height: 10%;
-    background-color: var(--acc3);
+    background: var(--acc3);
     border: none;
     border-radius: 0;
     outline: none;
@@ -1077,7 +1117,7 @@ footer > a {
 #addUserSearchRes {
     width: 95%;
     height: 65%;
-    background-color: var(--acc3);
+    background: var(--acc3);
 
     display: flex;
     flex-direction: column;
@@ -1086,7 +1126,7 @@ footer > a {
 #addUserAdd {
     width: 95%;
     height: 7.5%;
-    background-color: var(--button);
+    background: var(--button);
     border: none;
     border-radius: 0;
     outline: none;
@@ -1098,7 +1138,7 @@ footer > a {
 }
 
 #addUserAdd:enabled:hover {
-    background-color: var(--button-press);
+    background: var(--button-press);
 }
 
 #addUserCancel {
@@ -1124,7 +1164,7 @@ footer > a {
     height: 25%;
     top: 50%;
     left: 50%;
-    background-color: var(--bg);
+    background: var(--bg);
     transform: translate(-50%, -50%);
 
     display: flex;
@@ -1140,7 +1180,7 @@ footer > a {
     height: 25%;
     top: 50%;
     left: 50%;
-    background-color: var(--bg);
+    background: var(--bg);
     transform: translate(-50%, -50%);
 
     display: flex;
@@ -1156,7 +1196,7 @@ footer > a {
 }
 
 #changePwdScreenOrigPwd, #newPwdScreenNewPwd, #newPwdScreenConfirmPwd {
-    background-color: var(--acc3);
+    background: var(--acc3);
     border: none;
     font-size: 1.5em;
     width: 90%;
@@ -1168,7 +1208,7 @@ footer > a {
 }
 
 #changePwdScreenOrigPwdSubmit, #newPwdScreenSubmit {
-    background-color: var(--button);
+    background: var(--button);
     border: none;
     font-size: 1.5em;
     outline: none;
@@ -1177,7 +1217,7 @@ footer > a {
 }
 
 #changePwdScreenOrigPwdSubmit:hover, #newPwdScreenSubmit:hover {
-    background-color: var(--button-press);
+    background: var(--button-press);
 }
 
 #newPwdScreen {
@@ -1186,7 +1226,7 @@ footer > a {
     height: 25%;
     top: 50%;
     left: 50%;
-    background-color: var(--bg);
+    background: var(--bg);
     transform: translate(-50%, -50%);
 
     display: flex;
@@ -1203,7 +1243,7 @@ footer > a {
     height: 30%;
     top: 50%;
     left: 50%;
-    background-color: var(--bg);
+    background: var(--bg);
     transform: translate(-50%, -50%);
 
     display: flex;
@@ -1223,7 +1263,7 @@ footer > a {
     height: 15%;
     font-size: 1.5em;
     color: var(--text);
-    background-color: var(--acc3);
+    background: var(--acc3);
     border: none;
     outline: none;
 }
@@ -1235,7 +1275,7 @@ footer > a {
 #newChannelCreate {
     width: 95%;
     height: 15%;
-    background-color: var(--button);
+    background: var(--button);
     border: none;
     border-radius: 0;
     outline: none;
@@ -1247,7 +1287,7 @@ footer > a {
 }
 
 #newChannelCreate:enabled:hover {
-    background-color: var(--button-press);
+    background: var(--button-press);
 }
 
 #newChannelCancel {
@@ -1273,7 +1313,7 @@ footer > a {
     height: 30%;
     top: 50%;
     left: 50%;
-    background-color: var(--bg);
+    background: var(--bg);
     transform: translate(-50%, -50%);
 
     display: flex;
@@ -1293,7 +1333,7 @@ footer > a {
     height: 15%;
     font-size: 1.5em;
     color: var(--text);
-    background-color: var(--acc3);
+    background: var(--acc3);
     border: none;
     outline: none;
 }
@@ -1305,7 +1345,7 @@ footer > a {
 #newCategoryCreate {
     width: 95%;
     height: 15%;
-    background-color: var(--button);
+    background: var(--button);
     border: none;
     border-radius: 0;
     outline: none;
@@ -1317,7 +1357,7 @@ footer > a {
 }
 
 #newCategoryCreate:enabled:hover {
-    background-color: var(--button-press);
+    background: var(--button-press);
 }
 
 #newCategoryCancel {
@@ -1344,7 +1384,7 @@ footer > a {
     left: 50%;
     width: 75%;
     height: 75%;
-    background-color: var(--bg);
+    background: var(--bg);
     transform: translate(-50%, -50%);
 
     display: flex;
@@ -1359,7 +1399,7 @@ footer > a {
     flex-direction: column;
     align-items: center;
 
-    background-color: var(--acc);
+    background: var(--acc);
 }
 
 .genericSettingsLeftItem {
@@ -1373,11 +1413,11 @@ footer > a {
 }
 
 .genericSettingsLeftItem:disabled {
-    background-color: rgba(255, 255, 255, 0.125);
+    background: rgba(255, 255, 255, 0.125);
 }
 
 .genericSettingsLeftItem:hover {
-    background-color: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.25);
 }
 
 .genericSettingsView {
@@ -1390,7 +1430,7 @@ footer > a {
 }
 
 .genericSettingsTextInput {
-    background-color: var(--acc3);
+    background: var(--acc3);
     border: none;
     width: 75%;
     font-size: 2em;
@@ -1410,7 +1450,7 @@ footer > a {
     display: flex;
     flex-direction: row;
     transform: translateX(-50%);
-    background-color: var(--acc2);
+    background: var(--acc2);
     align-items: center;
 
     opacity: 0;
@@ -1440,7 +1480,7 @@ footer > a {
 }
 
 .genericSettingsUnsavedSave {
-    background-color: var(--button);
+    background: var(--button);
     border: none;
     flex-shrink: 0;
     cursor: pointer;
@@ -1454,7 +1494,7 @@ footer > a {
     height: 40%;
     top: 50%;
     left: 50%;
-    background-color: var(--bg);
+    background: var(--bg);
     transform: translate(-50%, -50%);
 
     display: flex;
@@ -1474,7 +1514,7 @@ footer > a {
     height: 25%;
     font-size: 1.5em;
     color: var(--text);
-    background-color: var(--acc3);
+    background: var(--acc3);
     border: none;
     outline: none;
     resize: none;
@@ -1484,7 +1524,7 @@ footer > a {
 #leavingCancel {
     width: 95%;
     height: 15%;
-    background-color: var(--button);
+    background: var(--button);
     border: none;
     border-radius: 0;
     outline: none;
@@ -1493,7 +1533,7 @@ footer > a {
 }
 
 #leavingCancel:hover {
-    background-color: var(--button-press);
+    background: var(--button-press);
 }
 
 #leavingLeave {
@@ -1514,7 +1554,7 @@ footer > a {
 }
 
 #accInfo {
-    background-color: var(--acc3);
+    background: var(--acc3);
     margin-left: 5%;
     margin-right: 5%;
     width: 90%;
@@ -1545,7 +1585,7 @@ footer > a {
 }
 
 #accCreated {
-    background-color: var(--acc3);
+    background: var(--acc3);
     margin-left: 5%;
     margin-right: calc(45% - 2em);
     width: 50%;
@@ -1573,7 +1613,7 @@ footer > a {
     resize: none;
     width: 90%;
     height: 75%;
-    background-color: var(--acc3);
+    background: var(--acc3);
     border: none;
     outline: none;
     font-size: 1.5em;
@@ -1583,7 +1623,7 @@ footer > a {
     position: absolute;
     top: 0;
     left: 0;
-    background-color: var(--bg);
+    background: var(--bg);
     width: 100%;
     height: 100%;
     z-index: 98;
@@ -1637,7 +1677,7 @@ footer > a {
     height: 1.75em;
     line-height: 1.75em;
     border-radius: 9999px;
-    background-color: red;
+    background: red;
     pointer-events: none;
     text-align: center;
     transform: translate(40%, -25%);
@@ -1669,7 +1709,7 @@ footer > a {
     height: 100%;
     top: 0;
     left: 0;
-    background-color: var(--bg);
+    background: var(--bg);
     z-index: 2;
     transform: translateX(calc(100% + 8px));
     box-shadow: 0px 0px 4px 4px rgba(0, 0, 0, .5);
@@ -1678,7 +1718,7 @@ footer > a {
 }
 
 #findFriends {
-    background-color: var(--acc2);
+    background: var(--acc2);
     width: 60%;
     height: calc(100% - 2em);
     margin: 1em;
@@ -1686,7 +1726,7 @@ footer > a {
 
 #friendSearch {
     display: flex;
-    background-color: var(--acc3);
+    background: var(--acc3);
     width: 100%;
     height: 10%;
 }
@@ -1733,14 +1773,14 @@ footer > a {
 }
 
 #incomingRequests {
-    background-color: var(--acc2);
+    background: var(--acc2);
     height: 50%;
     margin: 0;
     margin-bottom: .5em;
 }
 
 #outgoingRequests {
-    background-color: var(--acc2);
+    background: var(--acc2);
     height: 50%;
     margin: 0;
     margin-top: .5em;
@@ -1785,7 +1825,7 @@ footer > a {
     position: absolute;
     width: 100%;
     aspect-ratio: 1;
-    background-color: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.5);
     pointer-events: none;
     visibility: hidden;
 }
@@ -1815,7 +1855,7 @@ footer > a {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: var(--acc2);
+    background: var(--acc2);
     display: flex;
     flex-direction: column;
     border-radius: 8px;
@@ -1826,7 +1866,7 @@ footer > a {
     height: calc(95% - 1em);
     resize: none;
     padding: .5em;
-    background-color: var(--acc4);
+    background: var(--acc4);
     border: none;
     border-top-left-radius: 8px;
     border-top-right-radius: 8px;
@@ -1881,7 +1921,7 @@ footer > a {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: var(--bg);
+    background: var(--bg);
     padding: 1em;
     display: flex;
     flex-direction: column;
@@ -1902,14 +1942,14 @@ footer > a {
     position: absolute;
     width: calc(100% - 2em);
     font-size: 2em;
-    background-color: var(--button);
+    background: var(--button);
     border: none;
     cursor: pointer;
     bottom: 1em;
 }
 
 #popupClose:hover {
-    background-color: var(--button-press);
+    background: var(--button-press);
 }
 
 #confirmationPopupContents {
@@ -1919,7 +1959,7 @@ footer > a {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: var(--bg);
+    background: var(--bg);
     padding: 1em;
     display: flex;
     flex-direction: column;
@@ -1939,14 +1979,14 @@ footer > a {
 #confirmationPopupConfirm {
     width: calc(100% - 2em);
     font-size: 2em;
-    background-color: var(--button);
+    background: var(--button);
     border: none;
     cursor: pointer;
     margin-top: 1em;
 }
 
 #confirmationPopupConfirm:hover {
-    background-color: var(--button-press);
+    background: var(--button-press);
 }
 
 #confirmationPopupCancel {
@@ -1969,7 +2009,7 @@ footer > a {
     width: 300px;
     height: fit-content;
     overflow: hidden;
-    background-color: var(--acc);
+    background: var(--acc);
     border: 2px solid var(--acc2);
 
     padding-top: 1em;
@@ -2031,7 +2071,7 @@ footer > a {
     margin-top: 1em;
     outline: none;
     border: 1px solid var(--acc4);
-    background-color: transparent;
+    background: transparent;
     resize: none;
     field-sizing: content;
 }
@@ -2055,7 +2095,7 @@ footer > a {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: var(--bg);
+    background: var(--bg);
 }
 
 #usrProfileScreenUsrInfoWrapper {
@@ -2063,7 +2103,7 @@ footer > a {
     width: 50%;
     height: 100%;
     left: 0;
-    background-color: var(--acc);
+    background: var(--acc);
     overflow: hidden;
     overflow-y: auto;
 }
@@ -2118,7 +2158,7 @@ footer > a {
     margin-right: 1em;
     border: none;
     border-radius: 0;
-    background-color: var(--button);
+    background: var(--button);
 }
 
 #usrProfileScreenUsrActions > button:enabled {
@@ -2134,7 +2174,7 @@ footer > a {
     margin-top: 1em;
     outline: none;
     border: 1px solid var(--acc4);
-    background-color: transparent;
+    background: transparent;
     resize: none;
     field-sizing: content;
 }
@@ -2162,7 +2202,7 @@ footer > a {
     aspect-ratio: 1;
     border: 3px solid var(--acc4);
     border-radius: 9999px;
-    background-color: transparent;
+    background: transparent;
     cursor: pointer;
 }
 
@@ -2182,7 +2222,7 @@ footer > a {
 
 .header {
     width: calc(100% - 2em);
-    background-color: var(--acc3);
+    background: var(--acc3);
     padding: 1em;
 }
 
@@ -2213,7 +2253,7 @@ footer > a {
 
 .messageDiv {
     width: 100%;
-    background-color: var(--bg);
+    background: var(--bg);
     display: flex;
     justify-content: space-between;
     padding: 0;
@@ -2222,7 +2262,7 @@ footer > a {
 }
 
 .messageDiv:hover {
-    background-color: var(--acc);
+    background: var(--acc);
 }
 
 .invis {
@@ -2233,7 +2273,7 @@ footer > a {
     position: absolute;
     width: 224px;
     padding: 8px;
-    background-color: var(--acc);
+    background: var(--acc);
     left: 0;
     top: 0;
     border: 2px solid var(--acc2);
@@ -2247,7 +2287,7 @@ footer > a {
 .rClickMenuOption {
     width: 100%;
     font-size: 1.25em;
-    background-color: var(--acc);
+    background: var(--acc);
     border: none;
     cursor: pointer;
 }
@@ -2258,18 +2298,18 @@ footer > a {
 }
 
 .rClickMenuOption:hover {
-    background-color: var(--acc4);
+    background: var(--acc4);
 }
 
 .rClickMenuOption[disabled] {
-    background-color: var(--acc);
+    background: var(--acc);
 }
 
 .backBtn {
     position: absolute;
     right: 0;
     top: 0;
-    background-color: var(--acc3);
+    background: var(--acc3);
     border: none;
     border-radius: 0;
     font-size: 1.5em;
@@ -2284,7 +2324,7 @@ footer > a {
     height: 100%;
     top: 0;
     left: 0;
-    background-color: rgba(0, 0, 0, 0.75);
+    background: rgba(0, 0, 0, 0.75);
     visibility: hidden;
     opacity: 0;
     z-index: 10;
@@ -2356,7 +2396,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: white;
+    background: white;
     visibility: hidden;
     z-index: 100;
     pointer-events: none;
@@ -2371,13 +2411,13 @@ select {
     margin-right: 1em;
     font-size: 1.25em;
     color: var(--text);
-    background-color: var(--acc);
+    background: var(--acc);
     border-radius: 8px;
 }
 
 ::picker(select) {
     border-radius: 8px;
-    background-color: var(--acc);
+    background: var(--acc);
     color: var(--text);
 }
 

@@ -410,9 +410,10 @@ class WS():
 
             lastMsg = chat["messages"][-1] if len(chat["messages"]) > 0 else None
             lastRealMsg = None
-            for msg in chat["messages"]:
+            for msg in reversed(chat["messages"]):
                 if not "SYSMSG" in msg and not "deleted" in msg:
                     lastRealMsg = msg
+                    break
 
             metaList.append({
                 "CID": chat["CID"],
