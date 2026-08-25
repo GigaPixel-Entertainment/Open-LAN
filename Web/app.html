@@ -1514,7 +1514,14 @@
             const files = e.target.files
 
             if (files && files.length > 0) {
-                convertFileToBase64(files[0]).then((img) => {
+                const file = files[0]
+
+                if (file.size > 10*1024*1024) {
+                    openPopup("Woah there!", "That file exceeded the max size of 10MB!")
+                    return
+                }
+
+                convertFileToBase64(file).then((img) => {
                     selected = img
                     pfpPreview.setAttribute("src", selected)
                     pfpScalingWrapper.style.visibility = "visible"
@@ -1597,6 +1604,7 @@
                     origEditingMsg = msgRClickMenuMsg["content"]
                     editingMsgCurr = origEditingMsg
 
+                    doNotCache = [editingMsgId]
                     refreshCachedChat()
                 }
             }
@@ -2231,7 +2239,7 @@
                         await waitForImg(chatIcon, "Media/textChannel.png")
 
                         const numUnreadMsgs = chat["lastMsg"]["MSGID"] - readMsgs[chatID.toString()]
-                        const isRead = numUnreadMsgs <= 0 || isNaN(numUnreadMsgs)
+                        const isRead = numUnreadMsgs <= 0 || isNaN(numUnreadMsgs) || (currChat == chatID && currPage == 0 && chatDiv.scrollTop + chatDiv.offsetHeight >= chatDiv.scrollHeight - 8)
                         readIndicator.style.visibility = isRead ? "hidden" : "visible"
 
                         const channelName = document.createElement("h2")
@@ -2364,7 +2372,7 @@
                 chatExtInfo.classList = "font"
 
                 const numUnreadMsgs = chat["lastMsg"]["MSGID"] - readMsgs[chatID.toString()]
-                const isRead = numUnreadMsgs <= 0 || isNaN(numUnreadMsgs)
+                const isRead = numUnreadMsgs <= 0 || isNaN(numUnreadMsgs) || (currChat == chatID && currPage == 0 && chatDiv.scrollTop + chatDiv.offsetHeight >= chatDiv.scrollHeight - 8)
 
                 if (isRead) {
                     chatExtInfo.textContent = chat["lastMsg"]["content"]
@@ -3094,7 +3102,6 @@
                         const isValidMention = usrName == "everyone" || usrInfo
 
                         if (isValidMention) {
-                            const isForMe = usrName == "everyone" || usrInfo["UID"] == currUID
                             const mentionDisplay = usrInfo ? usrInfo["displayname"] : usrName
                             const mentionSpan = document.createElement("span")
                             mentionSpan.style.backgroundColor = "var(--highlight)"
@@ -3117,7 +3124,7 @@
                             p.style.marginTop = "0.25em"
                             p.style.marginBottom = "0.25em"
 
-                            if (isForMe) {
+                            if (usrName == "everyone" || usrInfo["UID"] == currUID) {
                                 msgP.dataset.highlighted = true
                             }
                         }
@@ -3416,16 +3423,23 @@
             msgP.style.wordWrap = "break-word"
 
             if (message["TYPE"] == "editGcInfo") {
-                targetInfo = await reqUsrInfo(message["TARGET"])
+                const targetInfo = await reqUsrInfo(message["TARGET"])
 
                 if (targetInfo) {
                     const targetNameE = document.createElement("b")
                     targetNameE.textContent = targetInfo["displayname"]
+                    targetNameE.classList = "fullMsgDisplayname"
+
+                    targetNameE.addEventListener("click", (e) => {
+                        showUsrProfilePopup(e.clientX, e.clientY, targetInfo)
+                        e.stopPropagation()
+                    })
+
                     msgP.appendChild(targetNameE)
                     msgP.append(" changed the group name/icon")
                 }
             } else if (message["TYPE"] == "addUsrToGc") {
-                targetInfo = await reqUsrInfo(message["TARGET"])
+                const targetInfo = await reqUsrInfo(message["TARGET"])
 
                 if (targetInfo) {
                     const arrowE = document.createElement("span")
@@ -3434,6 +3448,13 @@
 
                     const targetNameE = document.createElement("b")
                     targetNameE.textContent = targetInfo["displayname"]
+                    targetNameE.classList = "fullMsgDisplayname"
+
+                    targetNameE.addEventListener("click", (e) => {
+                        showUsrProfilePopup(e.clientX, e.clientY, targetInfo)
+                        e.stopPropagation()
+                    })
+
                     msgP.appendChild(arrowE)
                     msgP.append(" ")
                     msgP.appendChild(targetNameE)
@@ -3443,6 +3464,13 @@
                         const otherInfo = await reqUsrInfo(message["TARGETS"][0])
                         const otherNameE = document.createElement("b")
                         otherNameE.textContent = otherInfo["displayname"]
+                        otherNameE.classList = "fullMsgDisplayname"
+
+                        otherNameE.addEventListener("click", (e) => {
+                            showUsrProfilePopup(e.clientX, e.clientY, otherInfo)
+                            e.stopPropagation()
+                        })
+
                         msgP.appendChild(otherNameE)
                     } else {
                         const numOthersE = document.createElement("b")
@@ -3454,7 +3482,7 @@
                     msgP.append(" to this chat")
                 }
             } else if (message["TYPE"] == "usrLeaveGc") {
-                targetInfo = await reqUsrInfo(message["TARGET"])
+                const targetInfo = await reqUsrInfo(message["TARGET"])
 
                 if (targetInfo) {
                     const arrowE = document.createElement("span")
@@ -3463,17 +3491,23 @@
 
                     const targetNameE = document.createElement("b")
                     targetNameE.textContent = targetInfo["displayname"]
+                    targetNameE.classList = "fullMsgDisplayname"
+
+                    targetNameE.addEventListener("click", (e) => {
+                        showUsrProfilePopup(e.clientX, e.clientY, targetInfo)
+                        e.stopPropagation()
+                    })
                     msgP.appendChild(arrowE)
                     msgP.append(" ")
                     msgP.appendChild(targetNameE)
                     msgP.append(" left the chat")
                 }
             } else if (message["TYPE"] == "usrRemovedGc") {
-                infos = await reqMultiUsrInfo([message["TARGET"], message["TARGET2"]])
+                const infos = await reqMultiUsrInfo([message["TARGET"], message["TARGET2"]])
 
                 if (infos) {
-                    owner = infos[0]
-                    victim = infos[1]
+                    const owner = infos[0]
+                    const victim = infos[1]
 
                     const arrowE = document.createElement("span")
                     arrowE.classList = "red"
@@ -3481,9 +3515,21 @@
 
                     const victimE = document.createElement("b")
                     victimE.textContent = victim["displayname"]
+                    victimE.classList = "fullMsgDisplayname"
+
+                    victimE.addEventListener("click", (e) => {
+                        showUsrProfilePopup(e.clientX, e.clientY, victim)
+                        e.stopPropagation()
+                    })
 
                     const ownerE = document.createElement("b")
                     ownerE.textContent = owner["displayname"]
+                    ownerE.classList = "fullMsgDisplayname"
+
+                    ownerE.addEventListener("click", (e) => {
+                        showUsrProfilePopup(e.clientX, e.clientY, owner)
+                        e.stopPropagation()
+                    })
 
                     msgP.appendChild(arrowE)
                     msgP.append(" ")
@@ -3492,7 +3538,7 @@
                     msgP.appendChild(ownerE)
                 }
             } else if (message["TYPE"] == "serverInvite") {
-                let serverMeta = await reqServerMeta(message["TARGET"])
+                const serverMeta = await reqServerMeta(message["TARGET"])
 
                 if (serverMeta) {
                     let inviteInvalid = true
@@ -3615,7 +3661,7 @@
                     msgP.appendChild(inviteFrame)
                 }
             } else if (message["TYPE"] == "newServerMember") {
-                targetInfo = await reqUsrInfo(message["TARGET"])
+                const targetInfo = await reqUsrInfo(message["TARGET"])
 
                 if (targetInfo) {
                     const arrowE = document.createElement("span")
@@ -3624,17 +3670,29 @@
 
                     const targetNameE = document.createElement("b")
                     targetNameE.textContent = targetInfo["displayname"]
+                    targetNameE.classList = "fullMsgDisplayname"
+
+                    targetNameE.addEventListener("click", (e) => {
+                        showUsrProfilePopup(e.clientX, e.clientY, targetInfo)
+                        e.stopPropagation()
+                    })
                     msgP.appendChild(arrowE)
                     msgP.append(" ")
                     msgP.appendChild(targetNameE)
                     msgP.append(" joined the chat!")
                 }
             } else if (message["TYPE"] == "transferOwnership") {
-                targetInfo = await reqUsrInfo(message["TARGET"])
+                const targetInfo = await reqUsrInfo(message["TARGET"])
 
                 if (targetInfo) {
                     const targetNameE = document.createElement("b")
                     targetNameE.textContent = targetInfo["displayname"]
+                    targetNameE.classList = "fullMsgDisplayname"
+
+                    targetNameE.addEventListener("click", (e) => {
+                        showUsrProfilePopup(e.clientX, e.clientY, targetInfo)
+                        e.stopPropagation()
+                    })
                     msgP.appendChild(targetNameE)
                     msgP.append(" is the new owner!")
                 }
@@ -3658,6 +3716,8 @@
         var currMsgID = -1
 
         var newMsgSeperator = null
+        var msgCache = {}
+        var doNotCache = []
 
         async function newMsg(message, chatDiv2, lastMsg, userInfos) {
             if (message["deleted"]) {
@@ -3764,73 +3824,77 @@
 
             let messageDiv = null
 
-            if (message["SYSMSG"]) {
-                messageDiv = await genSysMsg(message, messageDate)
+            if (message["MSGID"].toString() in msgCache && !doNotCache.includes(message["MSGID"])) {
+                messageDiv = msgCache[message["MSGID"].toString()]
             } else {
-                let isShortMsg = lastMsg && !lastMsg["SYSMSG"] && message["UID"] == lastMsg["UID"] && message["time"] - lastMsg["time"] < 10*60 && !(message["replyTo"] && message["replyTo"] != -1) && messageDate.getDate() == lastMessageDate.getDate()
-
-                if (isShortMsg) {
-                    messageDiv = await genSmallMsg(userInfos, message, messageDate)
+                if (message["SYSMSG"]) {
+                    messageDiv = await genSysMsg(message, messageDate)
                 } else {
-                    messageDiv = await genFullMsg(userInfos, message, messageDate)
-                }
-            }
+                    let isShortMsg = lastMsg && !lastMsg["SYSMSG"] && message["UID"] == lastMsg["UID"] && message["time"] - lastMsg["time"] < 10*60 && !(message["replyTo"] && message["replyTo"] != -1) && messageDate.getDate() == lastMessageDate.getDate()
 
-            messageDiv.dataset.msgid = "MSGID" + message["MSGID"]
-
-            messageDiv.addEventListener("contextmenu", (e) => {
-                if (Date.now() - lastRClickMenuClose < 10) {
-                    return
+                    if (isShortMsg) {
+                        messageDiv = await genSmallMsg(userInfos, message, messageDate)
+                    } else {
+                        messageDiv = await genFullMsg(userInfos, message, messageDate)
+                    }
                 }
 
-                e.preventDefault()
+                messageDiv.dataset.msgid = "MSGID" + message["MSGID"]
 
-                if (message["UID"] == currUID) {
-                    editTxt.disabled = false
-                    delTxt.disabled = false
-                } else {
-                    editTxt.disabled = true
-                    delTxt.disabled = true
-                }
-
-                msgRClickMenu.style.visibility = "visible"
-                msgRClickMenu.style.left = e.pageX + "px"
-
-                if (e.pageY + msgRClickMenu.offsetHeight > window.innerHeight) {
-                    msgRClickMenu.style.top = e.pageY - msgRClickMenu.offsetHeight + "px"
-                } else {
-                    msgRClickMenu.style.top = e.pageY + "px"
-                }
-                msgRClickMenuMsg = message
-            })
-
-            if (highlightMsg == message["MSGID"]) {
-                highlightMsg = -1
-
-                const chatFinishedPromise = new Promise((r) => {
-                    function check() {
-                        if (!chatFetchInProgress) {
-                            r()
-                        } else {
-                            setTimeout(check, 100)
-                        }
+                messageDiv.addEventListener("contextmenu", (e) => {
+                    if (Date.now() - lastRClickMenuClose < 10) {
+                        return
                     }
 
-                    check()
+                    e.preventDefault()
+
+                    if (message["UID"] == currUID) {
+                        editTxt.disabled = false
+                        delTxt.disabled = false
+                    } else {
+                        editTxt.disabled = true
+                        delTxt.disabled = true
+                    }
+
+                    msgRClickMenu.style.visibility = "visible"
+                    msgRClickMenu.style.left = e.pageX + "px"
+
+                    if (e.pageY + msgRClickMenu.offsetHeight > window.innerHeight) {
+                        msgRClickMenu.style.top = e.pageY - msgRClickMenu.offsetHeight + "px"
+                    } else {
+                        msgRClickMenu.style.top = e.pageY + "px"
+                    }
+                    msgRClickMenuMsg = message
                 })
 
-                chatFinishedPromise.then(() => {
-                    const origBg = messageDiv.style.backgroundColor
-                    messageDiv.style.backgroundColor = "var(--acc6)"
-                    messageDiv.scrollIntoView({
-                        "behavior": "smooth",
-                        "block": "center"
+                if (highlightMsg == message["MSGID"]) {
+                    highlightMsg = -1
+
+                    const chatFinishedPromise = new Promise((r) => {
+                        function check() {
+                            if (!chatFetchInProgress) {
+                                r()
+                            } else {
+                                setTimeout(check, 100)
+                            }
+                        }
+
+                        check()
                     })
 
-                    setTimeout(() => {
-                        messageDiv.style.backgroundColor = origBg
-                    }, 2500)
-                })
+                    chatFinishedPromise.then(() => {
+                        const origBg = messageDiv.style.backgroundColor
+                        messageDiv.style.backgroundColor = "var(--acc6)"
+                        messageDiv.scrollIntoView({
+                            "behavior": "smooth",
+                            "block": "center"
+                        })
+
+                        setTimeout(() => {
+                            messageDiv.style.backgroundColor = origBg
+                        }, 2500)
+                    })
+                }
             }
 
             chatDiv2.push(messageDiv)
@@ -4272,6 +4336,16 @@
             }
 
             if (chatCache) {
+                msgCache = {}
+                for (let i = 0; i < chatCache["messages"].length; i++) {
+                    const msg = chatCache["messages"][i];
+                    const msgObj = document.querySelector('[data-msgid="MSGID' + msg["MSGID"] + '"]')
+
+                    if (msgObj) {
+                        msgCache[msg["MSGID"].toString()] = msgObj
+                    }
+                }
+
                 setChat(chatCache)
             } else {
                 fetchChatData()
@@ -4481,6 +4555,12 @@
 
             if (files && files.length == 1) {
                 const file = files[0]
+
+                if (file.size > 10*1024*1024) {
+                    openPopup("Woah there!", "That file exceeded the max size of 10MB!")
+                    return
+                }
+
                 convertFileToBase64(file).then((b64) => {
                     editGcIcon.src = b64
                 })
@@ -4517,6 +4597,12 @@
 
             if (files && files.length == 1) {
                 const file = files[0]
+
+                if (file.size > 10*1024*1024) {
+                    openPopup("Woah there!", "That file exceeded the max size of 10MB!")
+                    return
+                }
+
                 convertFileToBase64(file).then((b64) => {
                     createServerIcon.src = b64
                 })
@@ -5195,6 +5281,13 @@
                                                 }
 
                                                 noNewMsg = true
+                                                for (let i = 0; i < chatCache["messages"].length; i++) {
+                                                    const e = chatCache["messages"][i];
+                                                    if (!e["deleted"]) {
+                                                        doNotCache = [e["MSGID"]]
+                                                        break
+                                                    }
+                                                }
                                                 refreshCachedChat()
                                             }
                                         }
@@ -5221,6 +5314,16 @@
                                                 }
 
                                                 if (changed) {
+                                                    doNotCache = [respBody["MSGID"]]
+
+                                                    for (let i = 0; i < chatCache["messages"].length; i++) {
+                                                        const e = chatCache["messages"][i];
+                                                        if (e["MSGID"] > respBody["MSGID"] && !e["deleted"]) {
+                                                            doNotCache.push(e["MSGID"])
+                                                            break
+                                                        }
+                                                    }
+
                                                     refreshCachedChat()
                                                 }
                                             }
@@ -5247,6 +5350,7 @@
                                                 }
 
                                                 if (changed) {
+                                                    doNotCache = [respBody["MSGID"]]
                                                     refreshCachedChat()
                                                 }
                                             }
@@ -5734,6 +5838,10 @@
 
             if (files && files.length == 1) {
                 const file = files[0]
+                if (file.size > 10*1024*1024) {
+                    openPopup("Woah there!", "That file exceeded the max size of 10MB!")
+                    return
+                }
                 convertFileToBase64(file).then((b64) => {
                     fullServerSettingsOverviewIconImg.src = b64
                     unsaved = true

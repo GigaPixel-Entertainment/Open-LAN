@@ -1161,7 +1161,15 @@ class WS():
             await self.wsSendEncrypted(ws, orjson.dumps({"type": "updateGcInfoFailed"}), trackerId)
             return
 
+        if len(decryptedBody["icon"]) > config.MAX_ICON_SIZE:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type":"updateGcInfoFailed"}), trackerId)
+            return
+
         iconB64 = self.resizePfp(decryptedBody["icon"])
+
+        if len(iconB64) > config.MAX_ICON_SIZE:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type":"updateGcInfoFailed"}), trackerId)
+            return
 
         isChanged = True
         if iconB64 == chat["Icon"] and newChatName == chat["Name"]:
@@ -1456,6 +1464,16 @@ class WS():
             await self.wsSendEncrypted(ws, orjson.dumps({"type": "createServerFailed"}), trackerId)
             return
 
+        if len(decryptedBody["icon"]) > config.MAX_ICON_SIZE:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type":"createServerFailed"}), trackerId)
+            return
+
+        iconB64 = self.resizePfp(decryptedBody["icon"])
+
+        if len(iconB64) > config.MAX_ICON_SIZE:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type":"createServerFailed"}), trackerId)
+            return
+
         selfInfo = self.getUserInfoFromToken(authToken)
 
         if selfInfo is None:
@@ -1477,10 +1495,9 @@ class WS():
             "Owner": selfUID,
             "Users": [selfUID],
             "Categories": [textCategory],
-            "AnnouncementChat": cid
+            "AnnouncementChat": cid,
+            "Icon": iconB64
         }
-
-        serverDict["Icon"] = self.resizePfp(decryptedBody["icon"])
 
         serverName = decryptedBody["name"].strip()
         if len(serverName) == 0 or len(serverName) > 100:
@@ -2207,7 +2224,15 @@ class WS():
             await self.wsSendEncrypted(ws, orjson.dumps({"type": "editServerInfoFailed"}), trackerId)
             return
 
+        if len(decryptedBody["icon"]) > config.MAX_ICON_SIZE:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type":"editServerInfoFailed"}), trackerId)
+            return
+
         newIcon = self.resizePfp(decryptedBody["icon"])
+
+        if len(newIcon) > config.MAX_ICON_SIZE:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type":"editServerInfoFailed"}), trackerId)
+            return
 
         newAC = decryptedBody["ac"]
 
