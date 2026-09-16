@@ -231,7 +231,7 @@ class Dashboard(HttpHandler):
                     "Set-Cookie": f"dashboardToken={token}; HttpOnly; SameSite=Strict; Path=/"
                 }))
         else:
-            sk.sendall(httphelper.formatHttpHeader(401, {
+            sk.sendall(httphelper.formatErrorPage(401, {
                 "WWW-Authenticate": "Basic realm=\"Dashboard\", charset=\"UTF-8\"",
                 "Connection": "close"
             }))

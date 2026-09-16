@@ -21,6 +21,9 @@ import brotli
 
 import config
 
+with open(config.ERROR_PAGE, "rb") as f:
+    ERROR_PG_CONTENTS: bytes = f.read()
+
 class HTTPRequestParser(BaseHTTPRequestHandler):
     # pylint: disable=super-init-not-called
     def __init__(self, request_bytes: bytes):
@@ -59,6 +62,11 @@ def formatHttpHeader(statusCode: int, headerDict: dict | None = None) -> bytes:
         header += formatHttpHeaderRaw(headerDict)
 
     return (header + "\r\n").encode("utf-8")
+
+def formatErrorPage(statusCode: int, headerDict: dict | None = None) -> bytes:
+    header = formatHttpHeader(statusCode, headerDict)
+    respPage = ERROR_PG_CONTENTS.replace(b"\\$001", str(statusCode).encode("utf-8")).replace(b"\\$002", responses[statusCode].encode("utf-8") if statusCode in responses else b"")
+    return header + respPage
 
 def formatHEADResponse(parsed: HTTPRequestParser, filePath: pathlib.Path) -> bytes:
     if not filePath.is_file():
@@ -137,7 +145,7 @@ def formatHttpResponse(parsed: HTTPRequestParser | None, filePath: pathlib.Path,
     if not filePath.is_file() or not isSafePath(filePath):
         logging.warning("[MAIN] Invalid fetch %s!", filePath)
 
-        return formatHttpHeader(404)
+        return formatErrorPage(404)
 
     acceptEncoding = []
     if parsed:

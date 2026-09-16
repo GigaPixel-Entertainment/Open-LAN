@@ -9,8 +9,8 @@ import os
 
 from dotenv import load_dotenv
 
-DEV = False
-VER = "0.1.1"
+DEV = True
+VER = "0.1.2"
 STAGE = "beta"
 
 CWD = pathlib.Path(__file__).resolve().parent
@@ -33,6 +33,8 @@ SERVER_CERT_FILE = CA_CERT_DIR / "server.crt"
 SERVER_DIR = CWD / "Servers/"
 SERVER_KEY_FILE = CA_CERT_DIR / "server.key"
 USERS_DIR = CWD / "Users/"
+
+ERROR_PAGE = WEB_DIR / "error.html"
 
 PRIVATE_DIRS = [
     USERS_DIR,

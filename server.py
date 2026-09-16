@@ -404,7 +404,7 @@ def handleRequest(sk: socket.socket):
         elif httphelper.isSafePath(pagePath):
             sk.sendall(httphelper.formatHttpResponse(parsed, pagePath, fernet))
         else:
-            sk.sendall(httphelper.formatHttpHeader(404))
+            sk.sendall(httphelper.formatErrorPage(404))
     elif method == "HEAD":
         if page == "/":
             page = "/index.html"
@@ -622,7 +622,6 @@ if __name__ == "__main__":
     logging.info("[MAIN] Connect via:")
 
     for addr in ipAddrs:
-        logging.info("[MAIN] http://%s:%i/", addr, config.PORT)
         logging.info("[MAIN] https://%s:%i/", addr, config.PORT)
 
     while True:
