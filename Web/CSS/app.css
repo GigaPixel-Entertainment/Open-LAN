@@ -207,7 +207,7 @@ footer > a {
 
 #lookingAtOldMsgs {
     position: absolute;
-    width: calc(85% * 0.95 + 12px);
+    width: calc((100% - (15em * 1.25)) - 5%);
     top: 3.75em;
     left: 5%;
     background: var(--acc5);
