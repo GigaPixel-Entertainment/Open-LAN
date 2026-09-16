@@ -3108,7 +3108,10 @@
                             mentionSpan.style.borderRadius = "8px"
                             mentionSpan.style.paddingLeft = "0.5em"
                             mentionSpan.style.paddingRight = "0.5em"
+                            mentionSpan.style.marginRight = "0.25em"
                             mentionSpan.style.cursor = "pointer"
+                            mentionSpan.dataset["isMention"] = true
+                            mentionSpan.dataset["targetUid"] = usrInfo?.UID || -1
                             mentionSpan.textContent = "@" + mentionDisplay
 
                             if (usrName != "everyone") {
@@ -3119,9 +3122,9 @@
                             }
 
                             newContent += p.textContent.slice(lastMentionEnd, currLetterPos)
-                            lastMentionEnd = currLetterPos + mentionSpan.textContent.length
+                            lastMentionEnd = currLetterPos + Math.max(word.length, mentionSpan.textContent.length)
                             mentions.push([currLetterPos - removedChars, mentionSpan])
-                            removedChars += mentionSpan.textContent.length
+                            removedChars += word.length + 1
 
                             p.style.marginTop = "0.25em"
                             p.style.marginBottom = "0.25em"
@@ -4343,9 +4346,23 @@
                     const msg = chatCache["messages"][i];
                     const msgObj = document.querySelector('[data-msgid="MSGID' + msg["MSGID"] + '"]')
 
-                    if (msgObj) {
-                        msgCache[msg["MSGID"].toString()] = msgObj
+                    if (!msgObj) { continue }
+
+                    const allMentions = msgObj.querySelectorAll("span[data-is-mention='true']")
+                    let cacheItem = true
+
+                    for (let j = 0; j < allMentions.length; j++) {
+                        const mention = allMentions[j];
+
+                        if (mention.dataset["targetUid"] == lastUsrUpdated) {
+                            cacheItem = false
+                            break
+                        }
                     }
+
+                    if (!cacheItem) { continue }
+
+                    msgCache[msg["MSGID"].toString()] = msgObj
                 }
 
                 setChat(chatCache)
@@ -4354,6 +4371,7 @@
             }
         }
 
+        var lastUsrUpdated = -1
         function updateCachedProp(resp, prop, respProp, func) {
             updated = false
             for (let cacheIndex = 0; cacheIndex < userInfoCache.length; cacheIndex++) {
@@ -4361,12 +4379,15 @@
 
                 if (cacheItem["UID"] == resp["UID"]) {
                     cacheItem[prop] = resp[respProp]
+                    lastUsrUpdated = cacheItem["UID"]
                     updated = true
                 }
             }
 
             if (updated) {
                 func()
+            } else {
+                lastUsrUpdated = -1
             }
         }
 
