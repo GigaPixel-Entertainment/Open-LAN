@@ -327,7 +327,7 @@ def formatLoginResponse(username: str, cloudflare: bool):
     VALID_TOKENS[username] = {"TOKEN": token, "EXPIRES": time.time() + config.TOKEN_EXPIRES_SEC}
 
     return httphelper.formatHttpHeader(308, {
-        "Set-Cookie": f"authToken={token}; HttpOnly; SameSite=Strict; {"Domain=gigapixel.cc;" if cloudflare else ""} Path=/",
+        "Set-Cookie": f"authToken={token}; HttpOnly; SameSite=Strict; {"Domain=gigapixel.cc; " if cloudflare else ""} Path=/",
         "Location": "/app.html",
         "Connection": "close"
     })
@@ -364,8 +364,6 @@ def handleRequest(sk: socket.socket):
             page = "/index.html"
 
         pagePath = config.WEB_DIR / page.removeprefix("/")
-        if config.WEB_DIR.resolve() in (config.CWD / page.removeprefix("/")).resolve().parents:
-            pagePath = config.CWD / page.removeprefix("/")
 
         if page == "/api/wsurl":
             currUrl = parsed.headers.get("Domain-Url")

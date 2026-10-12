@@ -210,7 +210,29 @@
                     { name: "AES-GCM", iv: iv }, sharedSecretKey, ciphertext
                 );
 
-                return textDecode(decryptedBuffer);
+                return decryptedBuffer;
+            }
+
+            async function decompress(data) {
+                const stream = new ReadableStream({
+                    start(controller) {
+                        controller.enqueue(data)
+                        controller.close()
+                    }
+                })
+
+                const ds = new DecompressionStream("gzip")
+                const decompressed = stream.pipeThrough(ds)
+
+                const chunks = [];
+                for await (const chunk of decompressed) {
+                    chunks.push(chunk)
+                }
+
+                const blob = new Blob(chunks)
+                const buffer = await blob.arrayBuffer()
+
+                return textDecode(buffer)
             }
 
             wsUrlReady.then((wsURL) => {
@@ -240,8 +262,10 @@
 
                             if (resp["encryption"] == "AES") {
                                 if (encrypted) {
-                                    decryptAES(resp["iv"], resp["body"]).then((data) => {
+                                    decryptAES(resp["iv"], resp["body"]).then(data => decompress(data)).then((data) => {
                                         respBody = JSON.parse(data)
+
+                                        console.log(respBody)
 
                                         if (respBody["type"] == "loginSuccess") {
                                             window.location.assign(protocol + "//" + domainURL + respBody["redirect"] + "&hostname=" + window.location.hostname)

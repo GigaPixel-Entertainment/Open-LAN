@@ -14,7 +14,6 @@ import config
 
 username = input("Username: ")
 
-
 if not (config.SECURITY_DIR / f"{username}.sq").exists() or not (config.USERS_DIR / f"{username}.usr").exists():
     print(f"Invalid user {username}")
     sys.exit(1)

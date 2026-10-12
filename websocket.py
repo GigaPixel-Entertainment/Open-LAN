@@ -22,6 +22,7 @@ from cryptography.fernet import Fernet
 
 import orjson
 import bcrypt
+import gzip
 
 import config
 import httphelper
@@ -321,9 +322,11 @@ class WS():
             dataParsed["trackerID"] = trackerId
             data = orjson.dumps(dataParsed)
 
+        dataCompressed = gzip.compress(data, config.GZIP_COMPRESSION_LEVEL)
+
         iv = secrets.token_bytes(12)
         encryptor = Cipher(algorithms.AES256(getattr(ws, "secretKey")), modes.GCM(iv)).encryptor()
-        ciphertext = encryptor.update(data) + encryptor.finalize() + encryptor.tag
+        ciphertext = encryptor.update(dataCompressed) + encryptor.finalize() + encryptor.tag
         await ws.send(orjson.dumps({"encryption":"AES","iv":iv.hex(),"body":ciphertext.hex()}), text=True)
 
     async def wsBroadcastEncrypted(self, clients: Iterable[ServerConnection], data: bytes):
@@ -487,7 +490,7 @@ class WS():
             await self.wsSendEncrypted(ws, orjson.dumps({"type": "getEmbedFailed"}), trackerId)
             return
 
-        filePath = config.CWD / decryptedBody["embedUrl"]
+        filePath = config.WEB_DIR / decryptedBody["embedUrl"]
 
         if not httphelper.isSafePath(filePath) or not filePath.exists():
             await self.wsSendEncrypted(ws, orjson.dumps({"type": "getEmbedFailed"}), trackerId)
@@ -562,7 +565,7 @@ class WS():
 
                 break
 
-            embedFilePaths.append(str((config.CDN_DIR / f"{uuid}.{fNameSafe}{fileType}").resolve().relative_to(config.CWD)))
+            embedFilePaths.append(str((config.CDN_DIR / f"{uuid}.{fNameSafe}{fileType}").resolve().relative_to(config.WEB_DIR)))
 
         chat = self.getChatFromCID(decryptedBody["CID"])
 

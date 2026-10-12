@@ -46,7 +46,7 @@ for chat in config.CHATS_DIR.iterdir():
 
 unreferencedCDN = set()
 for cdn in config.CDN_DIR.iterdir():
-    cdnRel = cdn.relative_to(config.CWD)
+    cdnRel = cdn.relative_to(config.WEB_DIR)
 
     if not str(cdnRel) in referencedCDN:
         unreferencedCDN.add(cdnRel)
