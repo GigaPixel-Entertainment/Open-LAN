@@ -456,22 +456,20 @@ footer > a {
 
 #textEntryWrapper {
     position: absolute;
-    width: 75%;
+    width: calc((95% - (15em * 1.25)) - 5%);
     height: fit-content;
     background: var(--acc);
     bottom: 2.5%;
     left: 7.5%;
-    padding: 0;
+    padding: .25em;
     display: flex;
     flex-direction: row;
     justify-content: space-evenly;
 }
 
 #textEntry {
-    width: calc(85% - 1em);
+    width: 100%;
     font-size: 1.5em;
-    margin: .25em;
-    padding: .25em;
     border: none;
     background: var(--acc5);
     color: var(--text);
@@ -479,18 +477,20 @@ footer > a {
     max-height: 16vh;
     field-sizing: content;
     resize: none;
+    margin-left: .25em;
+    margin-right: .25em;
 }
 
 #sendMsg {
     width: 7%;
     font-size: 1.5em;
-    margin: .25em auto;
     border: none;
     border-radius: 0;
     background: var(--acc5);
     color: var(--sendButtonGreen);
     font-weight: bolder;
     cursor: pointer;
+    flex-shrink: 0;
 }
 
 #sendMsg:hover {
@@ -502,13 +502,13 @@ footer > a {
 
     width: 7%;
     font-size: 1.5em;
-    margin: .25em auto;
     border: none;
     border-radius: 0;
     background: var(--acc5);
     color: var(--sendButtonGreen);
     font-weight: bolder;
     cursor: pointer;
+    flex-shrink: 0;
 
     justify-content: center;
     align-items: center;

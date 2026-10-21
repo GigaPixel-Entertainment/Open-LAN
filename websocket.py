@@ -10,6 +10,7 @@ import base64
 import time
 import copy
 import math
+import gzip
 import ssl
 
 from websockets.asyncio.server import serve, ServerConnection, Request
@@ -22,7 +23,6 @@ from cryptography.fernet import Fernet
 
 import orjson
 import bcrypt
-import gzip
 
 import config
 import httphelper
@@ -526,7 +526,7 @@ class WS():
         await self.wsSendEncrypted(ws, orjson.dumps({"type":"reqUsersListSuccess", "users":userInfoList}), trackerId)
 
     async def sendMsg(self, ws, decryptedBody, authToken, trackerId):
-        if not self.checkFields(decryptedBody, ["CID", "msg", "embed", "replyTo"]):
+        if not self.checkFields(decryptedBody, ["CID", "msg", "embed", "replyTo", "msgPreviewId"]):
             await self.wsSendEncrypted(ws, orjson.dumps({"type": "chatUpdateFailed"}), trackerId)
             return
 
@@ -588,7 +588,7 @@ class WS():
             if self.tokenInChat(cAuthToken, decryptedBody["CID"]):
                 broadcastClients.append(client)
 
-        await self.wsBroadcastEncrypted(broadcastClients, orjson.dumps({"type":"newMsg", "CID": chat["CID"], "message": msgObj}))
+        await self.wsBroadcastEncrypted(broadcastClients, orjson.dumps({"type":"newMsg", "CID": chat["CID"], "message": msgObj, "msgPreviewId": decryptedBody["msgPreviewId"]}))
 
     async def delMsg(self, ws, decryptedBody, authToken, trackerId):
         if not self.checkFields(decryptedBody, ["CID", "MSGID"]):
@@ -1217,6 +1217,10 @@ class WS():
         chat = self.getChatFromCID(decryptedBody["CID"])
 
         if chat is None or uid is None or selfInfo is None:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "addUsrFailed"}), trackerId)
+            return
+
+        if chat["Type"] != "gc":
             await self.wsSendEncrypted(ws, orjson.dumps({"type": "addUsrFailed"}), trackerId)
             return
 

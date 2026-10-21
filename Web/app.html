@@ -1323,6 +1323,7 @@
                 const pfpWrapper = document.createElement("div")
                 pfpWrapper.style.height = "100%"
                 pfpWrapper.style.width = "fit-content"
+                pfpWrapper.style.flexShrink = "0"
 
                 const pfpImg = document.createElement("img")
                 pfpImg.src = res["pfp"]
@@ -1342,6 +1343,7 @@
                 displayname.style.height = "75%"
                 displayname.style.margin = "0"
                 displayname.style.padding = "0"
+                displayname.style.whiteSpace = "nowrap"
                 displayname.classList = "font white"
                 displayname.textContent = res["displayname"]
 
@@ -1350,6 +1352,7 @@
                 extraInfo.style.height = "25%"
                 extraInfo.style.margin = "0"
                 extraInfo.style.padding = "0"
+                extraInfo.style.whiteSpace = "nowrap"
                 extraInfo.classList = "font white"
                 extraInfo.textContent = res["username"] + " | ID: " + res["UID"]
 
@@ -1361,6 +1364,7 @@
                 btn.style.margin = "auto none"
                 btn.style.fontSize = "1.5em"
                 btn.classList = "font"
+
 
                 let btnType = null
 
@@ -1776,6 +1780,7 @@
                 extraInfo.style.width = "100%"
                 extraInfo.style.height = "25%"
                 extraInfo.style.margin = "0"
+                extraInfo.style.whiteSpace = "nowrap"
                 extraInfo.classList = "font white"
                 extraInfo.textContent = uInfo["username"] + " | ID: " + uInfo["UID"]
 
@@ -1791,6 +1796,7 @@
                 actionDiv.style.display = "flex"
                 actionDiv.style.flexDirection = "row"
                 actionDiv.style.alignItems = "center"
+                actionDiv.style.flexShrink = "0"
 
                 pfpDiv.appendChild(pfpImg)
 
@@ -1880,6 +1886,8 @@
             if (!refetch && newCID == currChat) {
                 return
             }
+
+            messageQueue = []
 
             currChat = newCID
             changedChat = true
@@ -3016,7 +3024,7 @@
             msgP.appendChild(embeds)
         }
 
-        async function genMsg(message) {
+        async function genMsg(message, isInTransit) {
             if (message["MSGID"] == editingMsgId) {
                 const msgT = document.createElement("textarea")
                 msgT.classList = "font white"
@@ -3052,7 +3060,13 @@
 
             const msgP = document.createElement("p")
             msgP.style.margin = "0"
-            msgP.classList = "font white"
+            msgP.classList = "font"
+
+            if (isInTransit) {
+                msgP.style.color = "lightgray"
+            } else {
+                msgP.style.color = "white"
+            }
 
             const markdownParsed = (new DOMParser()).parseFromString(DOMPurify.sanitize(marked.parse(message["content"], {"breaks": true, "gfm": true})), "text/html")
             if (markdownParsed) {
@@ -3196,7 +3210,7 @@
             return msgP
         }
 
-        async function genFullMsg(userInfoList, message, messageDate) {
+        async function genFullMsg(userInfoList, message, messageDate, isInTransit) {
             const usrInfo = await reqUsrInfo(message["UID"])
 
             const messageDiv = document.createElement("div")
@@ -3329,7 +3343,7 @@
                 dnWrapper.append(timeDisplay)
             }
 
-            const msgP = await genMsg(message)
+            const msgP = await genMsg(message, isInTransit)
 
             if (messageDiv.dataset.highlighted || msgP.dataset.highlighted) {
                 messageDiv.style.background = "var(--highlighted-transparent)"
@@ -3345,7 +3359,7 @@
             return messageDiv
         }
 
-        async function genSmallMsg(userInfoList, message, messageDate) {
+        async function genSmallMsg(userInfoList, message, messageDate, isInTransit) {
             const messageDiv = document.createElement("div")
             messageDiv.classList = "messageDiv"
             messageDiv.style.padding = "0"
@@ -3374,7 +3388,7 @@
             textarea.style.width = "96%"
             textarea.style.background = "none"
 
-            const msgP = await genMsg(message)
+            const msgP = await genMsg(message, isInTransit)
 
             if (messageDiv.dataset.highlighted || msgP.dataset.highlighted) {
                 messageDiv.style.background = "var(--highlighted-transparent)"
@@ -3724,7 +3738,7 @@
         var msgCache = {}
         var doNotCache = []
 
-        async function newMsg(message, chatDiv2, lastMsg, userInfos) {
+        async function newMsg(message, chatDiv2, lastMsg, userInfos, isInTransit) {
             if (message["deleted"]) {
                 return
             }
@@ -3778,7 +3792,7 @@
                 }
             }
 
-            if (!noNewMsg && message["MSGID"] - readMsgs[currChat.toString()] == 1) {
+            if (!isInTransit && !noNewMsg && message["MSGID"] - readMsgs[currChat.toString()] == 1) {
                 if (newMsgSeperator) {
                     newMsgSeperator.remove()
                 }
@@ -3838,9 +3852,9 @@
                     let isShortMsg = lastMsg && !lastMsg["SYSMSG"] && message["UID"] == lastMsg["UID"] && message["time"] - lastMsg["time"] < 10*60 && !(message["replyTo"] && message["replyTo"] != -1) && messageDate.getDate() == lastMessageDate.getDate()
 
                     if (isShortMsg) {
-                        messageDiv = await genSmallMsg(userInfos, message, messageDate)
+                        messageDiv = await genSmallMsg(userInfos, message, messageDate, isInTransit)
                     } else {
-                        messageDiv = await genFullMsg(userInfos, message, messageDate)
+                        messageDiv = await genFullMsg(userInfos, message, messageDate, isInTransit)
                     }
                 }
 
@@ -4270,6 +4284,14 @@
 
             if (currPage == 0) {
                 lookingAtOldMsgs.style.visibility = "hidden"
+
+                for (let index = 0; index < messageQueue.length; index++) {
+                    const message = messageQueue[index];
+
+                    await newMsg(message, chatDiv2, lastMsg, userInfos, true)
+
+                    lastMsg = message
+                }
             }
 
             const padding2 = document.createElement("div")
@@ -5297,6 +5319,16 @@
                                         }
 
                                         if (respBody["type"] == "newMsg") {
+                                            const msgPreviewId = respBody["msgPreviewId"]
+                                            if (trackerIds.includes(msgPreviewId)) {
+                                                const msgQueueMsg = messageQueue.filter((v) => v["msgPreviewId"] == msgPreviewId)[0]
+
+                                                if (msgQueueMsg && msgQueueMsg["UID"] == currUID) {
+                                                    messageQueue = messageQueue.filter((v) => v["msgPreviewId"] != msgPreviewId)
+                                                    trackerIds.splice(trackerIds.indexOf(msgPreviewId), 1)
+                                                }
+                                            }
+
                                             stringCID = respBody["CID"].toString()
                                             if (stringCID in chatMetaCache) {
                                                 chatMetaCache[stringCID]["lastMsg"]["MSGID"] = respBody["message"]["MSGID"]
@@ -6001,6 +6033,7 @@
     <script>
         // Send msg
         var embeddedFiles = []
+        var messageQueue = []
 
         async function sendMsg() {
             message = textEntry.value.trim()
@@ -6023,7 +6056,11 @@
             embedList.style.visibility = "hidden"
             embedList.style.top = "0"
 
-            msgSendResults = await request(JSON.stringify({"type":"sendMsg","CID":currChat,"msg":message,"embed": encodedFiles, "replyTo": replyingMsgId}))
+            msgPreviewId = genTrackerId()
+            trackerIds.push(msgPreviewId)
+            messageQueue.push({"content": message, "replyTo": replyingMsgId, "time": Math.floor(Date.now() / 1000), "UID": currUID, "MSGID": lastMsgId + 1000 + messageQueue.length, "embed": [], "msgPreviewId": msgPreviewId})
+            refreshCachedChat()
+            msgSendResults = await request(JSON.stringify({"type":"sendMsg","CID":currChat,"msg":message,"embed": encodedFiles, "replyTo": replyingMsgId, "msgPreviewId": msgPreviewId}))
             replyingMsgId = -1
         }
 
