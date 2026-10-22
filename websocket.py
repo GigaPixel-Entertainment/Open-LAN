@@ -1354,6 +1354,10 @@ class WS():
             await self.wsSendEncrypted(ws, orjson.dumps({"type": "leaveGcFailed"}), trackerId)
             return
 
+        if chat["Type"] != "gc":
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "leaveGcFailed"}), trackerId)
+            return
+
         failed = False
         try:
             usrInfo["Chats"].remove(cid)

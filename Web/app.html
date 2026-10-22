@@ -425,8 +425,7 @@
         Open-LAN is open-source under the <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank">GNU General Public License</a> and available on <a href="https://github.com/GigaPixel-Entertainment/GPE-Open-LAN" target="_blank">Github</a>
     </footer>
     <script src="JS/stop.js"></script>
-    <script src="JS/marked.umd.js"></script>
-    <script type="text/javascript" src="JS/purify.min.js"></script>
+    <script src="JS/markdown-it.min.js"></script>
     <script>
         // constants
         const userInfoCache = []
@@ -668,6 +667,11 @@
         const serverUsrListProfile = document.getElementById("serverUsrListProfile")
         const serverUsrListTransferOwnership = document.getElementById("serverUsrListTransferOwnership")
         const serverUsrListKick = document.getElementById("serverUsrListKick")
+
+        const mdit = markdownit({
+                    linkify: true,
+                    breaks: true
+                })
     </script>
     <script>
         // String comparison by aceakash (https://github.com/aceakash/string-similarity)
@@ -2745,7 +2749,8 @@
         }
 
         async function getUsernameInChat(username) {
-            const recipientsInfo = await reqMultiUsrInfo(chatCache["Recipients"])
+            const recipients = chatCache["Recipients"].length > 0 ? chatCache["Recipients"] : serverCache["Users"]
+            const recipientsInfo = await reqMultiUsrInfo(recipients)
 
             for (let i = 0; i < recipientsInfo.length; i++) {
                 const recipient = recipientsInfo[i];
@@ -3068,16 +3073,19 @@
                 msgP.style.color = "white"
             }
 
-            const markdownParsed = (new DOMParser()).parseFromString(DOMPurify.sanitize(marked.parse(message["content"], {"breaks": true, "gfm": true})), "text/html")
-            if (markdownParsed) {
-                const children = Array.from(markdownParsed.body.children)
-                for (let i = 0; i < children.length; i++) {
-                    const child = children[i]
-                    child.style.margin = "0"
-                    msgP.appendChild(child)
-                }
-            } else {
+            try {
+                const res = mdit.render(message["content"])
+                msgP.innerHTML = res
+            } catch {
                 msgP.textContent = message["content"]
+                return msgP
+            }
+
+            const children = Array.from(msgP.children)
+            for (let i = 0; i < children.length; i++) {
+                const child = children[i]
+                child.style.margin = "0"
+                msgP.appendChild(child)
             }
 
             const links = msgP.getElementsByTagName("a")
@@ -3122,7 +3130,6 @@
                             mentionSpan.style.borderRadius = "8px"
                             mentionSpan.style.paddingLeft = "0.5em"
                             mentionSpan.style.paddingRight = "0.5em"
-                            mentionSpan.style.marginRight = "0.25em"
                             mentionSpan.style.cursor = "pointer"
                             mentionSpan.dataset["isMention"] = true
                             mentionSpan.dataset["targetUid"] = usrInfo?.UID || -1
@@ -3136,9 +3143,9 @@
                             }
 
                             newContent += p.textContent.slice(lastMentionEnd, currLetterPos)
-                            lastMentionEnd = currLetterPos + Math.max(word.length, mentionSpan.textContent.length)
+                            lastMentionEnd = currLetterPos + word.length //Math.max(word.length, mentionSpan.textContent.length)
                             mentions.push([currLetterPos - removedChars, mentionSpan])
-                            removedChars += word.length + 1
+                            removedChars += word.length
 
                             p.style.marginTop = "0.25em"
                             p.style.marginBottom = "0.25em"
@@ -3942,6 +3949,10 @@
             for (let i = 0; i < users.length; i++) {
                 const uid = users[i];
                 const usrInfo = await reqUsrInfo(uid)
+
+                if (!usrInfo || Object.keys(usrInfo).length == 0) {
+                    continue
+                }
 
                 const userDiv = document.createElement("div")
                 userDiv.classList = "userDiv"
@@ -6056,12 +6067,14 @@
             embedList.style.visibility = "hidden"
             embedList.style.top = "0"
 
+            toBeRepliedTo = replyingMsgId
+            replyingMsgId = -1
+
             msgPreviewId = genTrackerId()
             trackerIds.push(msgPreviewId)
-            messageQueue.push({"content": message, "replyTo": replyingMsgId, "time": Math.floor(Date.now() / 1000), "UID": currUID, "MSGID": lastMsgId + 1000 + messageQueue.length, "embed": [], "msgPreviewId": msgPreviewId})
+            messageQueue.push({"content": message, "replyTo": toBeRepliedTo, "time": Math.floor(Date.now() / 1000), "UID": currUID, "MSGID": lastMsgId + 1000 + messageQueue.length, "embed": [], "msgPreviewId": msgPreviewId})
             refreshCachedChat()
-            msgSendResults = await request(JSON.stringify({"type":"sendMsg","CID":currChat,"msg":message,"embed": encodedFiles, "replyTo": replyingMsgId, "msgPreviewId": msgPreviewId}))
-            replyingMsgId = -1
+            msgSendResults = await request(JSON.stringify({"type":"sendMsg","CID":currChat,"msg":message,"embed": encodedFiles, "replyTo": toBeRepliedTo, "msgPreviewId": msgPreviewId}))
         }
 
         async function updateEmbeds() {

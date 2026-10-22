@@ -55,7 +55,7 @@ IMPORTANT_FILES = [
 ]
 
 if ENV_FILE.exists():
-    load_dotenv(CWD / ".env")
+    load_dotenv(ENV_FILE)
 
 PORT = 33333
 WS_PORT = 33334

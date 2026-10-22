@@ -764,6 +764,7 @@ footer > a {
     border-radius: 0;
     background: var(--acc5);
     padding: .25em;
+    flex-shrink: 0;
 }
 
 #changePwd {
