@@ -3101,7 +3101,7 @@
                 })
             }
 
-            const paragraphs = Array.from(msgP.querySelectorAll("p,h1,h2,h3,h4,h5,h6"))
+            const paragraphs = Array.from(msgP.querySelectorAll("p,h1,h2,h3,h4,h5,h6,li"))
             for (let i = 0; i < paragraphs.length; i++) {
                 const p = paragraphs[i]
                 const words = p.textContent.split(" ")
@@ -3114,6 +3114,8 @@
                 if (p.children.length > 0) {
                     continue
                 }
+
+                p.style.wordBreak = "break-word"
 
                 for (let j = 0; j < words.length; j++) {
                     const word = words[j];
