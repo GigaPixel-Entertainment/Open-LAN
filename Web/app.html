@@ -75,7 +75,7 @@
         </div>
         <div id="myProfileScreen">
             <div id="myProfileHeader">
-                <p class="font white" id="ChatName">my profile settings</p>
+                <p class="font white" id="ChatName" style="cursor: auto;">my profile settings</p>
                 <button class="font white" onclick="showMyProfileScreen()">go back ↑</button>
             </div>
 
@@ -1223,6 +1223,10 @@
 
             usrProfilePopupInfo = usrInfo
         }
+
+        usrProfilePopup.addEventListener("click", (e) => {
+            e.stopPropagation()
+        })
 
         usrProfileScreenUsrActionFri.addEventListener("click", () => {
             if (usrProfileFriAction == "none") {
@@ -3122,8 +3126,13 @@
 
                     if (word.startsWith("@")) {
                         const usrName = word.slice(1)
-                        const usrInfo = await getUsernameInChat(usrName)
-                        const isValidMention = usrName == "everyone" || usrInfo
+                        let usrInfo = null
+                        let isValidMention = usrName == "everyone"
+
+                        if (!isValidMention) {
+                            usrInfo = await getUsernameInChat(usrName)
+                            isValidMention = !!usrInfo
+                        }
 
                         if (isValidMention) {
                             const mentionDisplay = usrInfo ? usrInfo["displayname"] : usrName
