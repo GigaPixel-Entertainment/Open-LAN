@@ -1,7 +1,7 @@
 from collections.abc import Iterable, Callable
 from http import cookies
-import mimetypes
 import traceback
+import mimetypes
 import logging
 import secrets
 import random
@@ -25,7 +25,6 @@ import orjson
 import bcrypt
 
 import config
-import httphelper
 
 class WS():
     def __init__(self, validTokens: dict, redirTokens: dict, defaultPfps: list, chats: list, users: list, servers: list, invites: list, fernet: Fernet, resizePfpBytes: Callable) -> None:
@@ -50,16 +49,11 @@ class WS():
         )
         self.RESET_PWD_TOKENS: list[dict] = []
 
-        mimetypes.add_type("application/java-archive", ".jar")
-        mimetypes.add_type("text/plain", ".log")
-        mimetypes.add_type("application/x-sh", ".sh")
-
         self.webRequests = {
             "reqUser": self.reqUser,
             "reqChatMetas": self.reqChatMetas,
             "reqChat": self.reqChat,
             "reqMsg": self.reqMsg,
-            "getEmbed": self.getEmbed,
             "reqUsersList": self.reqUsersList,
             "sendMsg": self.sendMsg,
             "delMsg": self.delMsg,
@@ -484,24 +478,6 @@ class WS():
             return
 
         await self.wsSendEncrypted(ws, orjson.dumps({"type": "reqMsgSuccess", "msg": targetMsg}), trackerId)
-
-    async def getEmbed(self, ws, decryptedBody, authToken, trackerId):
-        if not self.checkFields(decryptedBody, ["embedUrl"]):
-            await self.wsSendEncrypted(ws, orjson.dumps({"type": "getEmbedFailed"}), trackerId)
-            return
-
-        filePath = config.WEB_DIR / decryptedBody["embedUrl"]
-
-        if not httphelper.isSafePath(filePath) or not filePath.exists():
-            await self.wsSendEncrypted(ws, orjson.dumps({"type": "getEmbedFailed"}), trackerId)
-            return
-
-        fileType, _ = mimetypes.guess_file_type(filePath, strict=False)
-
-        await self.wsSendEncrypted(ws, orjson.dumps({
-            "type": "getEmbedSuccess",
-            "embedType": fileType
-        }), trackerId)
 
     async def reqUsersList(self, ws, decryptedBody, authToken, trackerId):
         if not self.checkFields(decryptedBody, ["users"]):

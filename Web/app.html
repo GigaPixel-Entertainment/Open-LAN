@@ -47,11 +47,12 @@
                 <p class="font black" id="friendCount">friends (0)</p>
                 <div id="friendReqBtnWrapper">
                     <button class="font black" id="friendReqSBtn" onclick="toggleFriendReqScreen()">+</button>
+                    <p class="font white" id="friendReqNum">-1 (haha)</p>
                 </div>
-                <div id="friendNotifWrapper">
+                <!--<div id="friendNotifWrapper">
                     <button class="font black" id="friendNotifBtn">!</button>
                     <p class="font white" id="friendNotifNum">1</p>
-                </div>
+                </div>-->
                 <button id="toggleFriendsList" class="font white" onclick="hideFriendsList()"><</button>
             </div>
             <div id="friendsList">
@@ -426,7 +427,7 @@
         Open-LAN is open-source under the <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank">GNU General Public License</a> and available on <a href="https://github.com/GigaPixel-Entertainment/GPE-Open-LAN" target="_blank">Github</a>
     </footer>
     <script src="JS/stop.js" integrity="sha256-a+ZB2GHuRp9853Ln46hr2XVR2gsPQuhLVyRUYwP74bs= sha384-X41PwsRzv3SM4XanAxzbbor/zr+crPiPZuyg0QipffwTNs9jfvhDWlVWn7Jxfe6C sha512-eqHiOJE49hL0TarKD7T3n3cFtozIav3JYzSpsivCk4BqrLkz/bZwDGQeS4z6Fw19b0r9vhUP/Ck6RyOV+kvnww=="></script>
-    <script src="JS/markdown-it.min.js" integrity="sha256-yKfKGmJAeCTmC1n/K0BtuFUFcXV+8gf6ZRnigBHY1PU= sha384-1OKk9qa1Nu/NWZ96Rn4h9QOTjHaNUJ1F33Ay/ivAk2tb+Xuko8zbfo8lRCKgXkcv sha512-rED4XJCNGhVIZTRhWfP5+9Qw89k7/GddTOH4cr44CGaRAVDVkGyCNEYu3q/y6Nv9W2FXVu2haeOEb8QFGyedMw=="></script>
+    <script src="JS/markdown-it.umd.min.js" integrity="sha256-OR8qpjjnXmx4WdClxWUO8JVnIqRZmPF+Bbg7xlV3jh4= sha384-ARStLecQmtLYjBgfD3+w+irhiSoLTnFk/ne6c0gRWQKQtC9791ZLMQ9D3OaBISt3 sha512-laLRpIWeZO46pTZ9+U5bg8LSdhEPFDU8oiv+3WfgLZH/3L4v4VHHyWLbg7XQ55B4xQnoSsLQ0iW/qiiLAti0IQ=="></script>
     <script src="JS/highlight.min.js" integrity="sha256-dj6XmVVH9EIMLj4NTgSztjtZjHNniE5WVg7d2v2UDuY= sha384-UczO6qs7rVEa0ARVDDiI6CrpCtZ6ac6SDe9kxmdgkfXqS3me5e5WhyA8Kvj4ESTJ sha512-WM+AnCK1srKMQjGgK2zWXQCifgdHpub0OhjSO1FGh6wtt1LvNzIH3C75fLGQlH0RrP2RubnMp7f2tT7e1XxKvA=="></script>
     <script src="JS/purify.js" integrity="sha256-zTeJj5eCrfVIIMQTGRtWkYA/DxN8eZ1u3P04UjtMLDE= sha384-P0JNneQf81HOl9VwNXK76cQ9VMD6Nfsnepxb0cCOg8+UzEdzgPHAPV4wVQrvYQSx sha512-2wT0W6vojz3cJuLoa/DxrPVQRinkfRjFWMWIDK4NghTqObEhpem1nEkeK0d9ZE+/hyvfMNuJZlfxM4LsRgeoSA=="></script>
     <script>
@@ -593,6 +594,7 @@
         const friendsListContent = document.getElementById("friendsListContent")
 
         const friendReqScreenBtn = document.getElementById("friendReqSBtn")
+        const friendReqNum = document.getElementById("friendReqNum")
         const friendReqScreen = document.getElementById("friendReqScreen")
 
         const friendSearchbar = document.getElementById("friendSearchbar")
@@ -1997,6 +1999,18 @@
                 }
             }
 
+
+            friendReqNum.textContent = Math.min(incomingBuffer.length, 9)
+            if (incomingBuffer.length > 9) {
+                friendReqNum.textContent += "+"
+            }
+
+            if (incomingBuffer.length > 0) {
+                friendReqNum.style.visibility = "visible"
+            } else {
+                friendReqNum.style.visibility = ""
+            }
+
             replaceChildren(incomingList, incomingBuffer)
             replaceChildren(outgoingList, outgoingBuffer)
 
@@ -2586,14 +2600,19 @@
         async function setServerList() {
             serverListSeperators = []
 
+            const dmIconParent = document.createElement("div")
+            dmIconParent.classList = "serverIconParent"
+
             const dmIcon = document.createElement("img")
-            dmIcon.style.marginTop = "3px"
+            dmIcon.style.marginTop = "5px"
             dmIcon.classList = "serverIcon"
             await waitForImg(dmIcon, "Media/LogoSquare.png")
 
             if (currServer == -1) {
                 dmIcon.style.border = "3px solid var(--highlight)"
             }
+
+            dmIconParent.appendChild(dmIcon)
 
             dmIcon.addEventListener("click", () => {
                 moveServer(-1)
@@ -2603,7 +2622,7 @@
             seperator.style.width = "calc(100% - 16px)"
             seperator.style.border = "2px solid var(--acc)"
 
-            const serverList2 = [dmIcon, seperator]
+            const serverList2 = [dmIconParent, seperator]
 
             await reqMultiServerMeta(servers)
             for (let ind = 0; ind < servers.length; ind++) {
@@ -2613,6 +2632,13 @@
                 const seperator = newServerListSeperator(ind)
                 serverList2.push(seperator)
                 serverListSeperators.push(seperator)
+
+                const serverIconParent = document.createElement("div")
+                serverIconParent.classList = "serverIconParent"
+
+                const readIndicator = document.createElement("div")
+                readIndicator.classList = "readIndicator"
+                serverIconParent.appendChild(readIndicator)
 
                 const serverIcon = document.createElement("img")
                 serverIcon.classList = "serverIcon"
@@ -2627,13 +2653,13 @@
 
                 serverIcon.addEventListener("dragstart", (e) => {
                     const serverIconBoundingBox = serverIcon.getBoundingClientRect()
-                    const serverIconDragImg = serverIcon.cloneNode(true)
+                    const serverIconDragImg = serverIcon.cloneNode(false)
                     serverIconDragImg.style.position = "relative"
                     serverIconDragImg.style.width = "75%"
                     serverIconDragImg.style.opacity = "0.01"
                     serverList.appendChild(serverIconDragImg)
 
-                    e.dataTransfer.setDragImage(serverIconDragImg, (e.clientX - serverIconBoundingBox.left) / 2, e.clientY - serverIconBoundingBox.top)
+                    e.dataTransfer.setDragImage(serverIconDragImg, e.clientX - serverIconBoundingBox.left, e.clientY - serverIconBoundingBox.top)
 
                     setTimeout(() => {
                         serverIconDragImg.remove()
@@ -2677,7 +2703,8 @@
                     }
                 })
 
-                serverList2.push(serverIcon)
+                serverIconParent.appendChild(serverIcon)
+                serverList2.push(serverIconParent)
 
                 if (ind == servers.length - 1) {
                     const seperator2 = newServerListSeperator(ind + 1)
@@ -2925,20 +2952,11 @@
             return mimeMap[ext] || 'application/octet-stream'
         }
 
-        var highlightJobRunning = false
         async function highlight(toHighlight, resultElement) {
-            const jobInterval = setInterval(() => {
-                if (highlightJobRunning) {
-                    return
-                }
-
-                clearInterval(jobInterval)
-                highlightJobRunning = true
-                const highlightedText = hljs.highlightAuto(toHighlight)
-                const sanitizedText = DOMPurify.sanitize(highlightedText["value"])
-                resultElement.innerHTML = sanitizedText
-                highlightJobRunning = false
-            }, 100);
+            const highlightedText = hljs.highlightAuto(toHighlight)
+            const sanitizedText = DOMPurify.sanitize(highlightedText["value"])
+            resultElement.innerHTML = sanitizedText
+            return highlightedText
         }
 
         async function evalEmbeds(message, msgP) {
@@ -3041,6 +3059,7 @@
                     actualText.style.outline = "none"
                     actualText.style.whiteSpace = "pre-wrap"
                     actualText.style.wordWrap = "break-word"
+                    actualText.style.fontSize = "0.8em"
                     actualText.style.overflowY = "auto"
                     actualText.classList = "font white"
 
@@ -3097,7 +3116,9 @@
                         textOverlayContent.scrollTo({top:0, behavior:"instant"})
                         textOverlay.style.visibility = "visible"
 
-                        highlight(textOverlayContent.textContent, textOverlayContent)
+                        highlight(textOverlayContent.textContent, textOverlayContent).then((highlighted) => {
+                            hljsDropdown.value = highlighted["language"]
+                        })
                     }
 
                     copy.onclick = () => {

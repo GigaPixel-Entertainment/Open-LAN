@@ -291,3 +291,21 @@ input[type="submit"]:hover {
     border-color: var(--button-press);
     color: var(--button-press);
 }
+
+::-webkit-scrollbar {
+    width: 5px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgb(0, 0, 0, 0.25);
+    border-radius: 10000px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #999;
+    border-radius: 10000px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #777;
+}

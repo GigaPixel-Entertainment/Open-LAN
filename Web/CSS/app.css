@@ -1669,22 +1669,6 @@ footer > a {
     font-weight: 700;
 }
 
-#friendNotifNum {
-    position: absolute;
-    top: 0;
-    right: 0;
-    margin: 0;
-    width: 1.75em;
-    height: 1.75em;
-    line-height: 1.75em;
-    border-radius: 9999px;
-    background: red;
-    pointer-events: none;
-    text-align: center;
-    transform: translate(40%, -25%);
-    visibility: hidden;
-}
-
 #friendReqBtnWrapper {
     position: relative;
     margin: 0;
@@ -1702,6 +1686,22 @@ footer > a {
     cursor: pointer;
 
     font-weight: 700;
+}
+
+#friendReqNum {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: 0;
+    width: 1.5em;
+    height: 1.5em;
+    line-height: 1.5em;
+    border-radius: 9999px;
+    background: red;
+    pointer-events: none;
+    text-align: center;
+    transform: translate(-20%, -20%);
+    visibility: hidden;
 }
 
 #friendReqScreen {
@@ -1872,7 +1872,6 @@ footer > a {
     border-top-left-radius: 8px;
     border-top-right-radius: 8px;
     outline: none;
-    font-size: 1.25em;
     white-space: pre-wrap;
     word-wrap: break-word;
     overflow-y: auto;
@@ -2344,14 +2343,32 @@ footer > a {
     transition: opacity 250ms linear;
 }
 
+.serverIconParent {
+    position: relative;
+    width: 100%;
+    margin: 0;
+}
+
 .serverIcon {
-    width: calc(100% - 20px);
-    border-radius: 16px;
-    border: 3px solid var(--acc4);
+    width: calc(100% - 26px);
     margin: 0;
     margin-left: 10px;
     margin-right: 10px;
+    border-radius: 16px;
+    border: 3px solid var(--acc4);
     cursor: pointer;
+}
+
+.readIndicator {
+    position: absolute;
+    aspect-ratio: 1;
+    width: 12px;
+    background-color: white;
+    clip-path: circle(6px);
+    left: 0;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    visibility: hidden;
 }
 
 .jcCenter {
@@ -2381,12 +2398,12 @@ footer > a {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #333;
+    background: #999;
     border-radius: 10000px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #111;
+    background: #777;
 }
 
 .noScrollbar {
