@@ -7,6 +7,7 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="CSS/app.css">
+        <link rel="stylesheet" href="CSS/github-dark-hljs.min.css">
         <link rel="icon" href="Media/LogoSquare.png">
         <title>Open-LAN</title>
     </head>
@@ -323,7 +324,7 @@
 
         <div id="textOverlay" class="overlay" style="opacity: 1;">
             <div id="textOverlayContents">
-                <textarea id="textOverlayText" class="font white" readonly>TEXT</textarea>
+                <p id="textOverlayText" class="font white">TEXT</p>
                 <div id="textOverlayInfoWrapper">
                     <p id="textOverlayFilename" class="font textOverlayFilename">FILENAME</p>
                     <div id="textOverlayControls" class="textOverlayControls">
@@ -424,8 +425,10 @@
     <footer>
         Open-LAN is open-source under the <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank">GNU General Public License</a> and available on <a href="https://github.com/GigaPixel-Entertainment/GPE-Open-LAN" target="_blank">Github</a>
     </footer>
-    <script src="JS/stop.js"></script>
-    <script src="JS/markdown-it.min.js"></script>
+    <script src="JS/stop.js" integrity="sha256-a+ZB2GHuRp9853Ln46hr2XVR2gsPQuhLVyRUYwP74bs= sha384-X41PwsRzv3SM4XanAxzbbor/zr+crPiPZuyg0QipffwTNs9jfvhDWlVWn7Jxfe6C sha512-eqHiOJE49hL0TarKD7T3n3cFtozIav3JYzSpsivCk4BqrLkz/bZwDGQeS4z6Fw19b0r9vhUP/Ck6RyOV+kvnww=="></script>
+    <script src="JS/markdown-it.min.js" integrity="sha256-yKfKGmJAeCTmC1n/K0BtuFUFcXV+8gf6ZRnigBHY1PU= sha384-1OKk9qa1Nu/NWZ96Rn4h9QOTjHaNUJ1F33Ay/ivAk2tb+Xuko8zbfo8lRCKgXkcv sha512-rED4XJCNGhVIZTRhWfP5+9Qw89k7/GddTOH4cr44CGaRAVDVkGyCNEYu3q/y6Nv9W2FXVu2haeOEb8QFGyedMw=="></script>
+    <script src="JS/highlight.min.js" integrity="sha256-dj6XmVVH9EIMLj4NTgSztjtZjHNniE5WVg7d2v2UDuY= sha384-UczO6qs7rVEa0ARVDDiI6CrpCtZ6ac6SDe9kxmdgkfXqS3me5e5WhyA8Kvj4ESTJ sha512-WM+AnCK1srKMQjGgK2zWXQCifgdHpub0OhjSO1FGh6wtt1LvNzIH3C75fLGQlH0RrP2RubnMp7f2tT7e1XxKvA=="></script>
+    <script src="JS/purify.js" integrity="sha256-zTeJj5eCrfVIIMQTGRtWkYA/DxN8eZ1u3P04UjtMLDE= sha384-P0JNneQf81HOl9VwNXK76cQ9VMD6Nfsnepxb0cCOg8+UzEdzgPHAPV4wVQrvYQSx sha512-2wT0W6vojz3cJuLoa/DxrPVQRinkfRjFWMWIDK4NghTqObEhpem1nEkeK0d9ZE+/hyvfMNuJZlfxM4LsRgeoSA=="></script>
     <script>
         // constants
         const userInfoCache = []
@@ -607,6 +610,7 @@
         const textOverlayContents = document.getElementById("textOverlayContents")
         const textOverlayContent = document.getElementById("textOverlayText")
         const textOverlayFilename = document.getElementById("textOverlayFilename")
+        const textOverlayControls = document.getElementById("textOverlayControls")
         const textOverlayMinimize = document.getElementById("textOverlayMinimize")
         const textOverlayDownload = document.getElementById("textOverlayDownload")
         const textOverlayCopy = document.getElementById("textOverlayCopy")
@@ -669,9 +673,122 @@
         const serverUsrListKick = document.getElementById("serverUsrListKick")
 
         const mdit = markdownit({
-                    linkify: true,
-                    breaks: true
-                })
+            linkify: true,
+            breaks: true
+        })
+
+        const mimeMap = {
+            "aac": "audio/aac",
+            "abw": "application/x-abiword",
+            "apng": "image/apng",
+            "arc": "application/x-freearc",
+            "avif": "image/avif",
+            "avi": "video/x-msvideo",
+            "azw": "application/vnd.amazon.ebook",
+            "bin": "application/octet-stream",
+            "bmp": "image/bmp",
+            "bz": "application/x-bzip",
+            "bz2": "application/x-bzip2",
+            "cda": "application/x-cdf",
+            "csh": "application/x-csh",
+            "css": "text/css",
+            "csv": "text/csv",
+            "doc": "application/msword",
+            "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "eot": "application/vnd.ms-fontobject",
+            "epub": "application/epub+zip",
+            "gz": "application/gzip",
+            "gif": "image/gif",
+            "htm": "text/html",
+            "html": "text/html",
+            "ico": "image/vnd.microsoft.icon",
+            "ics": "text/calendar",
+            "jar": "application/java-archive",
+            "jpeg": "image/jpeg",
+            "jpg": "image/jpeg",
+            "js": "text/javascript",
+            "json": "application/json",
+            "jsonld": "application/ld+json",
+            "md": "text/markdown",
+            "mid": "audio/midi",
+            "midi": "audio/midi",
+            "mjs": "text/javascript",
+            "m4a": "audio/mp4",
+            "mp3": "audio/mpeg",
+            "mp4": "video/mp4",
+            "mpeg": "video/mpeg",
+            "mpkg": "application/vnd.apple.installer+xml",
+            "odp": "application/vnd.oasis.opendocument.presentation",
+            "ods": "application/vnd.oasis.opendocument.spreadsheet",
+            "odt": "application/vnd.oasis.opendocument.text",
+            "oga": "audio/ogg",
+            "ogg": "audio/ogg",
+            "ogv": "video/ogg",
+            "ogx": "application/ogg",
+            "opus": "audio/ogg",
+            "otf": "font/otf",
+            "png": "image/png",
+            "pdf": "application/pdf",
+            "php": "application/x-httpd-php",
+            "ppt": "application/vnd.ms-powerpoint",
+            "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            "rar": "application/vnd.rar",
+            "rtf": "application/rtf",
+            "sh": "application/x-sh",
+            "svg": "image/svg+xml",
+            "tar": "application/x-tar",
+            "tif": "image/tiff",
+            "tiff": "image/tiff",
+            "ts": "video/mp2t",
+            "ttf": "font/ttf",
+            "txt": "text/plain",
+            "vsd": "application/vnd.visio",
+            "wasm": "application/wasm",
+            "wav": "audio/wav",
+            "weba": "audio/webm",
+            "webm": "video/webm",
+            "webmanifest": "application/manifest+json",
+            "webp": "image/webp",
+            "woff": "font/woff",
+            "woff2": "font/woff2",
+            "xhtml": "application/xhtml+xml",
+            "xls": "application/vnd.ms-excel",
+            "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "xml": "application/xml",
+            "xul": "application/vnd.mozilla.xul+xml",
+            "zip": "application/zip",
+            "7z": "application/x-7z-compressed"
+        }
+
+        const maxTextEmbedPreviewLength = 1000
+        const maxTextOverlayPreviewLength = 50000
+    </script>
+    <script>
+        const hljsLanguages = hljs.listLanguages()
+        const hljsDropdown = document.createElement("select")
+        hljsDropdown.classList = "font languageDropdown"
+
+        hljsLanguages.forEach((lang) => {
+            const option = document.createElement("option")
+            option.value = lang
+            option.textContent = lang
+            hljsDropdown.appendChild(option)
+        })
+
+        textOverlayControls.prepend(hljsDropdown)
+
+        hljsDropdown.addEventListener("change", (e) => {
+            const fullText = textOverlayContent.dataset.fullText
+            let shortenedText = fullText.substring(0, maxTextOverlayPreviewLength)
+
+            if (fullText.length > maxTextOverlayPreviewLength) {
+                shortenedText += "...\n(END OF PREVIEW)"
+            }
+
+            const highlighted = hljs.highlight(shortenedText, {"language": hljsDropdown.value, "ignoreIllegals": true})
+            const sanitized = DOMPurify.sanitize(highlighted["value"])
+            textOverlayContent.innerHTML = sanitized
+        })
     </script>
     <script>
         // String comparison by aceakash (https://github.com/aceakash/string-similarity)
@@ -1110,7 +1227,7 @@
 
         textOverlayCopy.addEventListener("click", () => {
             try {
-                window.navigator.clipboard.writeText(textOverlayContent.textContent)
+                window.navigator.clipboard.writeText(textOverlayContent.dataset.fullText)
             } catch {
                 console.warn("Failed to copy to clipboard!")
             }
@@ -2804,7 +2921,26 @@
             onScroll(atBottom)
         })
 
-        const embedCache = {}
+        function getMimeType(ext) {
+            return mimeMap[ext] || 'application/octet-stream'
+        }
+
+        var highlightJobRunning = false
+        async function highlight(toHighlight, resultElement) {
+            const jobInterval = setInterval(() => {
+                if (highlightJobRunning) {
+                    return
+                }
+
+                clearInterval(jobInterval)
+                highlightJobRunning = true
+                const highlightedText = hljs.highlightAuto(toHighlight)
+                const sanitizedText = DOMPurify.sanitize(highlightedText["value"])
+                resultElement.innerHTML = sanitizedText
+                highlightJobRunning = false
+            }, 100);
+        }
+
         async function evalEmbeds(message, msgP) {
             const embeds = document.createElement("div")
             embeds.style.width = "100%"
@@ -2815,30 +2951,19 @@
             for (let index = 0; index < message["embed"].length; index++) {
                 const embed = message["embed"][index];
 
-                if (Object.hasOwn(embedCache, embed)) {
-                    embedContent = embedCache[embed]
-                } else {
-                    embedContent = await request(JSON.stringify({"type": "getEmbed", "embedUrl": embed}))
-
-                    if (embedContent["type"] == "getEmbedSuccess") {
-                        embedCache[embed] = embedContent
-                    }
-                }
-
-                if (!embedContent || embedContent["type"] == "getEmbedFailed") {
-                    continue
-                }
-
-                const embedType = embedContent["embedType"]
                 let filename = embed.slice(4)
+                let ext = "bin"
 
                 try {
                     splits = filename.split(".")
 
                     if (splits.length == 3) {
                         filename = atob(splits[splits.length - 2])
+                        ext = splits[2]
                     }
                 } catch {}
+
+                const embedType = getMimeType(ext)
 
                 if (embedType.startsWith("image/")) {
                     const img = document.createElement("img")
@@ -2904,24 +3029,30 @@
                     text.style.display = "flex"
                     text.style.flexDirection = "column"
 
-                    const actualText = document.createElement("textarea")
-                    actualText.style.resize = "none"
+                    const actualText = document.createElement("p")
                     actualText.style.width = "calc(100% - 1em)"
                     actualText.style.height = "calc(80% - 1em)"
+                    actualText.style.margin = "0"
                     actualText.style.padding = ".5em"
                     actualText.style.background = "var(--acc4)"
                     actualText.style.border = "none"
                     actualText.style.borderTopLeftRadius = "8px"
                     actualText.style.borderTopRightRadius = "8px"
                     actualText.style.outline = "none"
+                    actualText.style.whiteSpace = "pre-wrap"
+                    actualText.style.wordWrap = "break-word"
+                    actualText.style.overflowY = "auto"
                     actualText.classList = "font white"
-                    actualText.readOnly = true
 
-                    actualText.textContent = textCont.substring(0, 1000)
+                    let embedText = textCont.substring(0, maxTextEmbedPreviewLength)
 
-                    if (textCont.length > 1000) {
-                        actualText.textContent += "...\n(END OF PREVIEW)"
+                    if (textCont.length > maxTextEmbedPreviewLength) {
+                        embedText += "...\n(END OF PREVIEW)"
                     }
+
+                    actualText.textContent = embedText
+
+                    highlight(embedText, actualText)
 
                     const infoWrapper = document.createElement("div")
                     infoWrapper.style.width = "100%"
@@ -2953,16 +3084,20 @@
                     copy.src = "Media/Copy.png"
 
                     maximize.onclick = () => {
-                        textOverlayContent.textContent = textCont.substring(0, 50000)
+                        textOverlayContent.dataset.fullText = textCont
+                        textOverlayContent.textContent = textCont.substring(0, maxTextOverlayPreviewLength)
 
-                        if (textCont.length > 50000) {
+                        if (textCont.length > maxTextOverlayPreviewLength) {
                             textOverlayContent.textContent += "...\n(END OF PREVIEW)"
                         }
 
                         textOverlayFilename.textContent = filename
                         textOverlayDownload.download = filename
                         textOverlayDownload.href = embed
+                        textOverlayContent.scrollTo({top:0, behavior:"instant"})
                         textOverlay.style.visibility = "visible"
+
+                        highlight(textOverlayContent.textContent, textOverlayContent)
                     }
 
                     copy.onclick = () => {
@@ -3233,6 +3368,8 @@
 
             const messageDiv = document.createElement("div")
             messageDiv.classList = "messageDiv"
+            messageDiv.dataset.fromUID = message["UID"]
+            messageDiv.dataset.replyToUID = -1
 
             if (message["replyTo"] && message["replyTo"] != -1) {
                 const replyTarget = await getMessageFromMSGID(message["replyTo"])
@@ -3314,6 +3451,8 @@
                 if (replyUsr["UID"] == currUID) {
                     messageDiv.dataset.highlighted = true
                 }
+
+                messageDiv.dataset.replyToUID = replyTarget["UID"]
             }
 
 
@@ -3381,6 +3520,8 @@
             const messageDiv = document.createElement("div")
             messageDiv.classList = "messageDiv"
             messageDiv.style.padding = "0"
+            messageDiv.dataset.fromUID = message["UID"]
+            messageDiv.dataset.replyToUID = -1
 
             const padArea = document.createElement("div")
             padArea.style.width = "4%"
@@ -3761,6 +3902,11 @@
                 return
             }
 
+            if (message["MSGID"].toString() in msgCache && !doNotCache.includes(message["MSGID"])) {
+                chatDiv2.push(msgCache[message["MSGID"].toString()])
+                return
+            }
+
             messageDate = null
             lastMessageDate = null
 
@@ -3860,78 +4006,73 @@
             noNewMsg = true
 
             let messageDiv = null
-
-            if (message["MSGID"].toString() in msgCache && !doNotCache.includes(message["MSGID"])) {
-                messageDiv = msgCache[message["MSGID"].toString()]
+            if (message["SYSMSG"]) {
+                messageDiv = await genSysMsg(message, messageDate)
             } else {
-                if (message["SYSMSG"]) {
-                    messageDiv = await genSysMsg(message, messageDate)
-                } else {
-                    let isShortMsg = lastMsg && !lastMsg["SYSMSG"] && message["UID"] == lastMsg["UID"] && message["time"] - lastMsg["time"] < 10*60 && !(message["replyTo"] && message["replyTo"] != -1) && messageDate.getDate() == lastMessageDate.getDate()
+                let isShortMsg = lastMsg && !lastMsg["SYSMSG"] && message["UID"] == lastMsg["UID"] && message["time"] - lastMsg["time"] < 10*60 && !(message["replyTo"] && message["replyTo"] != -1) && messageDate.getDate() == lastMessageDate.getDate()
 
-                    if (isShortMsg) {
-                        messageDiv = await genSmallMsg(userInfos, message, messageDate, isInTransit)
-                    } else {
-                        messageDiv = await genFullMsg(userInfos, message, messageDate, isInTransit)
-                    }
+                if (isShortMsg) {
+                    messageDiv = await genSmallMsg(userInfos, message, messageDate, isInTransit)
+                } else {
+                    messageDiv = await genFullMsg(userInfos, message, messageDate, isInTransit)
+                }
+            }
+
+            messageDiv.dataset.msgid = "MSGID" + message["MSGID"]
+
+            messageDiv.addEventListener("contextmenu", (e) => {
+                if (Date.now() - lastRClickMenuClose < 10) {
+                    return
                 }
 
-                messageDiv.dataset.msgid = "MSGID" + message["MSGID"]
+                e.preventDefault()
 
-                messageDiv.addEventListener("contextmenu", (e) => {
-                    if (Date.now() - lastRClickMenuClose < 10) {
-                        return
+                if (message["UID"] == currUID) {
+                    editTxt.disabled = false
+                    delTxt.disabled = false
+                } else {
+                    editTxt.disabled = true
+                    delTxt.disabled = true
+                }
+
+                msgRClickMenu.style.visibility = "visible"
+                msgRClickMenu.style.left = e.pageX + "px"
+
+                if (e.pageY + msgRClickMenu.offsetHeight > window.innerHeight) {
+                    msgRClickMenu.style.top = e.pageY - msgRClickMenu.offsetHeight + "px"
+                } else {
+                    msgRClickMenu.style.top = e.pageY + "px"
+                }
+                msgRClickMenuMsg = message
+            })
+
+            if (highlightMsg == message["MSGID"]) {
+                highlightMsg = -1
+
+                const chatFinishedPromise = new Promise((r) => {
+                    function check() {
+                        if (!chatFetchInProgress) {
+                            r()
+                        } else {
+                            setTimeout(check, 100)
+                        }
                     }
 
-                    e.preventDefault()
-
-                    if (message["UID"] == currUID) {
-                        editTxt.disabled = false
-                        delTxt.disabled = false
-                    } else {
-                        editTxt.disabled = true
-                        delTxt.disabled = true
-                    }
-
-                    msgRClickMenu.style.visibility = "visible"
-                    msgRClickMenu.style.left = e.pageX + "px"
-
-                    if (e.pageY + msgRClickMenu.offsetHeight > window.innerHeight) {
-                        msgRClickMenu.style.top = e.pageY - msgRClickMenu.offsetHeight + "px"
-                    } else {
-                        msgRClickMenu.style.top = e.pageY + "px"
-                    }
-                    msgRClickMenuMsg = message
+                    check()
                 })
 
-                if (highlightMsg == message["MSGID"]) {
-                    highlightMsg = -1
-
-                    const chatFinishedPromise = new Promise((r) => {
-                        function check() {
-                            if (!chatFetchInProgress) {
-                                r()
-                            } else {
-                                setTimeout(check, 100)
-                            }
-                        }
-
-                        check()
+                chatFinishedPromise.then(() => {
+                    const origBg = messageDiv.style.background
+                    messageDiv.style.background = "var(--acc6)"
+                    messageDiv.scrollIntoView({
+                        "behavior": "smooth",
+                        "block": "center"
                     })
 
-                    chatFinishedPromise.then(() => {
-                        const origBg = messageDiv.style.background
-                        messageDiv.style.background = "var(--acc6)"
-                        messageDiv.scrollIntoView({
-                            "behavior": "smooth",
-                            "block": "center"
-                        })
-
-                        setTimeout(() => {
-                            messageDiv.style.background = origBg
-                        }, 2500)
-                    })
-                }
+                    setTimeout(() => {
+                        messageDiv.style.background = origBg
+                    }, 2500)
+                })
             }
 
             chatDiv2.push(messageDiv)
@@ -4386,11 +4527,14 @@
 
             if (chatCache) {
                 msgCache = {}
+
                 for (let i = 0; i < chatCache["messages"].length; i++) {
                     const msg = chatCache["messages"][i];
                     const msgObj = document.querySelector('[data-msgid="MSGID' + msg["MSGID"] + '"]')
 
                     if (!msgObj) { continue }
+                    if (msgObj.dataset.fromUID != -1 && msgObj.dataset.fromUID == lastUsrUpdated) { continue }
+                    if (msgObj.dataset.replyToUID != -1 && msgObj.dataset.replyToUID == lastUsrUpdated) { continue }
 
                     const allMentions = msgObj.querySelectorAll("span[data-is-mention='true']")
                     let cacheItem = true
@@ -4408,6 +4552,8 @@
 
                     msgCache[msg["MSGID"].toString()] = msgObj
                 }
+
+                lastUsrUpdated = -1
 
                 setChat(chatCache)
             } else {
@@ -4568,13 +4714,19 @@
             }
         })
 
-        function openEditGc() {
+        function openEditGc(e) {
             if (currChat == -1) {
                 return
             }
 
-            const isGC = chatCache["Type"] == "gc"
-            if (!isGC) {
+            if (chatCache["Type"] == "dm") {
+                e.stopPropagation()
+                const other = chatCache["Recipients"].filter(item => item != currUID)[0]
+                reqUsrInfo(other).then((uInfo) => showUsrProfilePopup(e.clientX, e.clientY, uInfo))
+                return
+            }
+
+            if (!chatCache["Type"] == "gc") {
                 return
             }
 
@@ -5376,7 +5528,7 @@
                                                 }
 
                                                 if (chatCache["messages"].length > 100) {
-                                                    chatCache["messages"].splice(0, 1)
+                                                    chatCache["messages"].splice(0, chatCache["messages"].length - 100)
                                                 }
 
                                                 noNewMsg = true
@@ -6137,24 +6289,25 @@
                         updateEmbeds()
                     }
 
-                    if (file.type == "application/pdf") {
+                    mimeType = getMimeType(file.name.split(".").pop())
+
+                    if (mimeType == "application/pdf") {
                         embedImg.src = "Media/pdf.png"
-                    } else if (file.type == "application/java-archive") {
+                    } else if (mimeType == "application/java-archive") {
                         embedImg.src = "Media/jar.png"
                     } else if (["text/css", "text/html", "application/json", "text/javascript", "application/x-httpd-php", "application/x-sh", "application/shellscript", "application/xhtml+xml", "text/x-python"].includes(file.type)) {
                         embedImg.src = "Media/code.png"
                     } else if (["application/x-freearc", "application/x-bzip", "application/x-bzip2", "application/gzip", "application/x-gzip", "application/vnd.rar", "application/x-tar", "application/zip", "application/x-zip-compressed", "application/x-7z-compressed"].includes(file.type)) {
                         embedImg.src = "Media/compress.png"
-                    } else if (file.type.startsWith("image/")) {
+                    } else if (mimeType.startsWith("image/")) {
                         convertFileToBase64(file).then((b64) => {
                             embedImg.src = b64
                         })
-                    } else if (file.type.startsWith("audio/")) {
+                    } else if (mimeType.startsWith("audio/")) {
                         embedImg.src = "Media/audio.png"
-                    } else if (file.type.startsWith("video/")) {
+                    } else if (mimeType.startsWith("video/")) {
                         embedImg.src = "Media/video.png"
-                    } else if (file.type.startsWith("text/")) {
-                        console.log(file.type)
+                    } else if (mimeType.startsWith("text/")) {
                         embedImg.src = "Media/text.png"
                     } else {
                         embedImg.src = "Media/generic.png"
@@ -6242,99 +6395,103 @@
         const flashWord = "flashbang"
         let flashWordProgress = 0
         document.addEventListener("keydown", (key) => {
-            if (key.key == "/" && textEntry != document.activeElement && !myProfileScreenShown && !friendReqScreenOpen) {
+            const isInputting = document.activeElement.nodeName == "TEXTAREA" || (document.activeElement.nodeName === 'INPUT' && ['text', 'search', 'tel', 'url', 'email', 'password'].includes(document.activeElement.type))
+
+            if (isInputting) {
+                return
+            }
+
+            if (key.key == "/" && !myProfileScreenShown && !friendReqScreenOpen) {
                 key.preventDefault()
                 textEntry.focus()
             }
 
-            if (document.activeElement.nodeName != "TEXTAREA" && !(document.activeElement.nodeName === 'INPUT' && ['text', 'search', 'tel', 'url', 'email', 'password'].includes(document.activeElement.type))) {
-                if (key.key == angyWord.charAt(angyWordProgress)) {
-                    angyWordProgress += 1
+            if (key.key == angyWord.charAt(angyWordProgress)) {
+                angyWordProgress += 1
 
-                    if (angyWordProgress == angyWord.length) {
-                        document.documentElement.dataset.theme = "red"
-                        angyWordProgress = 0
-                    }
-                } else {
-                    angyWordProgress = key.key == angyWord.charAt(0)
+                if (angyWordProgress == angyWord.length) {
+                    document.documentElement.dataset.theme = "red"
+                    angyWordProgress = 0
                 }
+            } else {
+                angyWordProgress = key.key == angyWord.charAt(0)
+            }
 
-                if (key.key == grassWord.charAt(grassWordProgress)) {
-                    grassWordProgress += 1
+            if (key.key == grassWord.charAt(grassWordProgress)) {
+                grassWordProgress += 1
 
-                    if (grassWordProgress == grassWord.length) {
-                        document.documentElement.dataset.theme = "grass"
-                        grassWordProgress = 0
-                    }
-                } else {
-                    grassWordProgress = key.key == grassWord.charAt(0)
+                if (grassWordProgress == grassWord.length) {
+                    document.documentElement.dataset.theme = "grass"
+                    grassWordProgress = 0
                 }
+            } else {
+                grassWordProgress = key.key == grassWord.charAt(0)
+            }
 
-                if (key.key == yellowWord.charAt(yellowWordProgress)) {
-                    yellowWordProgress += 1
+            if (key.key == yellowWord.charAt(yellowWordProgress)) {
+                yellowWordProgress += 1
 
-                    if (yellowWordProgress == yellowWord.length) {
-                        document.documentElement.dataset.theme = "yellow"
-                        yellowWordProgress = 0
-                    }
-                } else {
-                    yellowWordProgress = key.key == yellowWord.charAt(0)
+                if (yellowWordProgress == yellowWord.length) {
+                    document.documentElement.dataset.theme = "yellow"
+                    yellowWordProgress = 0
                 }
+            } else {
+                yellowWordProgress = key.key == yellowWord.charAt(0)
+            }
 
-                if (key.key == archWord.charAt(archWordProgress)) {
-                    archWordProgress += 1
+            if (key.key == archWord.charAt(archWordProgress)) {
+                archWordProgress += 1
 
-                    if (archWordProgress == archWord.length) {
-                        document.documentElement.dataset.theme = "arch"
-                        archWordProgress = 0
-                    }
-                } else {
-                    archWordProgress = key.key == archWord.charAt(0)
+                if (archWordProgress == archWord.length) {
+                    document.documentElement.dataset.theme = "arch"
+                    archWordProgress = 0
                 }
+            } else {
+                archWordProgress = key.key == archWord.charAt(0)
+            }
 
-                if (key.key == fixWord.charAt(fixWordProgress)) {
-                    fixWordProgress += 1
+            if (key.key == fixWord.charAt(fixWordProgress)) {
+                fixWordProgress += 1
 
-                    if (fixWordProgress == fixWord.length) {
-                        document.documentElement.dataset.theme = ""
-                        fixWordProgress = 0
-                    }
-                } else {
-                    fixWordProgress = key.key == fixWord.charAt(0)
+                if (fixWordProgress == fixWord.length) {
+                    document.documentElement.dataset.theme = ""
+                    fixWordProgress = 0
                 }
+            } else {
+                fixWordProgress = key.key == fixWord.charAt(0)
+            }
 
-                if (key.key == flashWord.charAt(flashWordProgress)) {
-                    flashWordProgress += 1
+            if (key.key == flashWord.charAt(flashWordProgress)) {
+                flashWordProgress += 1
 
-                    if (flashWordProgress == flashWord.length) {
-                        document.getElementById("flashbang").style.visibility = "visible"
-                        document.getElementById("flashbang").style.opacity = "0"
+                if (flashWordProgress == flashWord.length) {
+                    document.getElementById("flashbang").style.visibility = "visible"
+                    document.getElementById("flashbang").style.opacity = "0"
 
-                        setTimeout(() => {
-                            document.getElementById("flashbang").style.visibility = "hidden"
-                            document.getElementById("flashbang").style.opacity = "1"
-                        }, 5000);
+                    setTimeout(() => {
+                        document.getElementById("flashbang").style.visibility = "hidden"
+                        document.getElementById("flashbang").style.opacity = "1"
+                    }, 5000);
 
-                        let flashInterval = setInterval(() => {
-                            if (document.documentElement.dataset.theme == "") {
-                                clearInterval(flashInterval)
-                                return
-                            }
+                    let flashInterval = setInterval(() => {
+                        if (document.documentElement.dataset.theme == "") {
+                            clearInterval(flashInterval)
+                            return
+                        }
 
-                            const elements = document.documentElement.querySelectorAll("*")
-                            elements.forEach((e) => {
-                                e.style.border = "2px solid black"
-                                e.style.filter = "brightness(175%) blur(1px)"
-                            })
-                        }, 1)
+                        const elements = document.documentElement.querySelectorAll("*")
+                        elements.forEach((e) => {
+                            e.style.border = "2px solid black"
+                            e.style.filter = "brightness(175%) blur(1px)"
+                        })
+                    }, 1)
 
-                        document.documentElement.dataset.theme = "flash"
+                    document.documentElement.dataset.theme = "flash"
 
-                        flashWordProgress = 0
-                    }
-                } else {
-                    flashWordProgress = key.key == flashWord.charAt(0)
+                    flashWordProgress = 0
                 }
+            } else {
+                flashWordProgress = key.key == flashWord.charAt(0)
             }
         })
     </script>

@@ -24,6 +24,8 @@ import config
 with open(config.ERROR_PAGE, "rb") as f:
     ERROR_PG_CONTENTS: bytes = f.read()
 
+ENCODED_CACHE: dict[tuple[bytes, str], bytes] = {}
+
 class HTTPRequestParser(BaseHTTPRequestHandler):
     # pylint: disable=super-init-not-called
     def __init__(self, request_bytes: bytes):
@@ -141,6 +143,32 @@ def formatHttpRange(fileContents: bytes, rangeStr: str) -> bytes | None:
         "Content-Range": f"bytes {contentRange}/{fullFileLen}"
     }).encode("utf-8") + b"\r\n" + fileContents
 
+def encodeFile(fileContents: bytes, encoding: str | None) -> bytes:
+    if encoding is None:
+        return fileContents
+
+    if not config.DEV:
+        cached = ENCODED_CACHE.get((fileContents, encoding))
+
+        if cached is not None:
+            return cached
+
+    encoded = None
+    if encoding == "zstd":
+        encoded = zstandard.compress(fileContents, level=config.ZSTD_COMPRESSION_LEVEL)
+    elif encoding == "br":
+        encoded = brotli.compress(fileContents, quality=config.BROTLI_COMPRESSION_LEVEL)
+    elif encoding == "gzip":
+        encoded = gzip.compress(fileContents, compresslevel=config.GZIP_COMPRESSION_LEVEL)
+    else:
+        logging.warning("[MAIN] Unknown encoding %s!", encoding)
+        encoded = fileContents
+
+    if encoded != fileContents:
+        ENCODED_CACHE[(fileContents, encoding)] = encoded
+
+    return encoded
+
 def formatHttpResponse(parsed: HTTPRequestParser | None, filePath: pathlib.Path, fernet: Fernet | None = None, extraHeaders: dict | None = None) -> bytes:
     if not filePath.is_file() or not isSafePath(filePath):
         logging.warning("[MAIN] Invalid fetch %s!", filePath)
@@ -224,12 +252,7 @@ def formatHttpResponse(parsed: HTTPRequestParser | None, filePath: pathlib.Path,
         elif "gzip" in acceptEncoding:
             encoding = "gzip"
 
-        if encoding == "zstd":
-            fileContents = zstandard.compress(fileContents, level=config.ZSTD_COMPRESSION_LEVEL)
-        elif encoding == "br":
-            fileContents = brotli.compress(fileContents, quality=config.BROTLI_COMPRESSION_LEVEL)
-        elif encoding == "gzip":
-            fileContents = gzip.compress(fileContents, compresslevel=config.GZIP_COMPRESSION_LEVEL)
+        fileContents = encodeFile(fileContents, encoding)
 
     header = {"Content-Type": mime, "Content-Length": len(fileContents), "Accept-Ranges": "bytes", "Connection": "close"}
 

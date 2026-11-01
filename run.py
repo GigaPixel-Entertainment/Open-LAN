@@ -128,6 +128,7 @@ class MaintenancePage(HttpHandler):
             fContents = f.read()
 
         sk.sendall(httphelper.formatHttpHeader(503, {
+            "Retry-After": "60",
             "Connection": "close"
         }) + fContents)
 
@@ -237,7 +238,15 @@ class Dashboard(HttpHandler):
             }))
 
     def handleRequestHttp(self, sk: socket.socket):
-        sk.sendall(httphelper.formatHttpResponse(None, config.WEB_DIR / "httpsRequired.html"))
+        request = sk.recv(4096)
+        parsed = httphelper.HTTPRequestParser(request)
+        headers = parsed.headers
+
+        if "Host" in headers:
+            sk.sendall(httphelper.formatErrorPage(301, {"location": f"https://{headers["Host"]}/"}))
+            return
+
+        sk.sendall(httphelper.formatErrorPage(400))
 
 def stopServerProc():
     if serverProc:

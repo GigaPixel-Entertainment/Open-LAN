@@ -1865,14 +1865,17 @@ footer > a {
 #textOverlayText {
     width: calc(100% - 1em);
     height: calc(95% - 1em);
-    resize: none;
     padding: .5em;
+    margin: 0;
     background: var(--acc4);
     border: none;
     border-top-left-radius: 8px;
     border-top-right-radius: 8px;
     outline: none;
     font-size: 1.25em;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-y: auto;
 }
 
 #textOverlayInfoWrapper {
@@ -1888,6 +1891,7 @@ footer > a {
     flex: 0 0 50%;
     padding: 0;
     margin: 0;
+    margin-left: .5em;
     white-space: nowrap;
     background: linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%);
     background-clip: text;
@@ -1904,6 +1908,13 @@ footer > a {
     display: flex;
     flex-direction: row;
     justify-content: end;
+}
+
+.languageDropdown {
+    flex-shrink: none;
+    margin-top: .25em;
+    margin-bottom: .25em;
+    font-size: 100%;
 }
 
 .textOverlayControls > img, .textOverlayControls > a > img {
