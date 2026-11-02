@@ -603,6 +603,28 @@ footer > a {
     font-family: "Fira Code", monospace;
 }
 
+#dropIndicator {
+    transition: none;
+    opacity: 1;
+}
+
+#dropImage {
+    position: absolute;
+    max-width: 25%;
+    max-height: 25%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+#dropText {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: black;
+}
+
 #friendsListWrapper {
     position: absolute;
     top: 0;
@@ -2276,6 +2298,35 @@ footer > a {
     background: var(--acc);
 }
 
+.embedImgWrapper {
+    position: relative;
+    width: auto;
+    height: calc(100%-4px);
+    aspect-ratio: 1/1;
+    overflow: hidden;
+    border: 2px solid var(--acc4);
+    border-radius: 8px;
+    margin: 4px;
+}
+
+.embedImg {
+    object-fit: cover;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+.embedImgOverlay {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    background: rgba(0, 0, 0, .5);
+    visibility: hidden;
+    pointer-events: none;
+}
+
 .invis {
     opacity: 0;
 }
@@ -2391,6 +2442,7 @@ footer > a {
 
 ::-webkit-scrollbar {
     width: 5px;
+    height: 5px;
 }
 
 ::-webkit-scrollbar-track {

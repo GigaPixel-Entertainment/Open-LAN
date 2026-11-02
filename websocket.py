@@ -76,6 +76,7 @@ class WS():
             "leaveGc": self.leaveGc,
             "rmUsrFromChat": self.rmUsrFromChat,
             "setRead": self.setRead,
+            "setReadS": self.setReadS,
             "createServer": self.createServer,
             "reqServerMetas": self.reqServerMetas,
             "reqServer": self.reqServer,
@@ -310,6 +311,23 @@ class WS():
 
         return (valid, targetServer)
 
+    def getServerSString(self, server):
+        sstring = ""
+        serverChats = [chat for cate in server["Categories"] for chat in cate["Chats"]]
+        serverChats.sort()
+
+        # TODO: Add filtering logic for like roles or stuff
+
+        for chat in serverChats:
+            chatInfo = self.getChatFromCID(chat)
+
+            if chatInfo is None:
+                continue
+
+            sstring += str(chat) + ":" + str(len(chatInfo["messages"])-1) + ":"
+
+        return sstring
+
     async def wsSendEncrypted(self, ws: ServerConnection, data: bytes, trackerId: int | None=None):
         if trackerId is not None:
             dataParsed = orjson.loads(data)
@@ -384,9 +402,14 @@ class WS():
             await self.wsSendEncrypted(ws, orjson.dumps({"type":"reqUserFailed", "message": "User not found!"}), trackerId)
             return
 
+        # Maybe we should stop leaking the passwords..?
+
+        userinfoCopy = copy.deepcopy(userinfo)
+        userinfoCopy["PWD"] = "[REDACTED]"
+
         await self.wsSendEncrypted(ws, orjson.dumps({
             "type": "reqUserSuccess",
-            "user": userinfo
+            "user": userinfoCopy
         }), trackerId)
 
     async def reqChatMetas(self, ws, decryptedBody, authToken, trackerId):
@@ -419,6 +442,7 @@ class WS():
                 "icon": chat["Icon"] if "Icon" in chat else random.choice(self.DEFAULT_PFPS),
                 "recipients": chat["Recipients"],
                 "numMsgs": len(chat["messages"]),
+                "Server": chat["Server"],
                 "lastMsg": {
                     "time": lastMsg["time"] if lastMsg else chat["Time"],
                     "MSGID": lastMsg["MSGID"] if lastMsg else 0,
@@ -564,7 +588,15 @@ class WS():
             if self.tokenInChat(cAuthToken, decryptedBody["CID"]):
                 broadcastClients.append(client)
 
-        await self.wsBroadcastEncrypted(broadcastClients, orjson.dumps({"type":"newMsg", "CID": chat["CID"], "message": msgObj, "msgPreviewId": decryptedBody["msgPreviewId"]}))
+        sstring = ""
+        if "Server" in chat and chat["Server"] != -1:
+            serverInfo = self.getServerFromSID(chat["Server"])
+
+            if serverInfo is not None:
+                sstring = self.getServerSString(serverInfo)
+
+        await self.wsBroadcastEncrypted(broadcastClients, orjson.dumps({"type":"newMsg", "CID": chat["CID"], "message": msgObj, "msgPreviewId": decryptedBody["msgPreviewId"], "SString": sstring}))
+
 
     async def delMsg(self, ws, decryptedBody, authToken, trackerId):
         if not self.checkFields(decryptedBody, ["CID", "MSGID"]):
@@ -1447,6 +1479,24 @@ class WS():
             "readMsgs": usrInfo["ReadMsgs"]
         }), trackerId)
 
+    async def setReadS(self, ws, decryptedBody, authToken, trackerId):
+        if not self.checkFields(decryptedBody, ["SID", "SString"]):
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "setReadSFailed"}), trackerId)
+            return
+
+        usrInfo = self.getUserInfoFromToken(authToken)
+
+        if usrInfo is None:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "setReadSFailed"}), trackerId)
+            return
+
+        usrInfo["ReadMsgs"][f"s{decryptedBody["SID"]}"] = decryptedBody["SString"]
+
+        await self.wsSendEncrypted(ws, orjson.dumps({
+            "type": "setReadSSuccess",
+            "readMsgs": usrInfo["ReadMsgs"]
+        }), trackerId)
+
     async def createServer(self, ws, decryptedBody, authToken, trackerId):
         if not self.checkFields(decryptedBody, ["icon", "name"]):
             await self.wsSendEncrypted(ws, orjson.dumps({"type": "createServerFailed"}), trackerId)
@@ -1507,6 +1557,12 @@ class WS():
             await self.wsSendEncrypted(ws, orjson.dumps({"type": "reqServerMetasFailed"}), trackerId)
             return
 
+        selfInfo = self.getUserInfoFromToken(authToken)
+
+        if selfInfo is None:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "reqServerMetasFailed"}), trackerId)
+            return
+
         metaList = []
         for srv in decryptedBody["SIDs"]:
             server = self.getServerFromSID(srv)
@@ -1514,10 +1570,13 @@ class WS():
             if not server:
                 continue
 
+            sstring = self.getServerSString(server)
+
             metaList.append({
                 "SID": server["SID"],
                 "icon": server["Icon"],
-                "name": server["Name"]
+                "name": server["Name"],
+                "SString": sstring
             })
 
         await self.wsSendEncrypted(ws, orjson.dumps({

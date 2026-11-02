@@ -40,6 +40,10 @@
             <textarea placeholder="type a message..." id="textEntry" class="font" maxlength="4000"></textarea>
             <button id="sendMsg" class="font">-></button>
         </div>
+        <div id="dropIndicator" class="overlay">
+            <img id="dropImage" src="Media/fileUpload.png">
+            <h1 id="dropText" class="font">Upload Files</h1>
+        </div>
 
         <div id="friendsListWrapper">
             <div id="friendsHeader">
@@ -649,6 +653,8 @@
         const textEntry = document.getElementById("textEntry")
         const sendMsgBtn = document.getElementById("sendMsg")
         const addFileBtn = document.getElementById("addFileInput")
+
+        const dropIndicator = document.getElementById("dropIndicator")
 
         const usrProfilePopup = document.getElementById("usrProfilePopup")
         const usrProfilePopupPfp = document.getElementById("usrProfilePopupPfp")
@@ -2167,7 +2173,7 @@
                             categoryDivDragImg.style.width = "60%"
                             friendsListContent.appendChild(categoryDivDragImg)
 
-                            e.dataTransfer.setDragImage(categoryDivDragImg, (e.clientX - categoryDivBoundingBox.left) / 2, e.clientY - categoryDivBoundingBox.top)
+                            e.dataTransfer.setDragImage(categoryDivDragImg, e.clientX - categoryDivBoundingBox.left, e.clientY - categoryDivBoundingBox.top)
 
                             setTimeout(() => {
                                 categoryDivDragImg.remove()
@@ -2321,7 +2327,7 @@
                                 chatDivDragImg.style.width = "50%"
                                 friendsListContent.appendChild(chatDivDragImg)
 
-                                e.dataTransfer.setDragImage(chatDivDragImg, (e.clientX - chatDivBoundingBox.left) / 2, e.clientY - chatDivBoundingBox.top)
+                                e.dataTransfer.setDragImage(chatDivDragImg, e.clientX - chatDivBoundingBox.left, e.clientY - chatDivBoundingBox.top)
 
                                 setTimeout(() => {
                                     chatDivDragImg.remove()
@@ -2640,6 +2646,10 @@
                 readIndicator.classList = "readIndicator"
                 serverIconParent.appendChild(readIndicator)
 
+                if (serverMeta["SString"] != readMsgs["s" + SID]) {
+                    readIndicator.style.visibility = "visible"
+                }
+
                 const serverIcon = document.createElement("img")
                 serverIcon.classList = "serverIcon"
                 await waitForImg(serverIcon, serverMeta["icon"])
@@ -2941,6 +2951,28 @@
                 "CID": currChat,
                 "MSGID": lastMsgId
             }))
+
+            if (currServer != -1) {
+                const serverChats = []
+
+                for (let i = 0; i < serverCache["Categories"].length; i++) {
+                    serverChats.push(...serverCache["Categories"][i]["Chats"])
+                }
+
+                serverChats.sort((a, b) => a - b)
+
+                let serverReadString = ""
+                for (let i = 0; i < serverChats.length; i++) {
+                    const sChat = serverChats[i];
+                    serverReadString += sChat + ":" + (readMsgs[sChat.toString()] || 0) + ":"
+                }
+
+                request(JSON.stringify({
+                    "type": "setReadS",
+                    "SID": currServer,
+                    "SString": serverReadString
+                }))
+            }
         }
 
         chatDiv.addEventListener("scroll", () => {
@@ -2965,6 +2997,8 @@
             embeds.style.maxHeight = "10em"
             embeds.style.overflowY = "hidden"
             embeds.style.overflowX = "scroll"
+            embeds.style.display = "flex"
+            embeds.style.flexDirection = "row"
 
             for (let index = 0; index < message["embed"].length; index++) {
                 const embed = message["embed"][index];
@@ -2977,9 +3011,10 @@
 
                     if (splits.length == 3) {
                         filename = atob(splits[splits.length - 2])
-                        ext = splits[2]
                     }
                 } catch {}
+
+                ext = filename.split(".").pop()
 
                 const embedType = getMimeType(ext)
 
@@ -3002,7 +3037,7 @@
 
                     waitForImg(img, embed).then(() => {
                         img.style.minHeight = "0"
-                    })
+                    }).catch(() => {})
 
                     embeds.appendChild(img)
                 } else if (embedType.startsWith("audio/")) {
@@ -4747,7 +4782,7 @@
                 return
             }
 
-            if (!chatCache["Type"] == "gc") {
+            if (chatCache["Type"] != "gc") {
                 return
             }
 
@@ -5154,11 +5189,11 @@
                             wsURL = r.headers.get("Url")
                             res(wsURL)
                         }).catch((r) => {
-                            console.log("Failed to fetch websocket port! Using default")
+                            console.warn("Failed to fetch websocket port! Using default")
                             res(wsURL)
                         })
                 } catch {
-                    console.log("Failed to fetch websocket port! Using default")
+                    console.warn("Failed to fetch websocket port! Using default")
                     res(wsURL)
                 }
             })
@@ -5532,9 +5567,14 @@
                                                 if (!respBody["message"]["SYSMSG"]) {
                                                     chatMetaCache[stringCID]["lastMsg"]["content"] = respBody["message"]["content"]
                                                 }
+
+                                                if (respBody["SString"] && respBody["SString"] != "") {
+                                                    ServerMetaCache[chatMetaCache[stringCID]["Server"]]["SString"] = respBody["SString"]
+                                                }
                                             }
 
                                             setChatList()
+
 
                                             if (currChat == respBody["CID"]) {
                                                 lastMsgId = respBody["message"]["MSGID"]
@@ -5689,6 +5729,11 @@
                                             }
 
                                             setChatList()
+                                        }
+
+                                        if (respBody["type"] == "setReadSSuccess") {
+                                            readMsgs = respBody["readMsgs"]
+                                            setServerList()
                                         }
 
                                         if (trackerId && trackerIds.includes(trackerId)) {
@@ -6268,29 +6313,14 @@
                 embedList.replaceChildren()
                 embeddedFiles.forEach((file) => {
                     const embedImgWrapper = document.createElement("div")
-                    embedImgWrapper.style.position = "relative"
-                    embedImgWrapper.style.width = ""
-                    embedImgWrapper.style.height = "calc(100%-4px)"
-                    embedImgWrapper.style.aspectRatio = "1 / 1"
-                    embedImgWrapper.style.overflow = "hidden"
-                    embedImgWrapper.style.border = "2px solid var(--acc4)"
-                    embedImgWrapper.style.borderRadius = "8px"
-                    embedImgWrapper.style.margin = "4px"
+                    embedImgWrapper.classList = "embedImgWrapper"
 
                     const embedImg = document.createElement("img")
-                    embedImg.style.objectFit = "cover"
-                    embedImg.style.width = "100%"
-                    embedImg.style.height = "100%"
+                    embedImg.classList = "embedImg"
+                    embedImg.draggable = false
 
                     const embedImgOverlay = document.createElement("img")
-                    embedImgOverlay.style.position = "absolute"
-                    embedImgOverlay.style.width = "100%"
-                    embedImgOverlay.style.height = "100%"
-                    embedImgOverlay.style.top = "0"
-                    embedImgOverlay.style.left = "0"
-                    embedImgOverlay.style.background = "rgba(0, 0, 0, 0.5)"
-                    embedImgOverlay.style.visibility = "hidden"
-                    embedImgOverlay.style.pointerEvents = "none"
+                    embedImgOverlay.classList = "embedImgOverlay"
                     embedImgOverlay.src = "Media/trash.png"
 
                     embedImgWrapper.appendChild(embedImg)
@@ -6316,9 +6346,9 @@
                         embedImg.src = "Media/pdf.png"
                     } else if (mimeType == "application/java-archive") {
                         embedImg.src = "Media/jar.png"
-                    } else if (["text/css", "text/html", "application/json", "text/javascript", "application/x-httpd-php", "application/x-sh", "application/shellscript", "application/xhtml+xml", "text/x-python"].includes(file.type)) {
+                    } else if (["text/css", "text/html", "application/json", "text/javascript", "application/x-httpd-php", "application/x-sh", "application/shellscript", "application/xhtml+xml", "text/x-python"].includes(mimeType)) {
                         embedImg.src = "Media/code.png"
-                    } else if (["application/x-freearc", "application/x-bzip", "application/x-bzip2", "application/gzip", "application/x-gzip", "application/vnd.rar", "application/x-tar", "application/zip", "application/x-zip-compressed", "application/x-7z-compressed"].includes(file.type)) {
+                    } else if (["application/x-freearc", "application/x-bzip", "application/x-bzip2", "application/gzip", "application/x-gzip", "application/vnd.rar", "application/x-tar", "application/zip", "application/x-zip-compressed", "application/x-7z-compressed"].includes(mimeType)) {
                         embedImg.src = "Media/compress.png"
                     } else if (mimeType.startsWith("image/")) {
                         convertFileToBase64(file).then((b64) => {
@@ -6340,7 +6370,6 @@
                 embedList.style.visibility = "hidden"
             }
         }
-
         async function uploadFiles(files) {
             if (currChat == -1) {
                 return
@@ -6383,16 +6412,6 @@
 
         textEntry.addEventListener("paste", (event) => {
             const files = event.clipboardData.files
-            uploadFiles(files)
-        })
-
-        document.addEventListener("dragover", (event) => {
-            event.preventDefault()
-        })
-
-        document.addEventListener("drop", (event) => {
-            event.preventDefault()
-            const files = event.dataTransfer.files
             uploadFiles(files)
         })
 
@@ -6514,6 +6533,35 @@
             } else {
                 flashWordProgress = key.key == flashWord.charAt(0)
             }
+        })
+    </script>
+    <script>
+        var lastDragEvent = 0
+
+        setInterval(() => {
+            if (Date.now() - lastDragEvent > 750) {
+                dropIndicator.style.visibility = "hidden"
+            }
+        }, 500);
+
+        function onDragOver(event) {
+            if (currChat == -1) {
+                return
+            }
+
+            event.preventDefault()
+            lastDragEvent = Date.now()
+            dropIndicator.style.visibility = "visible"
+        }
+
+        chatDiv.addEventListener("dragover", onDragOver)
+        dropIndicator.addEventListener("dragover", onDragOver)
+
+        dropIndicator.addEventListener("drop", (event) => {
+            event.preventDefault()
+            dropIndicator.style.visibility = "hidden"
+            const files = event.dataTransfer.files
+            uploadFiles(files)
         })
     </script>
 </html>

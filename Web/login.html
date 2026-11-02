@@ -126,11 +126,11 @@
                             wsURL = r.headers.get("Url")
                             res(wsURL)
                         }).catch((r) => {
-                            console.log("Failed to fetch websocket port! Using default")
+                            console.warn("Failed to fetch websocket port! Using default")
                             res(wsURL)
                         })
                 } catch {
-                    console.log("Failed to fetch websocket port! Using default")
+                    console.warn("Failed to fetch websocket port! Using default")
                     res(wsURL)
                 }
             })
