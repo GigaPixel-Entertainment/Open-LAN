@@ -76,7 +76,6 @@ class WS():
             "leaveGc": self.leaveGc,
             "rmUsrFromChat": self.rmUsrFromChat,
             "setRead": self.setRead,
-            "setReadS": self.setReadS,
             "createServer": self.createServer,
             "reqServerMetas": self.reqServerMetas,
             "reqServer": self.reqServer,
@@ -417,7 +416,6 @@ class WS():
             await self.wsSendEncrypted(ws, orjson.dumps({"type": "reqChatMetasFailed", "message": "Request error. Please contact the server owner for help."}), trackerId)
             return
 
-
         metaList = []
         for cid in decryptedBody["CIDs"]:
             chat = self.getChatFromCID(cid)
@@ -442,10 +440,10 @@ class WS():
                 "icon": chat["Icon"] if "Icon" in chat else random.choice(self.DEFAULT_PFPS),
                 "recipients": chat["Recipients"],
                 "numMsgs": len(chat["messages"]),
-                "Server": chat["Server"],
+                "Server": chat["Server"] if "Server" in chat else -1,
                 "lastMsg": {
                     "time": lastMsg["time"] if lastMsg else chat["Time"],
-                    "MSGID": lastMsg["MSGID"] if lastMsg else 0,
+                    "MSGID": lastMsg["MSGID"] if lastMsg else -1,
                     "content": lastRealMsg["content"] if lastRealMsg else ""
                 }
             })
@@ -1009,7 +1007,7 @@ class WS():
             chatExists = False
             cid = len(self.chats)
 
-            self.chats.append({"CID": cid, "Type": "dm", "Name": f"{targetInfo["Displayname"]} & {selfInfo["Displayname"]}", "Recipients": [selfUID, targetUID], "Icon": random.choice(self.DEFAULT_PFPS), "Time": int(time.time()), "messages": []})
+            self.chats.append({"CID": cid, "Type": "dm", "Name": f"{targetInfo["Displayname"]} & {selfInfo["Displayname"]}", "Recipients": [selfUID, targetUID], "Server": -1, "Icon": random.choice(self.DEFAULT_PFPS), "Time": int(time.time()), "messages": []})
 
         for usr in self.users:
             if usr["UID"] == targetUID:
@@ -1476,24 +1474,6 @@ class WS():
 
         await self.wsSendEncrypted(ws, orjson.dumps({
             "type": "setReadSuccess",
-            "readMsgs": usrInfo["ReadMsgs"]
-        }), trackerId)
-
-    async def setReadS(self, ws, decryptedBody, authToken, trackerId):
-        if not self.checkFields(decryptedBody, ["SID", "SString"]):
-            await self.wsSendEncrypted(ws, orjson.dumps({"type": "setReadSFailed"}), trackerId)
-            return
-
-        usrInfo = self.getUserInfoFromToken(authToken)
-
-        if usrInfo is None:
-            await self.wsSendEncrypted(ws, orjson.dumps({"type": "setReadSFailed"}), trackerId)
-            return
-
-        usrInfo["ReadMsgs"][f"s{decryptedBody["SID"]}"] = decryptedBody["SString"]
-
-        await self.wsSendEncrypted(ws, orjson.dumps({
-            "type": "setReadSSuccess",
             "readMsgs": usrInfo["ReadMsgs"]
         }), trackerId)
 

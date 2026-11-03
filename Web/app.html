@@ -855,6 +855,18 @@
         }
     </script>
     <script>
+        function compareLists(a, b) {
+            const keys1 = Object.keys(a)
+            const keys2 = Object.keys(b)
+
+            if (keys1.length !== keys2.length) {
+                return false
+            }
+
+            return keys1.every(key => b.hasOwnProperty(key) && a[key] === b[key]);
+        }
+    </script>
+    <script>
         var currUrl = ""
 
         function travelLink(dest) {
@@ -1062,31 +1074,6 @@
                 img.onerror = rej
                 img.src = src
             })
-        }
-    </script>
-    <script>
-        // Array comparison adapted from Tomáš Zato (https://stackoverflow.com/a/14853974)
-
-        function compareLists(a, b) {
-            if (!a || !b)
-                return false
-
-            if(a == b)
-                return true;
-
-            if (a.length != b.length)
-                return false
-
-            for (var i = 0, l=a.length; i < l; i++) {
-                if (a[i] instanceof Array && b[i] instanceof Array) {
-                    if (!compareLists(a[i], b[i]))
-                        return false;
-                } else if (a[i] != b[i]) {
-                    return false;
-                }
-            }
-
-            return true;
         }
     </script>
     <script>
@@ -2587,7 +2574,7 @@
             settingChatList = false
         }
 
-        function newServerListSeperator(iconInd) {
+        function newServerListSeparator(iconInd) {
             const sep = document.createElement("hr")
             sep.style.width = "calc(100% - 8px)"
             sep.style.height = "4px"
@@ -2601,13 +2588,32 @@
         }
 
         var servers = []
-        var serverListSeperators = []
+        var serverListSeparators = []
         const ServerMetaCache = []
         async function setServerList() {
-            serverListSeperators = []
+            serverListSeparators = []
 
             const dmIconParent = document.createElement("div")
             dmIconParent.classList = "serverIconParent"
+
+            const readIndicator = document.createElement("div")
+            readIndicator.classList = "readIndicator"
+            dmIconParent.appendChild(readIndicator)
+
+            await reqMultiChatMeta(chats)
+            for (let i = 0; i < chats.length; i++) {
+                const CID = chats[i]
+                const chat = await reqChatMeta(CID);
+
+                if ("numMsgs" in chat) {
+                    const numMsgs = chat["numMsgs"]
+
+                    if (numMsgs - 1 != readMsgs[CID.toString()]) {
+                        readIndicator.style.visibility = "visible"
+                        break
+                    }
+                }
+            }
 
             const dmIcon = document.createElement("img")
             dmIcon.style.marginTop = "5px"
@@ -2624,20 +2630,20 @@
                 moveServer(-1)
             })
 
-            const seperator = document.createElement("hr")
-            seperator.style.width = "calc(100% - 16px)"
-            seperator.style.border = "2px solid var(--acc)"
+            const separator = document.createElement("hr")
+            separator.style.width = "calc(100% - 16px)"
+            separator.style.border = "2px solid var(--acc)"
 
-            const serverList2 = [dmIconParent, seperator]
+            const serverList2 = [dmIconParent, separator]
 
             await reqMultiServerMeta(servers)
             for (let ind = 0; ind < servers.length; ind++) {
                 const SID = servers[ind];
                 let serverMeta = await reqServerMeta(SID)
 
-                const seperator = newServerListSeperator(ind)
-                serverList2.push(seperator)
-                serverListSeperators.push(seperator)
+                const separator = newServerListSeparator(ind)
+                serverList2.push(separator)
+                serverListSeparators.push(separator)
 
                 const serverIconParent = document.createElement("div")
                 serverIconParent.classList = "serverIconParent"
@@ -2677,7 +2683,7 @@
                 })
 
                 serverIcon.addEventListener("drag", (e) => {
-                    serverListSeperators.forEach((dLocation) => {
+                    serverListSeparators.forEach((dLocation) => {
                         const dLocationBoundingBox = dLocation.getBoundingClientRect()
                         const xValid = e.clientX >= dLocationBoundingBox.left - 16 && e.clientX <= dLocationBoundingBox.right + 16
                         const Ydist = Math.abs(e.clientY - dLocationBoundingBox.top)
@@ -2692,7 +2698,7 @@
                 serverIcon.addEventListener("dragend", (e) => {
                     let target = null
 
-                    serverListSeperators.forEach((dLocation) => {
+                    serverListSeparators.forEach((dLocation) => {
                         const dLocationBoundingBox = dLocation.getBoundingClientRect()
                         const xValid = e.clientX >= dLocationBoundingBox.left - 16 && e.clientX <= dLocationBoundingBox.right + 16
                         const Ydist = Math.abs(e.clientY - dLocationBoundingBox.top)
@@ -2717,9 +2723,9 @@
                 serverList2.push(serverIconParent)
 
                 if (ind == servers.length - 1) {
-                    const seperator2 = newServerListSeperator(ind + 1)
-                    serverList2.push(seperator2)
-                    serverListSeperators.push(seperator2)
+                    const separator2 = newServerListSeparator(ind + 1)
+                    serverList2.push(separator2)
+                    serverListSeparators.push(separator2)
                 }
             }
 
@@ -2940,12 +2946,6 @@
 
             readMsgs[currChat.toString()] = lastMsgId
 
-            setTimeout(() => {
-                if (newMsgSeperator) {
-                    newMsgSeperator.remove()
-                }
-            }, 5000)
-
             request(JSON.stringify({
                 "type": "setRead",
                 "CID": currChat,
@@ -2964,13 +2964,13 @@
                 let serverReadString = ""
                 for (let i = 0; i < serverChats.length; i++) {
                     const sChat = serverChats[i];
-                    serverReadString += sChat + ":" + (readMsgs[sChat.toString()] || 0) + ":"
+                    serverReadString += sChat + ":" + (readMsgs[sChat.toString()] || -1) + ":"
                 }
 
                 request(JSON.stringify({
-                    "type": "setReadS",
-                    "SID": currServer,
-                    "SString": serverReadString
+                    "type": "setRead",
+                    "CID": "s" + currServer,
+                    "MSGID": serverReadString
                 }))
             }
         }
@@ -3949,7 +3949,7 @@
         var maxPage = 0
         var currMsgID = -1
 
-        var newMsgSeperator = null
+        var newMsgSeparator = null
         var msgCache = {}
         var doNotCache = []
 
@@ -3983,18 +3983,13 @@
                 }
 
                 if (currDate != lastDate) {
-                    const seperatorWrapper = document.createElement("div")
-                    seperatorWrapper.style.width = "95%"
-                    seperatorWrapper.style.margin = "0 auto"
+                    const separatorWrapper = document.createElement("div")
+                    separatorWrapper.classList = "chatSeparatorWrapper"
 
-                    const seperator = document.createElement("hr")
-                    seperator.style.position = "absolute"
-                    seperator.style.width = "95%"
-                    seperator.style.border = "none"
-                    seperator.style.height = "4px"
-                    seperator.style.borderRadius = "99999px"
-                    seperator.style.background = "var(--acc4)"
-                    seperatorWrapper.appendChild(seperator)
+                    const separator = document.createElement("hr")
+                    separator.classList = "chatSeparator"
+                    separator.style.backgroundColor = "var(--acc4)"
+                    separatorWrapper.appendChild(separator)
 
                     const date = document.createElement("p")
                     date.textContent = currDate
@@ -4006,29 +4001,24 @@
                     date.style.transform = "translateX(-50%)"
                     date.style.paddingLeft = "1em"
                     date.style.paddingRight = "1em"
-                    seperatorWrapper.appendChild(date)
+                    separatorWrapper.appendChild(date)
 
-                    chatDiv2.push(seperatorWrapper)
+                    chatDiv2.push(separatorWrapper)
                 }
             }
 
             if (!isInTransit && !noNewMsg && message["MSGID"] - readMsgs[currChat.toString()] == 1) {
-                if (newMsgSeperator) {
-                    newMsgSeperator.remove()
+                if (newMsgSeparator) {
+                    newMsgSeparator.remove()
                 }
 
-                const seperatorWrapper = document.createElement("div")
-                seperatorWrapper.style.width = "95%"
-                seperatorWrapper.style.margin = "0 auto"
+                const separatorWrapper = document.createElement("div")
+                separatorWrapper.classList = "chatSeparatorWrapper"
 
-                const seperator = document.createElement("hr")
-                seperator.style.position = "absolute"
-                seperator.style.width = "95%"
-                seperator.style.border = "none"
-                seperator.style.height = "4px"
-                seperator.style.borderRadius = "99999px"
-                seperator.style.background = "var(--rose)"
-                seperatorWrapper.appendChild(seperator)
+                const saperator = document.createElement("hr")
+                saperator.classList = "chatSeparator"
+                saperator.style.backgroundColor = "var(--rose)"
+                separatorWrapper.appendChild(saperator)
 
                 const label = document.createElement("p")
                 label.textContent = "new messages"
@@ -4040,10 +4030,10 @@
                 label.style.transform = "translateX(-50%)"
                 label.style.paddingLeft = "1em"
                 label.style.paddingRight = "1em"
-                seperatorWrapper.appendChild(label)
-                newMsgSeperator = seperatorWrapper
+                separatorWrapper.appendChild(label)
+                newMsgSeparator = separatorWrapper
 
-                chatDiv2.push(seperatorWrapper)
+                chatDiv2.push(separatorWrapper)
 
                 new Promise((r) => {
                     function check() {
@@ -4056,10 +4046,17 @@
 
                     check()
                 }).then(() => {
-                    seperatorWrapper.scrollIntoView({"behavior": "smooth", "block": "center"})
+                    separatorWrapper.scrollIntoView({"behavior": "smooth", "block": "center"})
+
+                    setTimeout(() => {
+                        if (newMsgSeparator) {
+                            newMsgSeparator.remove()
+                        }
+                    }, 5000)
                 })
+
+                noNewMsg = true
             }
-            noNewMsg = true
 
             let messageDiv = null
             if (message["SYSMSG"]) {
@@ -4180,7 +4177,7 @@
                     crown.style.top = "30px"
                     crown.style.height = "50%"
                     crown.style.transform = "translateX(-50%)"
-                    crown.src = "Media/ribbon.png"
+                    crown.src = Math.random() < 0.01 ? "Media/ribbon2.png" : "Media/ribbon.png"
 
                     userDiv.style.background = "var(--highlighted-transparent)"
                     userDiv.style.borderLeft = "2px solid var(--highlighted)"
@@ -4445,12 +4442,7 @@
 
             if (currPage < maxPage) {
                 const goUpBtn = document.createElement("button")
-                goUpBtn.style.width = "100%"
-                goUpBtn.style.background = "var(--button)"
-                goUpBtn.style.fontSize = "2em"
-                goUpBtn.style.border = "none"
-                goUpBtn.style.borderRadius = "0"
-                goUpBtn.classList = "font"
+                goUpBtn.classList = "font  pagingButton"
                 goUpBtn.textContent = "Go Up"
 
                 goUpBtn.onclick = () => {
@@ -4482,12 +4474,7 @@
 
             if (currPage > 0) {
                 const goDownBtn = document.createElement("button")
-                goDownBtn.style.width = "100%"
-                goDownBtn.style.background = "var(--button)"
-                goDownBtn.style.fontSize = "2em"
-                goDownBtn.style.border = "none"
-                goDownBtn.style.borderRadius = "0"
-                goDownBtn.classList = "font"
+                goDownBtn.classList = "font pagingButton"
                 goDownBtn.textContent = "Go Down"
 
                 goDownBtn.onclick = () => {
@@ -4522,6 +4509,7 @@
             attemptScroll(atBottom, startAtTop, currScroll)
 
             startAtTop = false
+            noNewMsg = false
             chatFetchInProgress = false
         }
 
@@ -5563,6 +5551,7 @@
                                             if (stringCID in chatMetaCache) {
                                                 chatMetaCache[stringCID]["lastMsg"]["MSGID"] = respBody["message"]["MSGID"]
                                                 chatMetaCache[stringCID]["lastMsg"]["time"] = respBody["message"]["time"]
+                                                chatMetaCache[stringCID]["numMsgs"] = respBody["message"]["MSGID"] + 1
 
                                                 if (!respBody["message"]["SYSMSG"]) {
                                                     chatMetaCache[stringCID]["lastMsg"]["content"] = respBody["message"]["content"]
@@ -5723,16 +5712,13 @@
                                         }
 
                                         if (respBody["type"] == "setReadSuccess") {
+                                            readMsgs = respBody["readMsgs"]
+
                                             if (!compareLists(readMsgs, respBody["readMsgs"])) {
-                                                readMsgs = respBody["readMsgs"]
                                                 delete chatMetaCache[currChat.toString()]
                                             }
 
                                             setChatList()
-                                        }
-
-                                        if (respBody["type"] == "setReadSSuccess") {
-                                            readMsgs = respBody["readMsgs"]
                                             setServerList()
                                         }
 

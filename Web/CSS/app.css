@@ -2422,6 +2422,27 @@ footer > a {
     visibility: hidden;
 }
 
+.pagingButton {
+    width: 100%;
+    background-color: var(--button);
+    font-size: 2em;
+    border: none;
+    border-radius: 0;
+}
+
+.chatSeparatorWrapper {
+    width: 95%;
+    margin: 0 auto;
+}
+
+.chatSeparator {
+    position: absolute;
+    width: 95%;
+    border: none;
+    height: 4px;
+    border-radius: 9999px;
+}
+
 .jcCenter {
     justify-content: center;
 }
