@@ -87,9 +87,20 @@
 
             <div id="myProfileLeft">
                 <div id="currentStatus">
-                    <img src="" id="currPFP">
-                    <input type="file" id="currPFPFile" accept="image/*">
-                    <img src="Media/camera.png" id="currPFPOverlay">
+                    <div id="pfp">
+                        <img src="" id="currPFP">
+                        <input type="file" id="currPFPFile" accept="image/*">
+                        <img src="Media/camera.png" id="currPFPOverlay">
+                    </div>
+                    <div id="statusSelector">
+                        <div id="statuses">
+                            <div style="background-color: var(--userActive);"></div>
+                            <div style="background-color: var(--userIdle);"></div>
+                            <div style="background-color: var(--userDND);"></div>
+                            <div style="background-color: var(--userInactive);"></div>
+                        </div>
+                        <input type="range" min="0" max="3" step="1" id="statusSelectorInput">
+                    </div>
                 </div>
                 <div id="accInfo">
                     <h2 id="accInfoDisplayname" class="font white"></h2>
@@ -345,6 +356,7 @@
             <div id="usrProfileScreenContent">
                 <div id="usrProfileScreenUsrInfoWrapper">
                     <img id="usrProfileScreenUsrPfp">
+                    <img id="usrProfileScreenUsrStatus" class="usrProfileScreenUsrStatus">
                     <h1 id="usrProfileScreenUsrDn" class="font"></h1>
                     <p id="usrProfileScreenUsrUn" class="font"></p>
                     <p id="usrProfileScreenUsrPro" class="font white"></p>
@@ -398,6 +410,7 @@
 
         <div id="usrProfilePopup">
             <img id="usrProfilePopupPfp" class="usrProfilePopupPfp" style="margin-top: 0;">
+            <img id="usrProfilePopupStatus" class="usrProfilePopupStatus">
             <p id="usrProfilePopupDn" class="font usrProfilePopupDn"></p>
             <p id="usrProfilePopupUn" class="font usrProfilePopupUn"></p>
             <p id="usrProfilePopupPro" class="font usrProfilePopupPro"></p>
@@ -436,7 +449,7 @@
     <script src="JS/purify.js" integrity="sha256-zTeJj5eCrfVIIMQTGRtWkYA/DxN8eZ1u3P04UjtMLDE= sha384-P0JNneQf81HOl9VwNXK76cQ9VMD6Nfsnepxb0cCOg8+UzEdzgPHAPV4wVQrvYQSx sha512-2wT0W6vojz3cJuLoa/DxrPVQRinkfRjFWMWIDK4NghTqObEhpem1nEkeK0d9ZE+/hyvfMNuJZlfxM4LsRgeoSA=="></script>
     <script>
         // constants
-        const userInfoCache = []
+        var userInfoCache = []
 
         const serverList = document.getElementById("serverList")
 
@@ -624,6 +637,7 @@
         const usrProfileScreen = document.getElementById("usrProfileScreen")
         const usrProfileScreenContent = document.getElementById("usrProfileScreenContent")
         const usrProfileScreenUsrPfp = document.getElementById("usrProfileScreenUsrPfp")
+        const usrProfileScreenUsrStatus = document.getElementById("usrProfileScreenUsrStatus")
         const usrProfileScreenUsrDn = document.getElementById("usrProfileScreenUsrDn")
         const usrProfileScreenUsrUn = document.getElementById("usrProfileScreenUsrUn")
         const usrProfileScreenUsrPro = document.getElementById("usrProfileScreenUsrPro")
@@ -658,6 +672,7 @@
 
         const usrProfilePopup = document.getElementById("usrProfilePopup")
         const usrProfilePopupPfp = document.getElementById("usrProfilePopupPfp")
+        const usrProfilePopupStatus = document.getElementById("usrProfilePopupStatus")
         const usrProfilePopupDn = document.getElementById("usrProfilePopupDn")
         const usrProfilePopupUn = document.getElementById("usrProfilePopupUn")
         const usrProfilePopupPro = document.getElementById("usrProfilePopupPro")
@@ -911,6 +926,7 @@
             }
 
             usr["users"].forEach((userInfo) => {
+                userInfoCache = userInfoCache.filter((r) => r["UID"] != userInfo["UID"])
                 userInfoCache.push(userInfo)
             })
 
@@ -945,6 +961,7 @@
                 usr = await request(JSON.stringify({"type": "reqUsersList", "users": requiredUIDs}))
 
                 usr["users"].forEach((userInfo) => {
+                    userInfoCache = userInfoCache.filter((r) => r["UID"] != userInfo["UID"])
                     userInfoCache.push(userInfo)
                 })
             }
@@ -1245,6 +1262,7 @@
 
         function showUsrProfile(usrInfo) {
             usrProfileScreenUsrPfp.src = usrInfo["pfp"]
+            usrProfileScreenUsrStatus.src = "Media/" + getUsrStatusVar(usrInfo["status"]) + ".png"
             usrProfileScreenUsrDn.textContent = usrInfo["displayname"]
             usrProfileScreenUsrUn.textContent = usrInfo["username"]
             usrProfileScreenUsrPro.textContent = usrInfo["pronouns"]
@@ -1315,6 +1333,7 @@
         var usrProfilePopupInfo = null
         function showUsrProfilePopup(x, y, usrInfo) {
             usrProfilePopupPfp.src = usrInfo["pfp"]
+            usrProfilePopupStatus.src = "Media/" + getUsrStatusVar(usrInfo["status"]) + ".png"
             usrProfilePopupDn.textContent = usrInfo["displayname"]
             usrProfilePopupUn.textContent = usrInfo["username"]
             usrProfilePopupPro.textContent = usrInfo["pronouns"]
@@ -2491,15 +2510,33 @@
                 chatInfo.style.flexDirection = "column"
 
                 const chatName = document.createElement("h2")
+                chatName.textContent = chat["name"]
                 chatName.style.width = "90%"
                 chatName.style.height = "60%"
                 chatName.style.margin = "0"
-                chatName.style.background = "linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%)"
+
+                let textBgCol = "userInactive"
+                if (chat["type"] == "dm") {
+                    const other = chat["recipients"].filter(item => item != currUID)
+
+                    if (other && other.length > 0) {
+                        const otherInfo = await reqUsrInfo(other[0])
+
+                        chatName.textContent = otherInfo["displayname"]
+                        chatImgPic.src = otherInfo["pfp"]
+
+                        textBgCol = getUsrStatusVar(otherInfo["status"])
+                    } else {
+                        // Fallback
+                        chatImgPic.src = "Media/LogoSquare.png"
+                    }
+                }
+
+                chatName.style.background = "linear-gradient(to right, var(--" + textBgCol + ") 0%, var(--" + textBgCol + ") 80%, transparent 100%)"
                 chatName.style.backgroundClip = "text"
                 chatName.style.color = "transparent"
                 chatName.style.whiteSpace = "nowrap"
                 chatName.classList = "font"
-                chatName.textContent = chat["name"]
 
                 const chatExtInfo = document.createElement("p")
                 chatExtInfo.style.width = "90%"
@@ -2520,21 +2557,9 @@
                     chatExtInfo.textContent = numUnreadMsgs + " unread message" + (numUnreadMsgs > 1 ? "s" : "")
                 }
 
-                if (chat["type"] == "dm") {
-                    const other = chat["recipients"].filter(item => item != currUID)
-
-                    if (other && other.length > 0) {
-                        const otherInfo = await reqUsrInfo(other[0])
-
-                        chatName.textContent = otherInfo["displayname"]
-                        chatImgPic.src = otherInfo["pfp"]
-                    } else {
-                        // Fallback
-                        chatImgPic.src = "Media/LogoSquare.png"
-                    }
-                } else if (chat["type"] == "gc") {
+                if (chat["type"] == "gc") {
                     chatImgPic.src = chat["icon"] || "Media/LogoSquare.png"
-                } else {
+                } else if (chat["type"] != "dm") {
                     chatImgPic.src = "Media/LogoSquare.png"
                 }
 
@@ -4191,7 +4216,10 @@
                 displayname.style.margin = "0"
                 displayname.style.fontSize = "1.25em"
                 displayname.style.whiteSpace = "pre"
-                displayname.style.background = "linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%)"
+
+                let bgColVar = getUsrStatusVar(usrInfo["status"])
+
+                displayname.style.background = "linear-gradient(to right, var(--" + bgColVar + ") 0%, var(--" + bgColVar + ") 80%, transparent 100%)"
                 displayname.style.backgroundClip = "text"
                 displayname.style.color = "transparent"
                 displayname.classList = "font"
@@ -5150,6 +5178,22 @@
         serverList.addEventListener("dragover", (e) => {
             e.stopPropagation()
         })
+
+        function setUsrStatus() {
+            setMemberList()
+
+            if (currServer == -1) {
+                setChatList()
+            }
+
+            if (usrProfilePopupInfo != null || usrProfileScreenUsrInfo != null) {
+                uid = usrProfilePopupInfo != null ? usrProfilePopupInfo["UID"] :  usrProfileScreenUsrInfo["UID"]
+                reqUsrInfo(uid).then((r) => {
+                    usrProfilePopupStatus.src = "Media/" + getUsrStatusVar(r["status"]) + ".png"
+                    usrProfileScreenUsrStatus.src = "Media/" + getUsrStatusVar(r["status"]) + ".png"
+                })
+            }
+        }
     </script>
 
     <script>
@@ -5445,6 +5489,10 @@
 
                                         if (respBody["type"] == "updateCachedPronouns") {
                                             updateCachedProp(respBody, "pronouns", "Pronouns", setMemberList)
+                                        }
+
+                                        if (respBody["type"] == "usrStatusChanged") {
+                                            updateCachedProp(respBody, "status", "newStatus", setUsrStatus)
                                         }
 
                                         if (respBody["type"] == "chatUpdate") {
@@ -6549,5 +6597,23 @@
             const files = event.dataTransfer.files
             uploadFiles(files)
         })
+    </script>
+    <script>
+        document.addEventListener("visibilitychange", () => {
+            request(JSON.stringify({"type": "idleStatusChange", "idle": document.visibilityState === "hidden"}))
+        });
+
+        function getUsrStatusVar(status) {
+            switch (status) {
+                case 1:
+                    return "userActive"
+                case 2:
+                    return "userIdle"
+                case 3:
+                    return "userDND"
+                default:
+                    return "userInactive"
+            }
+        }
     </script>
 </html>

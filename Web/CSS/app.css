@@ -16,6 +16,10 @@
     --rose: #e99898;
     --highlighted: #f9e1af;
     --highlighted-transparent: #f9e1af30;
+    --userActive: #5bd156;
+    --userIdle: #f6ed2c;
+    --userDND: #cd0004;
+    --userInactive: #fcf4ff;
 }
 
 /* Red Theme */
@@ -708,19 +712,31 @@ footer > a {
     height: 90%;
 }
 
-#currPFP {
+#currentStatus {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+#pfp {
+    position: relative;
     width: 25%;
     aspect-ratio: 1;
     margin-left: 5%;
+    flex-shrink: 0;
+}
+
+#currPFP {
+    width: 100%;
+    height: 100%;
     border-radius: 999999999px;
     border: 6px solid var(--acc4);
 }
 
 #currPFPOverlay {
     position: absolute;
-    width: 25%;
-    aspect-ratio: 1;
-    margin-left: 5%;
+    width: 100%;
+    height: 100%;
     border-radius: 999999999px;
     border: 6px solid var(--acc4);
     left: 0;
@@ -731,9 +747,8 @@ footer > a {
 
 #currPFPFile {
     position: absolute;
-    width: 25%;
-    aspect-ratio: 1;
-    margin-left: 5%;
+    width: 100%;
+    height: 100%;
     border-radius: 99999999px;
     border: 6px solid var(--acc4);
     left: 0;
@@ -745,6 +760,57 @@ footer > a {
 
 #currPFPFile::file-selector-button {
     cursor: pointer;
+}
+
+#statusSelector {
+    width: 50%;
+    aspect-ratio: 2;
+    margin-right: 2em;
+    flex-shrink: 0;
+
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+}
+
+#statuses {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    height: 100%;
+    width: 50%;
+}
+
+#statuses > div {
+    width: 100%;
+    height: calc(25% - 2px);
+    border: 1px solid black;
+}
+
+#statusSelectorInput {
+    writing-mode: vertical-lr;
+    direction: rtl;
+    height: calc(75% + 20px);
+    margin-left: .5em;
+}
+
+#statusSelectorInput::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background: #007bff;
+    margin-top: -10px;
+}
+
+#statusSelectorInput::-moz-range-thumb {
+    border: none;
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background: #007bff;
 }
 
 #myProfileRight {
@@ -2064,6 +2130,16 @@ footer > a {
     cursor: pointer;
 }
 
+#usrProfilePopupStatus {
+    position: absolute;
+    width: 5%;
+    aspect-ratio: 1;
+    border-radius: 9999px;
+    border: 2px solid var(--acc4);
+    margin-left: 21%;
+    margin-top: 16%;
+}
+
 .usrProfilePopupDn {
     font-size: 1.25em;
     font-weight: bold;
@@ -2147,6 +2223,17 @@ footer > a {
     border: 4px solid var(--acc4);
     margin-top: 1em;
     margin-left: 5%;
+}
+
+#usrProfileScreenUsrStatus {
+    position: absolute;
+    width: 7.5%;
+    aspect-ratio: 1;
+    border-radius: 9999px;
+    border: 2px solid var(--acc4);
+    margin-left: 0;
+    margin-top: calc(1em + 20%);
+    transform: translateX(-100%);
 }
 
 #usrProfileScreenUsrDn {

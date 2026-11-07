@@ -48,6 +48,7 @@ class WS():
             format=serialization.PublicFormat.UncompressedPoint
         )
         self.RESET_PWD_TOKENS: list[dict] = []
+        self.ONLINE_USR_STATUSES: dict[int, int] = {}
 
         self.webRequests = {
             "reqUser": self.reqUser,
@@ -96,7 +97,8 @@ class WS():
             "moveServerIcon": self.moveServerIcon,
             "editServerInfo": self.editServerInfo,
             "reqResetPwdToken": self.reqResetPwdToken,
-            "resetPwd": self.resetPwd
+            "resetPwd": self.resetPwd,
+            "idleStatusChange": self.idleStatusChange
         }
 
     def isValidToken(self, authToken: str | None, username=None):
@@ -123,13 +125,6 @@ class WS():
                     return True
 
         return False
-
-    def isValidB64(self, b64: str) -> bool:
-        try:
-            base64.b64decode(b64, validate=True)
-            return True
-        except:
-            return False
 
     def getUsernameFromAuthToken(self, token: str | None) -> str | None:
         for username, tk in self.VALID_TOKENS.items():
@@ -258,11 +253,12 @@ class WS():
         if "," in pfp:
             pfp = pfp.split(",")[1]
 
-        if not self.isValidB64(pfp):
+        try:
+            pfpBytes = base64.b64decode(pfp, validate=True)
+            return self.resizePfpBytes(pfpBytes)
+        except:
             return random.choice(self.DEFAULT_PFPS)
 
-        pfpBytes = base64.b64decode(pfp)
-        return self.resizePfpBytes(pfpBytes)
 
     def delChat(self, chat: dict):
         chat["messages"] = []
@@ -326,6 +322,51 @@ class WS():
             sstring += str(chat) + ":" + str(len(chatInfo["messages"])-1) + ":"
 
         return sstring
+
+    async def setUsrStatus(self, usrID: int, status: int) -> None:
+        if status == 0 and self.ONLINE_USR_STATUSES.get(usrID, None) is not None:
+            self.ONLINE_USR_STATUSES.pop(usrID, 0)
+        else:
+            self.ONLINE_USR_STATUSES[usrID] = status
+
+        userInfo = self.getUserInfoFromUserId(usrID)
+
+        if userInfo is None:
+            return
+
+        impactedUIDs = set()
+
+        for chat in userInfo["Chats"]:
+            cInfo = self.getChatFromCID(chat)
+
+            if cInfo is None:
+                continue
+
+            impactedUIDs.update(cInfo["Recipients"])
+
+        for server in userInfo["Servers"]:
+            sInfo = self.getServerFromSID(server)
+
+            if sInfo is None:
+                continue
+
+            impactedUIDs.update(sInfo["Users"])
+
+        try:
+            impactedUIDs.remove(usrID)
+        except KeyError:
+            pass
+        except:
+            traceback.print_exc()
+            logging.warning("What could have possibly happened????")
+
+        broadcastClients = []
+        for ws in self.WS_CLIENTS:
+            uid = getattr(ws, "UID", None)
+            if uid is not None and uid in impactedUIDs:
+                broadcastClients.append(ws)
+
+        await self.wsBroadcastEncrypted(broadcastClients, orjson.dumps({"type": "usrStatusChanged", "UID": usrID, "newStatus": status}))
 
     async def wsSendEncrypted(self, ws: ServerConnection, data: bytes, trackerId: int | None=None):
         if trackerId is not None:
@@ -518,7 +559,8 @@ class WS():
                     "pfp": userinfo["PFP"],
                     "displayname": userinfo["Displayname"],
                     "bio": userinfo["Bio"],
-                    "pronouns": userinfo["Pronouns"]
+                    "pronouns": userinfo["Pronouns"],
+                    "status": self.ONLINE_USR_STATUSES.get(usr, 0)
                 })
 
         await self.wsSendEncrypted(ws, orjson.dumps({"type":"reqUsersListSuccess", "users":userInfoList}), trackerId)
@@ -2355,6 +2397,19 @@ class WS():
 
         await self.wsSendEncrypted(ws, orjson.dumps({"type": "resetPwdSuccess"}), trackerId)
 
+    async def idleStatusChange(self, ws, decryptedBody, authToken, trackerId):
+        if not self.checkFields(decryptedBody, ["idle"]):
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "idleStatusChangeFailed"}), trackerId)
+            return
+
+        uid = self.getUserIdFromAuthToken(authToken)
+
+        if uid is None:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "idleStatusChangeFailed"}), trackerId)
+            return
+
+        await self.setUsrStatus(uid, 2 if decryptedBody["idle"] else 1)
+        await self.wsSendEncrypted(ws, orjson.dumps({"type": "idleStatusChangeSuccess"}), trackerId)
 
     async def wsHandler(self, ws: ServerConnection):
         self.WS_CLIENTS.add(ws)
@@ -2363,7 +2418,11 @@ class WS():
             authToken: str | None = getattr(ws, "authToken", None)
 
             if authToken:
-                setattr(ws, "UID", self.getUserIdFromAuthToken(authToken))
+                usrID = self.getUserIdFromAuthToken(authToken)
+
+                if usrID is not None:
+                    setattr(ws, "UID", usrID)
+                    await self.setUsrStatus(usrID, 1)
 
             async for message in ws:
                 msgDecoded = orjson.loads(message)
@@ -2504,6 +2563,10 @@ class WS():
             traceback.print_exc()
         finally:
             self.WS_CLIENTS.remove(ws)
+
+            usrID = getattr(ws, "UID", None)
+            if usrID is not None and self.ONLINE_USR_STATUSES.get(usrID, None) is not None:
+                await self.setUsrStatus(usrID, 0)
 
     async def shutdownWs(self, shutdownEvent: asyncio.Event, shutdownEventDone: asyncio.Event):
         shutdownEvent.set()
