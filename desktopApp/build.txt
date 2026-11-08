@@ -1,0 +1,1 @@
+.venv/bin/nuitka --standalone --onefile --enable-plugin=tk-inter --enable-plugin=pyside6 --windows-console-mode=disable main.py

@@ -98,7 +98,8 @@ class WS():
             "editServerInfo": self.editServerInfo,
             "reqResetPwdToken": self.reqResetPwdToken,
             "resetPwd": self.resetPwd,
-            "idleStatusChange": self.idleStatusChange
+            "idleStatusChange": self.idleStatusChange,
+            "statusOverride": self.statusOverride
         }
 
     def isValidToken(self, authToken: str | None, username=None):
@@ -324,15 +325,28 @@ class WS():
         return sstring
 
     async def setUsrStatus(self, usrID: int, status: int) -> None:
-        if status == 0 and self.ONLINE_USR_STATUSES.get(usrID, None) is not None:
-            self.ONLINE_USR_STATUSES.pop(usrID, 0)
-        else:
-            self.ONLINE_USR_STATUSES[usrID] = status
-
         userInfo = self.getUserInfoFromUserId(usrID)
 
         if userInfo is None:
             return
+
+
+        if status == 0 and self.ONLINE_USR_STATUSES.get(usrID, None) is not None:
+            self.ONLINE_USR_STATUSES.pop(usrID, 0)
+
+        statusOverride = status
+
+        if status != 0 and "statusOverride" in userInfo:
+            if status == 1:
+                statusOverride = userInfo["statusOverride"]
+
+            if status == 2:
+                statusOverride = userInfo["statusOverride"] if userInfo["statusOverride"] != 1 else 2
+
+            if self.ONLINE_USR_STATUSES.get(usrID, None) == statusOverride:
+                return
+
+            self.ONLINE_USR_STATUSES[usrID] = statusOverride
 
         impactedUIDs = set()
 
@@ -352,23 +366,18 @@ class WS():
 
             impactedUIDs.update(sInfo["Users"])
 
-        try:
-            impactedUIDs.remove(usrID)
-        except KeyError:
-            pass
-        except:
-            traceback.print_exc()
-            logging.warning("What could have possibly happened????")
-
         broadcastClients = []
         for ws in self.WS_CLIENTS:
             uid = getattr(ws, "UID", None)
             if uid is not None and uid in impactedUIDs:
                 broadcastClients.append(ws)
 
-        await self.wsBroadcastEncrypted(broadcastClients, orjson.dumps({"type": "usrStatusChanged", "UID": usrID, "newStatus": status}))
+        await self.wsBroadcastEncrypted(broadcastClients, orjson.dumps({"type": "usrStatusChanged", "UID": usrID, "newStatus": statusOverride}))
 
     async def wsSendEncrypted(self, ws: ServerConnection, data: bytes, trackerId: int | None=None):
+        if getattr(ws, "secretKey", None) is None:
+            return
+
         if trackerId is not None:
             dataParsed = orjson.loads(data)
             dataParsed["trackerID"] = trackerId
@@ -449,6 +458,7 @@ class WS():
 
         await self.wsSendEncrypted(ws, orjson.dumps({
             "type": "reqUserSuccess",
+            "status": self.ONLINE_USR_STATUSES.get(userinfo["UID"], 0),
             "user": userinfoCopy
         }), trackerId)
 
@@ -2410,6 +2420,28 @@ class WS():
 
         await self.setUsrStatus(uid, 2 if decryptedBody["idle"] else 1)
         await self.wsSendEncrypted(ws, orjson.dumps({"type": "idleStatusChangeSuccess"}), trackerId)
+
+    async def statusOverride(self, ws, decryptedBody, authToken, trackerId):
+        if not self.checkFields(decryptedBody, ["status"]):
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "statusOverrideFailed"}), trackerId)
+            return
+
+        uid = self.getUserIdFromAuthToken(authToken)
+
+        if uid is None:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "statusOverrideFailed"}), trackerId)
+            return
+
+        uinfo = self.getUserInfoFromUserId(uid)
+
+        if uinfo is None:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "statusOverrideFailed"}), trackerId)
+            return
+
+        uinfo["statusOverride"] = decryptedBody["status"]
+
+        await self.setUsrStatus(uid, decryptedBody["status"])
+        await self.wsSendEncrypted(ws, orjson.dumps({"type": "statusOverrideSuccess"}), trackerId)
 
     async def wsHandler(self, ws: ServerConnection):
         self.WS_CLIENTS.add(ws)

@@ -1,10 +1,10 @@
 cryptography
 websockets
-pillow
 zstandard
 pathlib
 msgpack
 asyncio
+pillow
 orjson
 brotli
 bcrypt

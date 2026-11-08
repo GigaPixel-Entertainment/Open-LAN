@@ -409,7 +409,11 @@ def handleRequest(sk: socket.socket):
 
         pagePath = config.WEB_DIR / page.removeprefix("/")
 
-        if httphelper.isSafePath(pagePath):
+        if page == "/api/appPing":
+            sk.sendall(httphelper.formatHttpHeader(200, {
+                "minBuild": 1
+            }))
+        elif httphelper.isSafePath(pagePath):
             sk.sendall(httphelper.formatHEADResponse(parsed, pagePath))
         else:
             sk.sendall(httphelper.formatHttpHeader(statusCode=404))

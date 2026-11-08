@@ -8,8 +8,8 @@
         <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="CSS/app.css">
         <link rel="stylesheet" href="CSS/github-dark-hljs.min.css">
-        <link rel="icon" href="Media/LogoSquare.png">
-        <title>Open-LAN</title>
+        <link rel="icon" href="Media/LogoSquare.png" id="pageIcon">
+        <title id="pageTitle">Open-LAN Loading...</title>
     </head>
     <body>
         <div id="serverList" class="noScrollbar"></div>
@@ -451,6 +451,9 @@
         // constants
         var userInfoCache = []
 
+        const pageIcon = document.getElementById("pageIcon")
+        const pageTitle = document.getElementById("pageTitle")
+
         const serverList = document.getElementById("serverList")
 
         const genericPopup = document.getElementById("genericPopup")
@@ -494,6 +497,8 @@
         const currPFP = document.getElementById("currPFP")
         const currPFPFile = document.getElementById("currPFPFile")
         const currPFPOverlay = document.getElementById("currPFPOverlay")
+
+        const statusSelectorInput = document.getElementById("statusSelectorInput")
 
         const bioArea = document.getElementById("bioArea")
 
@@ -2625,6 +2630,9 @@
             readIndicator.classList = "readIndicator"
             dmIconParent.appendChild(readIndicator)
 
+            pageIcon.href = "Media/LogoSquare.png"
+            pageTitle.textContent = "Open-LAN"
+
             await reqMultiChatMeta(chats)
             for (let i = 0; i < chats.length; i++) {
                 const CID = chats[i]
@@ -2635,6 +2643,7 @@
 
                     if (numMsgs - 1 != readMsgs[CID.toString()]) {
                         readIndicator.style.visibility = "visible"
+                        pageIcon.href = "Media/LogoSquareUnread.png"
                         break
                     }
                 }
@@ -2679,6 +2688,7 @@
 
                 if (serverMeta["SString"] != readMsgs["s" + SID]) {
                     readIndicator.style.visibility = "visible"
+                    pageIcon.href = "Media/LogoSquareUnread.png"
                 }
 
                 const serverIcon = document.createElement("img")
@@ -2795,6 +2805,8 @@
             accInfoUsername.textContent = usr["USRNAME"]
             accInfoUID.textContent = "Account ID: " + currUID
             accCreatedDate.textContent = (new Date(usr["AccCreated"] * 1000)).toLocaleDateString()
+
+            statusSelectorInput.value = statusToRangeInput(resp["status"])
 
             bioArea.value = usr["Bio"]
 
@@ -5608,10 +5620,11 @@
                                                 if (respBody["SString"] && respBody["SString"] != "") {
                                                     ServerMetaCache[chatMetaCache[stringCID]["Server"]]["SString"] = respBody["SString"]
                                                 }
+
+                                                setServerList()
                                             }
 
                                             setChatList()
-
 
                                             if (currChat == respBody["CID"]) {
                                                 lastMsgId = respBody["message"]["MSGID"]
@@ -6615,5 +6628,40 @@
                     return "userInactive"
             }
         }
+
+        function rangeInputToStatus(rInput) {
+            switch (rInput) {
+                case 0:
+                    return 0
+                case 1:
+                    return 3
+                case 2:
+                    return 2
+                case 3:
+                    return 1
+                default:
+                    return 0
+            }
+        }
+
+        function statusToRangeInput(status) {
+            switch (status) {
+                case 0:
+                    return 0
+                case 1:
+                    return 3
+                case 2:
+                    return 2
+                case 3:
+                    return 1
+                default:
+                    return 0
+            }
+        }
+
+        statusSelectorInput.addEventListener("change", (e) => {
+            const newOverride = rangeInputToStatus(Number(statusSelectorInput.value))
+            request(JSON.stringify({"type": "statusOverride", "status": newOverride}))
+        })
     </script>
 </html>

@@ -18,7 +18,7 @@
     --highlighted-transparent: #f9e1af30;
     --userActive: #5bd156;
     --userIdle: #f6ed2c;
-    --userDND: #cd0004;
+    --userDND: #e82b2b;
     --userInactive: #fcf4ff;
 }
 
@@ -178,6 +178,7 @@ footer > a {
     border-radius: 9999px;
     border: 4px solid var(--acc);
     cursor: pointer;
+    flex-shrink: 0;
 }
 
 #ChatName {
@@ -729,6 +730,7 @@ footer > a {
 #currPFP {
     width: 100%;
     height: 100%;
+    aspect-ratio: 1;
     border-radius: 999999999px;
     border: 6px solid var(--acc4);
 }
@@ -736,10 +738,11 @@ footer > a {
 #currPFPOverlay {
     position: absolute;
     width: 100%;
-    height: 100%;
+    aspect-ratio: 1;
     border-radius: 999999999px;
     border: 6px solid var(--acc4);
     left: 0;
+    top: 0;
     opacity: .5;
     visibility: hidden;
     pointer-events: none;
@@ -748,10 +751,11 @@ footer > a {
 #currPFPFile {
     position: absolute;
     width: 100%;
-    height: 100%;
+    aspect-ratio: 1;
     border-radius: 99999999px;
     border: 6px solid var(--acc4);
     left: 0;
+    top: 0;
     opacity: .5;
     pointer-events: all;
     opacity: 0;
@@ -2134,8 +2138,6 @@ footer > a {
     position: absolute;
     width: 5%;
     aspect-ratio: 1;
-    border-radius: 9999px;
-    border: 2px solid var(--acc4);
     margin-left: 21%;
     margin-top: 16%;
 }
@@ -2229,8 +2231,6 @@ footer > a {
     position: absolute;
     width: 7.5%;
     aspect-ratio: 1;
-    border-radius: 9999px;
-    border: 2px solid var(--acc4);
     margin-left: 0;
     margin-top: calc(1em + 20%);
     transform: translateX(-100%);

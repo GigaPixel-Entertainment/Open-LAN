@@ -1,0 +1,4 @@
+pywebview
+requests
+pyside6
+qtpy
