@@ -64,6 +64,7 @@ class WS():
             "updatePronoun": self.updatePronoun,
             "updatePfp": self.updatePfp,
             "updateBio": self.updateBio,
+            "setBDayVis": self.setBDayVis,
             "userSearch": self.userSearch,
             "friendReq": self.friendReq,
             "cancelFriendReq": self.cancelFriendReq,
@@ -330,7 +331,6 @@ class WS():
         if userInfo is None:
             return
 
-
         if status == 0 and self.ONLINE_USR_STATUSES.get(usrID, None) is not None:
             self.ONLINE_USR_STATUSES.pop(usrID, 0)
 
@@ -557,12 +557,20 @@ class WS():
             await self.wsSendEncrypted(ws, orjson.dumps({"type": "reqUsersListFailed"}), trackerId)
             return
 
+        selfUID = self.getUserIdFromAuthToken(authToken)
         userInfoList = []
 
         for usr in decryptedBody["users"]:
             userinfo = self.getUserInfoFromUserId(usr)
 
             if userinfo is not None:
+                birthday = None
+                if userinfo["BirthdayV"] == "EVERYONE":
+                    birthday = userinfo["Birthday"]
+                elif userinfo["BirthdayV"] == "FRIENDS":
+                    friends = [friend["UID"] for friend in userinfo["Friends"]]
+                    birthday = userinfo["Birthday"] if selfUID in friends else None
+
                 userInfoList.append({
                     "username": userinfo["USRNAME"],
                     "UID": userinfo["UID"],
@@ -570,7 +578,8 @@ class WS():
                     "displayname": userinfo["Displayname"],
                     "bio": userinfo["Bio"],
                     "pronouns": userinfo["Pronouns"],
-                    "status": self.ONLINE_USR_STATUSES.get(usr, 0)
+                    "status": self.ONLINE_USR_STATUSES.get(usr, 0),
+                    "birthday": birthday
                 })
 
         await self.wsSendEncrypted(ws, orjson.dumps({"type":"reqUsersListSuccess", "users":userInfoList}), trackerId)
@@ -760,12 +769,29 @@ class WS():
             return
 
         bDay = decryptedBody["bd"]
+        uid = self.getUserIdFromAuthToken(authToken)
+        uInfo = self.getUserInfoFromUserId(uid)
 
-        if not self.setUserProperty(self.getUserIdFromAuthToken(authToken), "Birthday", bDay):
+        if not self.setUserProperty(uid, "Birthday", bDay):
             await self.wsSendEncrypted(ws, orjson.dumps({"type": "updateBirthdayFailed"}), trackerId)
             return
 
         await self.wsSendEncrypted(ws, orjson.dumps({"type": "updateBirthdaySuccess"}), trackerId)
+
+        if uInfo is None:
+            return
+
+        if uInfo["BirthdayV"] == "FRIENDS":
+            clients = []
+            friends = [friend["UID"] for friend in uInfo["Friends"]]
+
+            for ws in self.WS_CLIENTS:
+                if getattr(ws, "UID", None) is not None and getattr(ws, "UID", None) in friends:
+                    clients.append(ws)
+
+            await self.wsBroadcastEncrypted(clients, data=orjson.dumps({"type": "updateCachedBirthday", "UID": uid, "bDay": bDay}))
+        elif uInfo["BirthdayV"] == "EVERYONE":
+            await self.wsBroadcastEncrypted(self.WS_CLIENTS, data=orjson.dumps({"type": "updateCachedBirthday", "UID": uid, "bDay": bDay}))
 
     async def updatePronoun(self, ws, decryptedBody, authToken, trackerId):
         if not self.checkFields(decryptedBody, ["pronoun"]):
@@ -773,6 +799,10 @@ class WS():
             return
 
         pronouns = decryptedBody["pronoun"]
+
+        if len(pronouns) > 10:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type":"updatePronounFailed"}), trackerId)
+            return
 
         if not self.setUserProperty(self.getUserIdFromAuthToken(authToken), "Pronouns", pronouns):
             await self.wsSendEncrypted(ws, orjson.dumps({"type": "updatePronounFailed"}), trackerId)
@@ -822,6 +852,42 @@ class WS():
 
         await self.wsSendEncrypted(ws, orjson.dumps({"type": "updateBioSuccess"}), trackerId)
         await self.wsBroadcastEncrypted(self.WS_CLIENTS, data=orjson.dumps({"type": "updateCachedBio", "UID": self.getUserIdFromAuthToken(authToken), "Bio": bio}))
+
+    async def setBDayVis(self, ws, decryptedBody, authToken, trackerId):
+        if not self.checkFields(decryptedBody, ["newVis"]):
+            await self.wsSendEncrypted(ws, orjson.dumps({"type":"setBDayVisFailed"}), trackerId)
+            return
+
+        uid = self.getUserIdFromAuthToken(authToken)
+        uInfo = self.getUserInfoFromUserId(uid)
+
+        if not self.setUserProperty(uid, "BirthdayV", decryptedBody["newVis"]):
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "setBDayVisFailed"}), trackerId)
+            return
+
+        await self.wsSendEncrypted(ws, orjson.dumps({"type": "setBDayVisSuccess", "newVis": decryptedBody["newVis"]}), trackerId)
+
+        if uid is None or uInfo is None:
+            await self.wsBroadcastEncrypted(self.WS_CLIENTS, data=orjson.dumps({"type": "updateCachedBirthday", "UID": uid, "bDay": None}))
+            return
+
+        if decryptedBody["newVis"] == "FRIENDS":
+            clients = []
+            resetClients = []
+            friends = [friend["UID"] for friend in uInfo["Friends"]]
+
+            for ws in self.WS_CLIENTS:
+                if getattr(ws, "UID", None) is not None and getattr(ws, "UID", None) in friends:
+                    clients.append(ws)
+                else:
+                    resetClients.append(ws)
+
+            await self.wsBroadcastEncrypted(clients, data=orjson.dumps({"type": "updateCachedBirthday", "UID": uid, "bDay": uInfo["Birthday"]}))
+            await self.wsBroadcastEncrypted(resetClients, data=orjson.dumps({"type": "updateCachedBirthday", "UID": uid, "bDay": None}))
+        elif decryptedBody["newVis"] == "EVERYONE":
+            await self.wsBroadcastEncrypted(self.WS_CLIENTS, data=orjson.dumps({"type": "updateCachedBirthday", "UID": uid, "bDay": uInfo["Birthday"]}))
+        else:
+            await self.wsBroadcastEncrypted(self.WS_CLIENTS, data=orjson.dumps({"type": "updateCachedBirthday", "UID": uid, "bDay": None}))
 
     async def userSearch(self, ws, decryptedBody, authToken, trackerId):
         if not self.checkFields(decryptedBody, ["unameSearch"]):

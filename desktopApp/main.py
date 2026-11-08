@@ -30,7 +30,7 @@ import webview
 
 BUILD = 1
 
-CWD = pathlib.Path(__file__).resolve().parent
+CWD = pathlib.Path(os.path.abspath(sys.argv[0])).resolve().parent
 LOG_DIR = CWD / "LOGS/"
 CONFIG = CWD / "config.json"
 
@@ -119,7 +119,7 @@ def setup() -> None:
     address = simpledialog.askstring("Open-LAN", "Please enter Open-LAN server ip")
 
     if address is None:
-        setupErr("Invalid address")
+        sys.exit(0)
         return
 
     if checkServer(address):

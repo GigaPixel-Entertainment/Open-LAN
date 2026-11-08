@@ -134,6 +134,20 @@
                         <input type="date" disabled class="font gray" id="currBirthday">
                         <button class="font black editBtn" id="editBirthday">edit</button>
                     </div>
+                    <div id="bdayVis">
+                        <button id="bdayVisEVERYONE" title="Everyone can see your birthday">
+                            <img src="Media/sphereWireframe.png">
+                            <p class="font white">Everyone</p>
+                        </button>
+                        <button id="bdayVisFRIENDS" title="Only friends can see your birthday">
+                            <img src="Media/FriendsIconTransparent.png">
+                            <p class="font white">Friends</p>
+                        </button>
+                        <button id="bdayVisPRIVATE" title="Nobody can see your birthday">
+                            <img src="Media/eyeClose.png">
+                            <p class="font white">Private</p>
+                        </button>
+                    </div>
                     <div>
                         <p class="font white">pronouns</p>
                         <input type="text" disabled class="font gray" id="currPronouns" maxlength="10" spellcheck="false">
@@ -608,6 +622,10 @@
         const editCurrBirthday = document.getElementById("editBirthday")
         const currPronounsI = document.getElementById("currPronouns")
         const editCurrPronouns = document.getElementById("editPronouns")
+
+        const bdayVisEVERYONE = document.getElementById("bdayVisEVERYONE")
+        const bdayVisFRIENDS = document.getElementById("bdayVisFRIENDS")
+        const bdayVisPRIVATE = document.getElementById("bdayVisPRIVATE")
 
         const editPwdBtn = document.getElementById("changePwd")
 
@@ -1273,6 +1291,15 @@
             usrProfileScreenUsrPro.textContent = usrInfo["pronouns"]
             usrProfileScreenUsrBio.textContent = usrInfo["bio"]
 
+            if (usrInfo["birthday"] != null || usrInfo["UID"] == currUID) {
+                birthday = usrInfo["birthday"]
+                if (usrInfo["UID"] == currUID) {
+                    birthday = currBirthdayI.valueAsNumber
+                }
+
+                usrProfileScreenUsrPro.textContent += " 🞄 " + new Date(birthday).toLocaleDateString("en-US", {"timeZone": "UTC", "month": "2-digit", "day": "2-digit", "year": "numeric"})
+            }
+
             if (usrInfo["UID"] == currUID) {
                 usrProfileScreenUsrActions.style.position = "absolute"
                 usrProfileScreenUsrActions.style.visibility = "hidden"
@@ -1343,6 +1370,15 @@
             usrProfilePopupUn.textContent = usrInfo["username"]
             usrProfilePopupPro.textContent = usrInfo["pronouns"]
             usrProfilePopupBio.textContent = usrInfo["bio"].slice(0, 100)
+
+            if (usrInfo["birthday"] != null || usrInfo["UID"] == currUID) {
+                birthday = usrInfo["birthday"]
+                if (usrInfo["UID"] == currUID) {
+                    birthday = currBirthdayI.valueAsNumber
+                }
+
+                usrProfilePopupPro.textContent += " 🞄 " + new Date(birthday).toLocaleDateString("en-US", {"timeZone": "UTC", "month": "2-digit", "day": "2-digit", "year": "numeric"})
+            }
 
             if (usrInfo["bio"].length > 100) {
                 usrProfilePopupFullBio.style.visibility = ""
@@ -1508,7 +1544,6 @@
                 btn.style.margin = "auto none"
                 btn.style.fontSize = "1.5em"
                 btn.classList = "font"
-
 
                 let btnType = null
 
@@ -2779,6 +2814,20 @@
             }
         }
 
+        var currSelBirthday = ""
+        function setBDayVis(newV) {
+            currSelBirthday = newV
+            bdayVisEVERYONE.style.border = ""
+            bdayVisFRIENDS.style.border = ""
+            bdayVisPRIVATE.style.border = ""
+
+            const selectedBtn = document.getElementById("bdayVis" + newV)
+
+            if (selectedBtn) {
+                selectedBtn.style.border = "4px solid var(--highlight)"
+            }
+        }
+
         var readMsgs = {}
         function popUserInfo(resp) {
             let usr = resp["user"]
@@ -2794,7 +2843,7 @@
             currUsernameI.value = usr["USRNAME"]
             currDisplaynameI.value = usr["Displayname"]
 
-            if (usr["Birthday"] && typeof usr["Birthday"] == "number") {
+            if (typeof usr["Birthday"] == "number") {
                 currBirthdayI.valueAsNumber = usr["Birthday"] * 1000
             }
 
@@ -2810,11 +2859,36 @@
 
             bioArea.value = usr["Bio"]
 
+            setBDayVis(usr["BirthdayV"])
             setFriendReqs()
             setChatList()
             setServerList()
             setCreateGCList()
         }
+
+        bdayVisEVERYONE.addEventListener("click", () => {
+            if (currSelBirthday == "EVERYONE") {
+                return
+            }
+
+            request(JSON.stringify({"type": "setBDayVis", "newVis": "EVERYONE"}))
+        })
+
+        bdayVisFRIENDS.addEventListener("click", () => {
+            if (currSelBirthday == "FRIENDS") {
+                return
+            }
+
+            request(JSON.stringify({"type": "setBDayVis", "newVis": "FRIENDS"}))
+        })
+
+        bdayVisPRIVATE.addEventListener("click", () => {
+            if (currSelBirthday == "PRIVATE") {
+                return
+            }
+
+            request(JSON.stringify({"type": "setBDayVis", "newVis": "PRIVATE"}))
+        })
 
         var editingDisplayname = false
         var origDisplayname = ""
@@ -4313,6 +4387,11 @@
 
         async function setMemberList() {
             const chat = chatCache
+
+            if (chat == null) {
+                return
+            }
+
             const currChatName = chat["Name"]
             const currRecipients = chat["Recipients"]
             const currOwner = chat["Owner"]
@@ -5191,20 +5270,29 @@
             e.stopPropagation()
         })
 
-        function setUsrStatus() {
+        function refreshProfile() {
+            if (usrProfilePopupInfo != null || usrProfileScreenUsrInfo != null) {
+                uid = usrProfilePopupInfo != null ? usrProfilePopupInfo["UID"] :  usrProfileScreenUsrInfo["UID"]
+                reqUsrInfo(uid).then((r) => {
+                    if (usrProfilePopupInfo != null) {
+                        showUsrProfilePopup(r)
+                    }
+
+                    if (usrProfileScreenUsrInfo != null) {
+                        showUsrProfile(r)
+                    }
+                })
+            }
+        }
+
+        function updateUsrInfoNoChat() {
             setMemberList()
 
             if (currServer == -1) {
                 setChatList()
             }
 
-            if (usrProfilePopupInfo != null || usrProfileScreenUsrInfo != null) {
-                uid = usrProfilePopupInfo != null ? usrProfilePopupInfo["UID"] :  usrProfileScreenUsrInfo["UID"]
-                reqUsrInfo(uid).then((r) => {
-                    usrProfilePopupStatus.src = "Media/" + getUsrStatusVar(r["status"]) + ".png"
-                    usrProfileScreenUsrStatus.src = "Media/" + getUsrStatusVar(r["status"]) + ".png"
-                })
-            }
+            refreshProfile()
         }
     </script>
 
@@ -5496,15 +5584,23 @@
                                         }
 
                                         if (respBody["type"] == "updateCachedBio") {
-                                            updateCachedProp(respBody, "bio", "Bio", setMemberList)
+                                            updateCachedProp(respBody, "bio", "Bio", updateUsrInfoNoChat)
                                         }
 
                                         if (respBody["type"] == "updateCachedPronouns") {
-                                            updateCachedProp(respBody, "pronouns", "Pronouns", setMemberList)
+                                            updateCachedProp(respBody, "pronouns", "Pronouns", updateUsrInfoNoChat)
+                                        }
+
+                                        if (respBody["type"] == "updateCachedBirthday") {
+                                            updateCachedProp(respBody, "birthday", "bDay", refreshProfile)
                                         }
 
                                         if (respBody["type"] == "usrStatusChanged") {
-                                            updateCachedProp(respBody, "status", "newStatus", setUsrStatus)
+                                            updateCachedProp(respBody, "status", "newStatus", updateUsrInfoNoChat)
+                                        }
+
+                                        if (respBody["type"] == "setBDayVisSuccess") {
+                                            setBDayVis(respBody["newVis"])
                                         }
 
                                         if (respBody["type"] == "chatUpdate") {

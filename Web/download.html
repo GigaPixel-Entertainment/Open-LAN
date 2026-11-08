@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&display=swap" rel="stylesheet">
+        <link rel="icon" href="Media/LogoSquare.png">
+        <title>Open-LAN</title>
+
+        <style>
+            :root {
+                --bg: #1a3053;
+                --acc: #113963;
+                --acc2: #145492;
+                --acc3: #3e84c5;
+                --acc4: #0c273f;
+                --text: #FFFFFF;
+                --text2: #cee1f3;
+                --placeholder: #BBBBBB;
+                --button: #a1c3c8;
+                --button-press: #90b2b7;
+                --highlight: #6ea6db;
+            }
+
+            html, body {
+                height: 100vh;
+                background-color: var(--bg);
+                overflow: auto;
+                margin: 0;
+            }
+
+            #smallTopLogo {
+                position: absolute;
+                max-width: 10%;
+                margin: 4px;
+            }
+
+            footer {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                color: white;
+                font-family: "Fire Code", monospace;
+                font-size: small;
+                z-index: 99;
+            }
+
+            footer > a {
+                color: white;
+                text-decoration-color: white;
+            }
+
+            .invisA {
+                text-decoration: none;
+            }
+
+            ::-webkit-scrollbar {
+                width: 5px;
+                height: 5px;
+            }
+
+            ::-webkit-scrollbar-track {
+                background: rgb(0, 0, 0, 0.25);
+                border-radius: 10000px;
+            }
+
+            ::-webkit-scrollbar-thumb {
+                background: #999;
+                border-radius: 10000px;
+            }
+
+            ::-webkit-scrollbar-thumb:hover {
+                background: #777;
+            }
+
+            h1, h2 {
+                font-weight: bold;
+                font-style: normal;
+                font-size: 7.5em;
+
+                margin-top: 0;
+                margin-bottom: 0;
+                color: var(--text);
+                text-align: center;
+                font-family: 'Fire Code', monospace;
+                margin-top: .4em;
+                margin-bottom: .05em;
+            }
+
+            h2 {
+                font-size: 2em;
+            }
+
+            p {
+                color: var(--text);
+                text-align: center;
+                font-family: 'Fire Code', monospace;
+                margin-top: 0;
+            }
+
+            #downloadList {
+                width: 100%;
+                height: 20em;
+                display: flex;
+                flex-direction: row;
+                justify-content: space-evenly;
+            }
+
+            .downloadItem {
+                width: 25%;
+                height: 100%;
+                background-color: var(--acc);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .downloadItem > a {
+                width: 80%;
+                margin-top: .5em;
+            }
+
+            button {
+                display: block;
+                width: 100%;
+                font-family: "Fira Code", monospace;
+                font-size: 1em;
+                padding: .75em;
+                font-weight: 700;
+                border: none;
+                border-radius: 0;
+                cursor: pointer;
+                margin: 0 auto;
+                background-color: var(--acc3);
+            }
+        </style>
+    </head>
+    <body>
+        <a href="index.html"><img src="Media/Logo.png" id="smallTopLogo"></a>
+        <h1>Download Client</h1>
+        <p>This is absolutely useless compared to the web version but here it is anyways</p>
+
+        <div id="downloadList">
+            <div class="downloadItem" id="windowsDownload">
+                <h2>Windows</h2>
+                <a href="static/OpenLAN Windows x64 Client.zip" class="invisA" download><button>x64</button></a>
+            </div>
+            <div class="downloadItem" id="macDownload">
+                <h2>MacOS</h2>
+                <p>Probably coming? Just use the web version for now</p>
+
+            </div>
+            <div class="downloadItem" id="linuxDownload">
+                <h2>Linux</h2>
+                <a href="static/OpenLAN Linux x64 Client.tar.gz" class="invisA" download><button>x64</button></a>
+            </div>
+        </div>
+
+        <p>more versions coming sometime between 3 hours and 9 years</p>
+    </body>
+    <footer>
+        Open-LAN is open-source under the <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank">GNU General Public License</a> and available on <a href="https://github.com/GigaPixel-Entertainment/GPE-Open-LAN" target="_blank">Github</a>
+    </footer>
+</html>

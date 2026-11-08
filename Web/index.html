@@ -76,15 +76,27 @@
                 background-color: var(--button-press);
             }
 
-            #signup {
+            #signup, #downloadApp {
                 background: none;
                 border: 2px solid var(--button);
                 color: var(--button);
             }
 
-            #signup:hover {
+            #signup:hover, #downloadApp:hover {
                 border: 2px solid var(--button-press);
                 color: var(--button-press);
+            }
+
+            #downloadApp {
+                display: block;
+                width: 75%;
+                font-family: "Fira Code", monospace;
+                font-size: 2em;
+                padding: .75em;
+                font-weight: 700;
+                border-radius: 0;
+                cursor: pointer;
+                margin: 0 auto;
             }
 
             #viewGithub {
@@ -105,14 +117,15 @@
                 background-color: var(--acc2);
             }
 
-            #viewGithubWrapper {
+            #viewGithubWrapper, #downloadAppWrapper {
                 width: 50%;
+                margin-bottom: .5em;
             }
 
             p {
                 color: var(--text);
                 font-family: "Fira Code", monospace;
-                font-size: 3em;
+                font-size: 2.5em;
                 font-weight: 500;
                 width: calc(50% - 16px);
                 margin: 8px;
@@ -153,6 +166,9 @@
         <p>OPEN-LAN is an open-source program that allows you to set up LAN chat rooms on your very own computer.</p>
         <div id="viewGithubWrapper">
             <a href="https://github.com/GigaPixel-Entertainment/GPE-Open-LAN" class="invisA" target="_blank"><button id="viewGithub">View on Github</button></a>
+        </div>
+        <div id="downloadAppWrapper">
+            <a href="download.html" class="invisA"><button id="downloadApp">Download Client</button></a>
         </div>
         <div id="rightSide">
             <div id="rightWrapper">
