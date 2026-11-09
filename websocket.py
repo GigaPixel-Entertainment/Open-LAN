@@ -2696,12 +2696,13 @@ class WS():
 
             setattr(connection, "authToken", parsedCookies.get("authToken"))
 
-    async def wsListen(self, ipAddrs: list, context: ssl.SSLContext, shutdownEvent: asyncio.Event, shutdownEventDone: asyncio.Event):
+    async def wsListen(self, ipAddrs: list, context: ssl.SSLContext | None, shutdownEvent: asyncio.Event, shutdownEventDone: asyncio.Event):
         servers = []
 
         for addr in ipAddrs:
-            servers.append(serve(self.wsHandler, addr, config.WSS_PORT, max_size=(25*1024*1024 * 11), ssl=context, process_request=self.getAuth))
-            logging.debug("[WS] wss://%s:%i", addr, config.WSS_PORT)
+            if context is not None:
+                servers.append(serve(self.wsHandler, addr, config.WSS_PORT, max_size=(25*1024*1024 * 11), ssl=context, process_request=self.getAuth))
+                logging.debug("[WS] wss://%s:%i", addr, config.WSS_PORT)
             servers.append(serve(self.wsHandler, addr, config.WS_PORT, max_size=(25*1024*1024 * 11), process_request=self.getAuth))
             logging.debug("[WS] ws://%s:%i", addr, config.WS_PORT)
 

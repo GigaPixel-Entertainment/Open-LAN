@@ -219,18 +219,7 @@
                     }
                 })
 
-                const ds = new DecompressionStream("gzip")
-                const decompressed = stream.pipeThrough(ds)
-
-                const chunks = [];
-                for await (const chunk of decompressed) {
-                    chunks.push(chunk)
-                }
-
-                const blob = new Blob(chunks)
-                const buffer = await blob.arrayBuffer()
-
-                return textDecode(buffer)
+                return await (new Response(stream.pipeThrough(new DecompressionStream("gzip")))).text()
             }
 
             wsUrlReady.then((wsURL) => {

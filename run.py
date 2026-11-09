@@ -52,9 +52,12 @@ class HttpHandler:
         self.listenerThread: threading.Thread | None = None
         self.keepListening: bool = False
 
-        self.context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-        self.context.minimum_version = ssl.TLSVersion.TLSv1_2
-        self.context.load_cert_chain(certfile=config.SERVER_CERT_FILE, keyfile=config.SERVER_KEY_FILE)
+        if config.SERVER_CERT_FILE.exists() and config.SERVER_KEY_FILE.exists():
+            self.context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+            self.context.minimum_version = ssl.TLSVersion.TLSv1_2
+            self.context.load_cert_chain(certfile=config.SERVER_CERT_FILE, keyfile=config.SERVER_KEY_FILE)
+        else:
+            logging.warning("TLS Certificate or Key missing!")
 
     def handleRequest(self, sk: socket.socket):
         pass
@@ -69,7 +72,7 @@ class HttpHandler:
             self.closeSocket(sk)
             return
 
-        if peekBytes[0] == 0x16:
+        if peekBytes[0] == 0x16 and hasattr(self, "context"):
             try:
                 with self.context.wrap_socket(sk, server_side=True) as secureSk:
                     self.handleRequest(secureSk)

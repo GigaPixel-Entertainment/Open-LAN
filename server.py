@@ -508,7 +508,7 @@ def httpThread(sk):
         closeSocket(sk)
         return
 
-    if peekBytes[0] == 0x16:
+    if peekBytes[0] == 0x16 and context is not None:
         try:
             with context.wrap_socket(sk, server_side=True) as secureSk:
                 handleRequest(secureSk)
@@ -586,9 +586,13 @@ if __name__ == "__main__":
         logging.fatal("[MAIN] No valid network interfaces found! Please connect to a network")
         sys.exit(-1)
 
-    context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-    context.minimum_version = ssl.TLSVersion.TLSv1_2
-    context.load_cert_chain(certfile=config.SERVER_CERT_FILE, keyfile=config.SERVER_KEY_FILE)
+    context = None
+    if config.SERVER_CERT_FILE.exists() and config.SERVER_KEY_FILE.exists():
+        context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        context.minimum_version = ssl.TLSVersion.TLSv1_2
+        context.load_cert_chain(certfile=config.SERVER_CERT_FILE, keyfile=config.SERVER_KEY_FILE)
+    else:
+        logging.warning("[MAIN] Server TLS Certificate or Key missing!")
 
     ws = websocket.WS(VALID_TOKENS, SHORT_REDIRECT_TOKENS, DEFAULT_PFPS, chats, users, servers, invites, fernet, resizePfpBytes)
 
