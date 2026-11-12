@@ -291,6 +291,7 @@ footer > a {
     background: transparent;
     cursor: pointer;
     border-left: 2px solid transparent;
+    overflow: hidden;
 }
 
 .userDiv:hover {
@@ -668,6 +669,7 @@ footer > a {
     z-index: 3;
     background: var(--bg);
     box-shadow: 0px 0px 4px 4px rgba(0, 0, 0, .5);
+    visibility: hidden;
     transform: translateY(calc(-100% - 8px));
 
     transition: transform 0.5s ease-in-out;
@@ -676,23 +678,13 @@ footer > a {
 #myProfileHeader {
     position: absolute;
     top: 0;
-    left: 0;
+    left: 0%;
     width: 100%;
     height: calc(40px + 1.25em);
     background: var(--acc4);
-    display: flex;
-}
 
-#myProfileHeader > p {
-    font-style: italic;
-    font-size: 1.25em;
-    font-weight: 100;
-    margin-left: 1em;
-    margin-top: 1em;
-    margin-bottom: 1em;
-    width: 85%;
-    min-width: 0;
-    flex-grow: 0;
+    display: flex;
+    flex-direction: row;
 }
 
 #myProfileHeader > button {
@@ -1957,6 +1949,37 @@ div #bdayVis {
 
 #fullServerSettingsOverviewAnnouncementChannelLabel {
     font-size: 1.25em;
+}
+
+#fullServerSettingsBanListHeader {
+    margin: 0.75em auto;
+    width: 90%;
+    height: 5%;
+    display: flex;
+    flex-direction: row-reverse;
+}
+
+#fullServerSettingsBanListFilter {
+    width: calc(100% / 3);
+    height: 100%;
+    font-size: 1.5em;
+    background-color: var(--acc3);
+    border: none;
+    outline: none;
+}
+
+#fullServerSettingsBanListFilter::placeholder {
+    color: var(--placeholder);
+}
+
+#fullServerSettingsBanList {
+    margin: 0 auto;
+    width: 90%;
+    height: 70%;
+    background-color: var(--acc);
+
+    display: flex;
+    flex-direction: column;
 }
 
 #imageOverlayImg {

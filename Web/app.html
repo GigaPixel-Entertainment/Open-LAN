@@ -1,3 +1,8 @@
+<!--
+Hello there!
+How's your day?
+-->
+
 <!DOCTYPE html>
 <html lang="en">
     <head>
@@ -129,8 +134,8 @@
                         <input type="text" disabled class="font gray" id="currDisplayname" maxlength="30" spellcheck="false">
                         <button class="font black editBtn" id="editDisplayname">edit</button>
                     </div>
-                    <div>
-                        <p class="font white">birthday</p>
+                    <div style="margin-bottom: .5em;">
+                        <p class="font white" style="margin: 0em;">birthday</p>
                         <input type="date" disabled class="font gray" id="currBirthday">
                         <button class="font black editBtn" id="editBirthday">edit</button>
                     </div>
@@ -312,7 +317,8 @@
         <div id="fullServerSettingsWrapper" class="overlay">
             <div id="fullServerSettings" class="genericSettings">
                 <div id="fullServerSettingsLeft" class="genericSettingsLeft">
-                    <button class="genericSettingsLeftItem font white" disabled>Overview</button>
+                    <button class="genericSettingsLeftItem font white" id="fullServerSettingsOverviewBtn" disabled>Overview</button>
+                    <button class="genericSettingsLeftItem font white" id="fullServerSettingsBansBtn">Bans</button>
                 </div>
                 <div id="fullServerSettingsOverview" class="genericSettingsView">
                     <h1 class="genericSettingsHeading font white center">Overview</h1>
@@ -328,6 +334,13 @@
                         <p id="fullServerSettingsOverviewAnnouncementChannelLabel" class="font white">Announcement Channel: </p>
                         <select id="fullServerSettingsOverviewAnnouncementChannel" class="font"></select>
                     </div>
+                </div>
+                <div id="fullServerSettingsBans" class="genericSettingsView" style="display: none;">
+                    <h1 class="genericSettingsHeading font white center">Bans</h1>
+                    <div id="fullServerSettingsBanListHeader">
+                        <input type="text" id="fullServerSettingsBanListFilter" spellcheck="false" placeholder="filter..." class="font white" maxlength="30">
+                    </div>
+                    <div id="fullServerSettingsBanList" class="scroll"></div>
                 </div>
 
                 <div id="fullServerSettingsUnsaved" class="genericSettingsUnsaved">
@@ -440,6 +453,7 @@
             <button id="serverUsrListProfile" class="rClickMenuOption font white">see profile</button>
             <button id="serverUsrListTransferOwnership" class="rClickMenuOption font white">give ownership</button>
             <button id="serverUsrListKick" class="rClickMenuOption font white">kick user</button>
+            <button id="serverUsrListBan" class="rClickMenuOption font white">ban user</button>
         </div>
 
         <div id="channelRClickMenu" class="rClickMenu">
@@ -450,6 +464,11 @@
         <div id="categoryRClickMenu" class="rClickMenu">
             <button id="categoryEdit" class="rClickMenuOption font white">edit category</button>
             <button id="categoryDelete" class="rClickMenuOption font white">delete category</button>
+        </div>
+
+        <div id="banListDropdown" class="rClickMenu">
+            <button id="banListShowProfile" class="rClickMenuOption font white">view profile</button>
+            <button id="banListUnban" class="rClickMenuOption font white">unban</button>
         </div>
 
         <div id="flashbang"></div>
@@ -598,6 +617,10 @@
         const fullServerSettingsWrapper = document.getElementById("fullServerSettingsWrapper")
         const fullServerSettings = document.getElementById("fullServerSettings")
         const fullServerSettingsLeft = document.getElementById("fullServerSettingsLeft")
+
+        const fullServerSettingsOverviewBtn = document.getElementById("fullServerSettingsOverviewBtn")
+        const fullServerSettingsBansBtn = document.getElementById("fullServerSettingsBansBtn")
+
         const fullServerSettingsOverview = document.getElementById("fullServerSettingsOverview")
         const fullServerSettingsOverviewIcon = document.getElementById("fullServerSettingsOverviewIcon")
         const fullServerSettingsOverviewIconImg = document.getElementById("fullServerSettingsOverviewIconImg")
@@ -609,6 +632,10 @@
         const fullServerSettingsUnsaved = document.getElementById("fullServerSettingsUnsaved")
         const fullServerSettingsUnsavedUndo = document.getElementById("fullServerSettingsUnsavedUndo")
         const fullServerSettingsUnsavedSave = document.getElementById("fullServerSettingsUnsavedSave")
+
+        const fullServerSettingsBans = document.getElementById("fullServerSettingsBans")
+        const fullServerSettingsBanListFilter = document.getElementById("fullServerSettingsBanListFilter")
+        const fullServerSettingsBanList = document.getElementById("fullServerSettingsBanList")
 
         const leavingWrapper = document.getElementById("leavingWrapper")
         const leavingUrl = document.getElementById("leavingUrl")
@@ -717,6 +744,11 @@
         const serverUsrListProfile = document.getElementById("serverUsrListProfile")
         const serverUsrListTransferOwnership = document.getElementById("serverUsrListTransferOwnership")
         const serverUsrListKick = document.getElementById("serverUsrListKick")
+        const serverUsrListBan = document.getElementById("serverUsrListBan")
+
+        const banListDropdown = document.getElementById("banListDropdown")
+        const banListShowProfile = document.getElementById("banListShowProfile")
+        const banListUnban = document.getElementById("banListUnban")
 
         const mdit = markdownit({
             linkify: true,
@@ -873,26 +905,6 @@
         }
     </script>
     <script>
-        // Sanitization
-        function isValidUrl(url) {
-            try {
-                const parsedUrl = URL.parse(url)
-                const safeProtocols = ["http:", "https:"]
-
-                if (safeProtocols.includes(parsedUrl.protocol)) {
-                    return true
-                }
-            } catch {}
-
-            return false
-        }
-
-        function sanitizeHTML(html) {
-            const doc = new DOMParser().parseFromString(html, 'text/html');
-            return doc.body.textContent || "";
-        }
-    </script>
-    <script>
         function compareLists(a, b) {
             const keys1 = Object.keys(a)
             const keys2 = Object.keys(b)
@@ -933,13 +945,21 @@
     </script>
     <script>
         // Userinfo Mgr
-        async function reqUsrInfo(UID) {
+        function getUsrInfo(UID) {
             for (let index = 0; index < userInfoCache.length; index++) {
                 const userInfo = userInfoCache[index];
 
                 if (userInfo["UID"] == UID) {
                     return userInfo
                 }
+            }
+        }
+
+        async function reqUsrInfo(UID) {
+            const usrInfo = getUsrInfo(UID)
+
+            if (usrInfo) {
+                return usrInfo
             }
 
             usr = await request(JSON.stringify({"type": "reqUsersList", "users": [UID]}))
@@ -1229,8 +1249,13 @@
         function showMyProfileScreen() {
             if (myProfileScreenShown) {
                 myProfileScreen.style.transform = "translateY(calc(-100% - 8px))"
+
+                setTimeout(() => {
+                    myProfileScreen.style.visibility = ""
+                }, 500)
             } else {
                 myProfileScreen.style.transform = "translateY(0%)"
+                myProfileScreen.style.visibility = "visible"
             }
 
             myProfileScreenShown = !myProfileScreenShown
@@ -1465,12 +1490,16 @@
         usrProfilePopupPfp.addEventListener("mousedown", () => {
             if (usrProfilePopupInfo) {
                 showUsrProfile(usrProfilePopupInfo)
+                usrProfilePopup.style.visibility = "hidden"
+                usrProfilePopupInfo = null
             }
         })
 
         usrProfilePopupFullBio.addEventListener("mousedown", () => {
             if (usrProfilePopupInfo) {
                 showUsrProfile(usrProfilePopupInfo)
+                usrProfilePopup.style.visibility = "hidden"
+                usrProfilePopupInfo = null
             }
         })
 
@@ -1629,11 +1658,11 @@
             }
 
             searchResult["results"].sort((a, b) => {
-                aSim = compareTwoStrings(a["username"], search)
-                bSim = compareTwoStrings(b["username"], search)
+                const aSim = compareTwoStrings(a["username"], search)
+                const bSim = compareTwoStrings(b["username"], search)
 
-                adSim = compareTwoStrings(a["displayname"], search)
-                bdSim = compareTwoStrings(b["displayname"], search)
+                const adSim = compareTwoStrings(a["displayname"], search)
+                const bdSim = compareTwoStrings(b["displayname"], search)
 
                 return Math.max(bSim, bdSim) - Math.max(aSim, adSim)
             })
@@ -1813,7 +1842,6 @@
                     showUsrProfile(uInfo)
                 })
             }
-
         })
 
         usrListRemove.addEventListener("mousedown", () => {
@@ -1824,7 +1852,29 @@
 
         serverUsrListKick.addEventListener("mousedown", () => {
             if (serverUsrListRClickMenu && serverUsrListRClickMenuUsr != null && serverUsrListRClickMenuUsr != currUID && currUID == serverCache["Owner"]) {
-                request(JSON.stringify({"type": "kickUsrFromServer", "SID": currServer, "UID": serverUsrListRClickMenuUsr}))
+                const targetUID = serverUsrListRClickMenuUsr
+                const targetInfo = getUsrInfo(targetUID)
+                const confirmText = targetInfo ? "Kick " + targetInfo["displayname"] + " (@" + targetInfo["username"] + ") from the server?" : "Kick this member from the server?"
+
+                openConfirmPopup("Kick User?", confirmText).then((r) => {
+                    if (r) {
+                        request(JSON.stringify({"type": "kickUsrFromServer", "SID": currServer, "UID": targetUID}))
+                    }
+                })
+            }
+        })
+
+        serverUsrListBan.addEventListener("mousedown", () => {
+            if (serverUsrListRClickMenu && serverUsrListRClickMenuUsr != null && serverUsrListRClickMenuUsr != currUID && currUID == serverCache["Owner"]) {
+                const targetUID = serverUsrListRClickMenuUsr
+                const targetInfo = getUsrInfo(targetUID)
+                const confirmText = targetInfo ? "Ban " + targetInfo["displayname"] + " (@" + targetInfo["username"] + ") from the server?" : "Ban this member from the server?"
+
+                openConfirmPopup("Ban User?", confirmText).then((r) => {
+                    if (r) {
+                        request(JSON.stringify({"type": "banUsrFromServer", "SID": currServer, "UID": targetUID}))
+                    }
+                })
             }
         })
 
@@ -3138,6 +3188,7 @@
                     img.style.borderRadius = "8px"
                     img.style.cursor = "pointer"
                     img.title = filename
+                    img.alt = filename
 
                     img.style.marginRight = "1em"
                     img.style.marginBottom = "1em"
@@ -3371,6 +3422,7 @@
 
             const msgP = document.createElement("p")
             msgP.style.margin = "0"
+            msgP.style.marginBottom = "0.25em"
             msgP.classList = "font"
 
             if (isInTransit) {
@@ -3394,6 +3446,28 @@
                 msgP.appendChild(child)
             }
 
+            const walker = document.createTreeWalker(msgP, NodeFilter.SHOW_TEXT)
+            const textNodes = []
+
+            while (true) {
+                const nextNode = walker.nextNode()
+
+                if (nextNode == null) {
+                    break
+                }
+
+                textNodes.push(nextNode)
+            }
+
+            for (let i = 0; i < textNodes.length; i++) {
+                const textNode = textNodes[i];
+
+                const spanReplacement = document.createElement("span")
+                spanReplacement.textContent = textNode.textContent
+
+                textNode.parentNode.replaceChild(spanReplacement, textNode)
+            }
+
             const links = msgP.getElementsByTagName("a")
             for (let i = 0; i < links.length; i++) {
                 const link = links[i];
@@ -3407,7 +3481,7 @@
                 })
             }
 
-            const paragraphs = Array.from(msgP.querySelectorAll("p,h1,h2,h3,h4,h5,h6,li"))
+            const paragraphs = Array.from(msgP.querySelectorAll("p,h1,h2,h3,h4,h5,h6,li,span"))
             for (let i = 0; i < paragraphs.length; i++) {
                 const p = paragraphs[i]
                 const words = p.textContent.split(" ")
@@ -3887,11 +3961,14 @@
 
                 if (serverMeta) {
                     let inviteInvalid = true
+                    let banned = false
                     if (!servers.includes(message["TARGET"])) {
                         inviteInvalid = message["expire"] == null || message["expire"] - (Date.now() / 1000) < 0
 
                         if (!inviteInvalid) {
-                            inviteInvalid = !(await request(JSON.stringify({"type": "checkInviteValid", "inviteID": message["ID"]})))["isValid"]
+                            checkResp = await request(JSON.stringify({"type": "checkInviteValid", "inviteID": message["ID"]}))
+                            inviteInvalid = !checkResp["isValid"]
+                            banned = checkResp["banned"]
                         }
                     }
 
@@ -3955,7 +4032,14 @@
 
                     inviteSubtext.appendChild(subtext)
 
-                    if (inviteInvalid && !servers.includes(message["TARGET"])) {
+                    if (banned) {
+                        serverIcon.src = "Media/trash.png"
+                        inviteTitle.textContent = "Banned"
+                        inviteTitle.title = "Banned"
+                        subtext.textContent = "Sorry, but you are banned from this server."
+                        subtext.title = "Sorry, but you are banned from this server."
+                        subtext.style.width = "100%"
+                    } else if (inviteInvalid && !servers.includes(message["TARGET"])) {
                         serverIcon.src = "Media/trash.png"
                         inviteTitle.textContent = "Expired Invite"
                         inviteTitle.title = "Expired Invite"
@@ -4069,11 +4153,6 @@
                 return
             }
 
-            if (message["MSGID"].toString() in msgCache && !doNotCache.includes(message["MSGID"])) {
-                chatDiv2.push(msgCache[message["MSGID"].toString()])
-                return
-            }
-
             messageDate = null
             lastMessageDate = null
 
@@ -4116,6 +4195,11 @@
 
                     chatDiv2.push(separatorWrapper)
                 }
+            }
+
+            if (message["MSGID"].toString() in msgCache && !doNotCache.includes(message["MSGID"])) {
+                chatDiv2.push(msgCache[message["MSGID"].toString()])
+                return
             }
 
             if (!isInTransit && !noNewMsg && message["MSGID"] - readMsgs[currChat.toString()] == 1) {
@@ -4284,8 +4368,8 @@
                 if (currOwner == uid) {
                     const crown = document.createElement("img")
                     crown.style.position = "absolute"
-                    crown.style.left = "30px"
-                    crown.style.top = "30px"
+                    crown.style.left = "10%"
+                    crown.style.top = "60%"
                     crown.style.height = "50%"
                     crown.style.transform = "translateX(-50%)"
                     crown.src = Math.random() < 0.01 ? "Media/ribbon2.png" : "Media/ribbon.png"
@@ -4327,12 +4411,14 @@
                     if (currUID == (currServer == -1 ? chatCache["Owner"] : serverCache["Owner"]) && currUID != uid) {
                         usrListRemove.disabled = false
                         serverUsrListKick.disabled = false
+                        serverUsrListBan.disabled = false
 
                         usrListTransferOwnership.disabled = false
                         serverUsrListTransferOwnership.disabled = false
                     } else {
                         usrListRemove.disabled = true
                         serverUsrListKick.disabled = true
+                        serverUsrListBan.disabled = true
 
                         usrListTransferOwnership.disabled = true
                         serverUsrListTransferOwnership.disabled = true
@@ -4547,8 +4633,6 @@
             changedChat = false
 
             userInfos = await reqMultiUsrInfo(chat["Recipients"])
-
-            await setMemberList()
 
             chat["messages"].sort((a, b) => a["time"] - b["time"])
 
@@ -5566,6 +5650,7 @@
                                         if (respBody["type"] == "reqChatSuccess") {
                                             maxPage = respBody["numPages"]
                                             setChat(respBody["chat"])
+                                            setMemberList()
                                         }
 
                                         if (respBody["type"] == "updateCachedPfp") {
@@ -5837,6 +5922,13 @@
                                                 serverCache["AnnouncementChat"] = respBody["ac"]
                                                 setChatNameAndIcon()
                                                 setServerList()
+                                            }
+                                        }
+
+                                        if (respBody["type"] == "banlistUpdate") {
+                                            if (currServer == respBody["SID"]) {
+                                                serverCache["BanList"] = respBody["list"]
+                                                popBanList()
                                             }
                                         }
 
@@ -6126,179 +6218,6 @@
             categoryUnsaved = false
             hideCategoryUnsaved()
         })
-
-
-        var origServerName = ""
-        var origServerIcon = ""
-        var origServerAC = ""
-        var editingSID = -1
-        var serverUnsaved = false
-        var serverIconChanged = false
-        async function openServerSettings() {
-            origServerName = serverCache["Name"]
-            origServerIcon = serverCache["Icon"]
-            origServerAC = serverCache["AnnouncementChat"]
-            editingSID = currServer
-            serverUnsaved = false
-            serverIconChanged = false
-
-            fullServerSettingsOverviewName.value = origServerName
-            fullServerSettingsOverviewIconImg.src = origServerIcon
-            fullServerSettingsOverviewAnnouncementChannel.replaceChildren()
-
-            const noneOptionE = document.createElement("option")
-            noneOptionE.textContent = "-"
-            noneOptionE.value = -1
-            fullServerSettingsOverviewAnnouncementChannel.appendChild(noneOptionE)
-
-            const serverChats = []
-            for (let i = 0; i < serverCache["Categories"].length; i++) {
-                serverChats.push(...serverCache["Categories"][i]["Chats"])
-            }
-
-            await reqMultiChatMeta(serverChats)
-            for (let i = 0; i < serverChats.length; i++) {
-                const cht = serverChats[i];
-                const chat = await reqChatMeta(cht)
-
-                const optionE = document.createElement("option")
-                optionE.textContent = chat["name"]
-                optionE.value = cht
-                fullServerSettingsOverviewAnnouncementChannel.appendChild(optionE)
-            }
-
-            fullServerSettingsOverviewAnnouncementChannel.value = origServerAC
-
-            fullServerSettingsWrapper.style.visibility = "visible"
-            fullServerSettingsWrapper.style.opacity = "1"
-        }
-
-        function closeServerSettings() {
-            if (serverUnsaved) {
-                fullServerSettingsUnsaved.style.boxShadow = "red 0 0 16px"
-
-                setTimeout(() => {
-                    fullServerSettingsUnsaved.style.boxShadow = ""
-                }, 1000);
-
-                return
-            }
-
-            editingSID = -1
-            origServerName = ""
-            origServerIcon = ""
-            origServerAC = ""
-            fullServerSettingsWrapper.style.opacity = "0"
-
-            setTimeout(() => {
-                fullServerSettingsWrapper.style.visibility = "hidden"
-            }, 250);
-        }
-
-        serverSettingsSettings.addEventListener("click", (e) => {
-            e.stopPropagation()
-            serverSettingsFriendsList.style.visibility = "hidden"
-            openServerSettings()
-        })
-        fullServerSettingsWrapper.addEventListener("click", closeServerSettings)
-        fullServerSettings.addEventListener("click", (e) => e.stopPropagation())
-
-        function hideServerUnsaved() {
-            fullServerSettingsUnsaved.style.opacity = "0"
-            setTimeout(() => {
-                if (serverUnsaved) {
-                    return
-                }
-
-                fullServerSettingsUnsaved.style.visibility = "hidden"
-            }, 250)
-        }
-
-        function showServerUnsaved() {
-            fullServerSettingsUnsaved.style.visibility = "visible"
-            fullServerSettingsUnsaved.style.opacity = "1"
-        }
-
-        function fullServerSettingsOnInput() {
-            if (fullServerSettingsOverviewName.value == origServerName && fullServerSettingsOverviewAnnouncementChannel.value == origServerAC && !serverIconChanged) {
-                serverUnsaved = false
-                hideServerUnsaved()
-            } else {
-                serverUnsaved = true
-                showServerUnsaved()
-            }
-        }
-
-        fullServerSettingsOverviewName.addEventListener("input", fullServerSettingsOnInput)
-        fullServerSettingsOverviewAnnouncementChannel.addEventListener("change", fullServerSettingsOnInput)
-
-        fullServerSettingsUnsavedSave.addEventListener("click", () => {
-            const newServerName = fullServerSettingsOverviewName.value.trim()
-            const newServerIcon = fullServerSettingsOverviewIconImg.src
-            const newServerAc = fullServerSettingsOverviewAnnouncementChannel.value
-
-            if (newServerName.length == 0 || newServerName.length > 100) {
-                fullServerSettingsOverviewName.style.border = "2px solid red"
-                fullServerSettingsOverviewName.scrollIntoView({"behavior": "smooth", "block": "center"})
-
-                setTimeout(() => {
-                    fullServerSettingsOverviewName.style.border = ""
-                }, 2500)
-
-                return
-            }
-
-            request(JSON.stringify({
-                "type": "editServerInfo",
-                "SID": editingSID,
-                "name": newServerName,
-                "icon": newServerIcon,
-                "ac": parseInt(newServerAc)
-            })).then((r) => {
-                if (r["type"] == "editServerInfoSuccess") {
-                    serverUnsaved = false
-                    serverIconChanged = false
-                    hideServerUnsaved()
-                } else {
-                    openPopup("Error", "Failed to save server info!")
-                }
-            })
-        })
-
-        fullServerSettingsUnsavedUndo.addEventListener("click", () => {
-            fullServerSettingsOverviewName.value = origServerName
-            fullServerSettingsOverviewIconImg.src = origServerIcon
-            fullServerSettingsOverviewAnnouncementChannel.value = origServerAC
-            serverUnsaved = false
-            serverIconChanged = false
-            hideServerUnsaved()
-        })
-
-        fullServerSettingsOverviewIconFile.addEventListener("mouseenter", () => {
-            fullServerSettingsOverviewIconOverlay.style.visibility = "visible"
-        })
-
-        fullServerSettingsOverviewIconFile.addEventListener("mouseleave", () => {
-            fullServerSettingsOverviewIconOverlay.style.visibility = "hidden"
-        })
-
-        fullServerSettingsOverviewIconFile.addEventListener("change", (e) => {
-            const files = e.target.files
-
-            if (files && files.length == 1) {
-                const file = files[0]
-                if (file.size > 10*1024*1024) {
-                    openPopup("Woah there!", "That file exceeded the max size of 10MB!")
-                    return
-                }
-                convertFileToBase64(file).then((b64) => {
-                    fullServerSettingsOverviewIconImg.src = b64
-                    unsaved = true
-                    serverIconChanged = true
-                    showServerUnsaved()
-                })
-            }
-        })
     </script>
     <script>
         // Edit Pwd
@@ -6566,6 +6485,8 @@
         let fixWordProgress = 0
         const flashWord = "flashbang"
         let flashWordProgress = 0
+        const sufferingWord = "suffering"
+        let sufferingWordProgress = 0
         document.addEventListener("keydown", (key) => {
             const isInputting = document.activeElement.nodeName == "TEXTAREA" || (document.activeElement.nodeName === 'INPUT' && ['text', 'search', 'tel', 'url', 'email', 'password'].includes(document.activeElement.type))
 
@@ -6631,6 +6552,18 @@
                 }
             } else {
                 fixWordProgress = key.key == fixWord.charAt(0)
+            }
+
+            if (key.key == sufferingWord.charAt(sufferingWordProgress)) {
+                sufferingWordProgress += 1
+                if (sufferingWordProgress == sufferingWord.length) {
+                    for (let i = 0; i < 20; i++) {
+                        openConfirmPopup("Are you sure?", "Are you sure?")
+                    }
+                    sufferingWordProgress = 0
+                }
+            } else {
+                sufferingWordProgress = key.key == sufferingWord.charAt(0)
             }
 
             if (key.key == flashWord.charAt(flashWordProgress)) {
@@ -6747,6 +6680,390 @@
         statusSelectorInput.addEventListener("change", (e) => {
             const newOverride = rangeInputToStatus(Number(statusSelectorInput.value))
             request(JSON.stringify({"type": "statusOverride", "status": newOverride}))
+        })
+    </script>
+    <script>
+        var origServerName = ""
+        var origServerIcon = ""
+        var origServerAC = ""
+        var editingSID = -1
+        var serverUnsaved = false
+        var serverIconChanged = false
+        async function openServerSettings() {
+            origServerName = serverCache["Name"]
+            origServerIcon = serverCache["Icon"]
+            origServerAC = serverCache["AnnouncementChat"]
+            editingSID = currServer
+            serverUnsaved = false
+            serverIconChanged = false
+
+            fullServerSettingsOverviewName.value = origServerName
+            fullServerSettingsOverviewIconImg.src = origServerIcon
+            fullServerSettingsOverviewAnnouncementChannel.replaceChildren()
+
+            const noneOptionE = document.createElement("option")
+            noneOptionE.textContent = "-"
+            noneOptionE.value = -1
+            fullServerSettingsOverviewAnnouncementChannel.appendChild(noneOptionE)
+
+            const serverChats = []
+            for (let i = 0; i < serverCache["Categories"].length; i++) {
+                serverChats.push(...serverCache["Categories"][i]["Chats"])
+            }
+
+            await reqMultiChatMeta(serverChats)
+            for (let i = 0; i < serverChats.length; i++) {
+                const cht = serverChats[i];
+                const chat = await reqChatMeta(cht)
+
+                const optionE = document.createElement("option")
+                optionE.textContent = chat["name"]
+                optionE.value = cht
+                fullServerSettingsOverviewAnnouncementChannel.appendChild(optionE)
+            }
+
+            fullServerSettingsOverviewAnnouncementChannel.value = origServerAC
+
+            await popBanList()
+
+            fullServerSettingsWrapper.style.visibility = "visible"
+            fullServerSettingsWrapper.style.opacity = "1"
+        }
+
+        function THEUNSAVEDISANGRY() {
+            fullServerSettingsUnsaved.style.boxShadow = "red 0 0 16px"
+
+            setTimeout(() => {
+                fullServerSettingsUnsaved.style.boxShadow = ""
+            }, 1000);
+        }
+
+        function closeServerSettings() {
+            if (serverUnsaved) {
+                THEUNSAVEDISANGRY()
+                return
+            }
+
+            editingSID = -1
+            origServerName = ""
+            origServerIcon = ""
+            origServerAC = ""
+            fullServerSettingsWrapper.style.opacity = "0"
+
+            setTimeout(() => {
+                fullServerSettingsWrapper.style.visibility = "hidden"
+            }, 250);
+        }
+
+        serverSettingsSettings.addEventListener("click", (e) => {
+            e.stopPropagation()
+            serverSettingsFriendsList.style.visibility = "hidden"
+            openServerSettings()
+        })
+        fullServerSettingsWrapper.addEventListener("click", closeServerSettings)
+        fullServerSettings.addEventListener("click", (e) => e.stopPropagation())
+
+        function hideServerUnsaved() {
+            fullServerSettingsUnsaved.style.opacity = "0"
+            setTimeout(() => {
+                if (serverUnsaved) {
+                    return
+                }
+
+                fullServerSettingsUnsaved.style.visibility = "hidden"
+            }, 250)
+        }
+
+        function showServerUnsaved() {
+            fullServerSettingsUnsaved.style.visibility = "visible"
+            fullServerSettingsUnsaved.style.opacity = "1"
+        }
+
+        function fullServerSettingsOnInput() {
+            if (fullServerSettingsOverviewName.value == origServerName && fullServerSettingsOverviewAnnouncementChannel.value == origServerAC && !serverIconChanged) {
+                serverUnsaved = false
+                hideServerUnsaved()
+            } else {
+                serverUnsaved = true
+                showServerUnsaved()
+            }
+        }
+
+        var banListFilter = ""
+        var banListDropdownUID = -1
+        async function popBanList() {
+            if (serverCache == null) {
+                return
+            }
+
+            fullServerSettingsBanList.replaceChildren()
+
+            if (serverCache["BanList"].length == 0) {
+                const noBannedTxt = document.createElement("p")
+                noBannedTxt.classList = "font white center"
+                noBannedTxt.textContent = "Nobody is banned!"
+                fullServerSettingsBanList.appendChild(noBannedTxt)
+                return
+            }
+
+            const newBanList = []
+
+            await reqMultiUsrInfo(serverCache["BanList"])
+
+            let includedBanList = [...serverCache["BanList"]]
+            if (banListFilter != "") {
+                includedBanList = serverCache["BanList"].filter((uid) => {
+                    const usrInfo = getUsrInfo(uid)
+
+                    if (usrInfo == undefined) {
+                        return false
+                    }
+
+                    if (usrInfo["displayname"].toLowerCase().includes(banListFilter.toLowerCase()) || usrInfo["username"].toLowerCase().includes(banListFilter.toLowerCase())) {
+                        return true
+                    }
+
+                    return false
+                })
+            }
+
+            includedBanList.sort((a, b) => {
+                const usrInfoA = getUsrInfo(a)
+                const usrInfoB = getUsrInfo(b)
+
+                const aSim = compareTwoStrings(usrInfoA["username"], banListFilter)
+                const bSim = compareTwoStrings(usrInfoB["username"], banListFilter)
+
+                const adSim = compareTwoStrings(usrInfoA["displayname"], banListFilter)
+                const bdSim = compareTwoStrings(usrInfoB["displayname"], banListFilter)
+
+                return Math.max(bSim, bdSim) - Math.max(aSim, adSim)
+            })
+
+            for (let i = 0; i < includedBanList.length; i++) {
+                const banned = includedBanList[i];
+                const usrInfo = await reqUsrInfo(banned)
+
+                if (Object.keys(usrInfo).length == 0) {
+                    continue
+                }
+
+                const usrDiv = document.createElement("div")
+                usrDiv.style.width = "100%"
+                usrDiv.style.height = "3em"
+                usrDiv.style.margin = "0"
+                usrDiv.style.marginBottom = ".25em"
+                usrDiv.style.backgroundColor = "var(--acc2)"
+                usrDiv.style.display = "flex"
+                usrDiv.style.flexDirection = "row"
+
+                const usrPfp = document.createElement("img")
+                usrPfp.style.height = "calc(100%-4px)"
+                usrPfp.style.aspectRatio = "1"
+                usrPfp.style.borderRadius = "9999px"
+                usrPfp.style.border = "2px solid var(--acc4)"
+                usrPfp.style.flexShrink = "0"
+                usrPfp.src = usrInfo["pfp"]
+
+                const usrInfoDiv = document.createElement("div")
+                usrInfoDiv.style.height = "100%"
+                usrInfoDiv.style.width = "100%"
+                usrInfoDiv.style.marginLeft = ".5em"
+                usrInfoDiv.style.display = "flex"
+                usrInfoDiv.style.flexDirection = "column"
+
+                const displayname = document.createElement("strong")
+                displayname.style.width = "100%"
+                displayname.style.height = "1.35em"
+                displayname.style.fontSize = "1.35em"
+                displayname.classList = "font white"
+                displayname.textContent = usrInfo["displayname"]
+
+                const otherInfo = document.createElement("p")
+                otherInfo.style.width = "100%"
+                otherInfo.style.height = ".75em"
+                otherInfo.style.fontSize = ".75em"
+                otherInfo.style.margin = "0"
+                otherInfo.classList = "font white"
+                otherInfo.textContent = usrInfo["username"] + " | UID: " + usrInfo["UID"]
+
+                const dropdown = document.createElement("img")
+                dropdown.style.margin = "auto .5em"
+                dropdown.style.height = "75%"
+                dropdown.style.flexShrink = "0"
+                dropdown.style.cursor = "pointer"
+                dropdown.style.filter = "invert(1)"
+                dropdown.src = "Media/dots.png"
+
+                dropdown.addEventListener("click", (e) => {
+                    e.stopPropagation()
+                    banListDropdownUID = banned
+                    moveRClickMenuToCursorPos(banListDropdown, e)
+                    banListDropdown.style.visibility = "visible"
+                })
+
+                usrInfoDiv.appendChild(displayname)
+                usrInfoDiv.appendChild(otherInfo)
+
+                usrDiv.appendChild(usrPfp)
+                usrDiv.appendChild(usrInfoDiv)
+                usrDiv.appendChild(dropdown)
+
+                newBanList.push(usrDiv)
+            }
+
+            replaceChildren(fullServerSettingsBanList, newBanList)
+        }
+
+        banListDropdown.addEventListener("click", (e) => {
+            e.stopPropagation()
+        })
+
+        banListShowProfile.addEventListener("click", () => {
+            const usrInfo = getUsrInfo(banListDropdownUID)
+
+            if (usrInfo == null) {
+                return
+            }
+
+            banListDropdownUID = -1
+            banListDropdown.style.visibility = "hidden"
+            showUsrProfile(usrInfo)
+        })
+
+        banListUnban.addEventListener("click", () => {
+            const usrInfo = getUsrInfo(banListDropdownUID)
+
+            if (usrInfo == null) {
+                return
+            }
+
+            banListDropdownUID = -1
+            banListDropdown.style.visibility = "hidden"
+
+            openConfirmPopup("Unban user?", "Unban " + usrInfo["displayname"] + " (@" + usrInfo["username"] + ") from this server?").then((r) => {
+                if (r) {
+                    request(JSON.stringify({"type": "unbanUsrFromServer", "SID": currServer, "UID": usrInfo["UID"]}))
+                }
+            })
+        })
+
+        fullServerSettingsBans.addEventListener("click", () => {
+            banListDropdownUID = -1
+            banListDropdown.style.visibility = "hidden"
+        })
+
+        document.addEventListener("click", () => {
+            banListDropdownUID = -1
+            banListDropdown.style.visibility = "hidden"
+        })
+
+        fullServerSettingsOverviewName.addEventListener("input", fullServerSettingsOnInput)
+        fullServerSettingsOverviewAnnouncementChannel.addEventListener("change", fullServerSettingsOnInput)
+
+        fullServerSettingsUnsavedSave.addEventListener("click", () => {
+            const newServerName = fullServerSettingsOverviewName.value.trim()
+            const newServerIcon = fullServerSettingsOverviewIconImg.src
+            const newServerAc = fullServerSettingsOverviewAnnouncementChannel.value
+
+            if (newServerName.length == 0 || newServerName.length > 100) {
+                fullServerSettingsOverviewName.style.border = "2px solid red"
+                fullServerSettingsOverviewName.scrollIntoView({"behavior": "smooth", "block": "center"})
+
+                setTimeout(() => {
+                    fullServerSettingsOverviewName.style.border = ""
+                }, 2500)
+
+                return
+            }
+
+            request(JSON.stringify({
+                "type": "editServerInfo",
+                "SID": editingSID,
+                "name": newServerName,
+                "icon": newServerIcon,
+                "ac": parseInt(newServerAc)
+            })).then((r) => {
+                if (r["type"] == "editServerInfoSuccess") {
+                    serverUnsaved = false
+                    serverIconChanged = false
+                    hideServerUnsaved()
+                } else {
+                    openPopup("Error", "Failed to save server info!")
+                }
+            })
+        })
+
+        fullServerSettingsUnsavedUndo.addEventListener("click", () => {
+            fullServerSettingsOverviewName.value = origServerName
+            fullServerSettingsOverviewIconImg.src = origServerIcon
+            fullServerSettingsOverviewAnnouncementChannel.value = origServerAC
+            serverUnsaved = false
+            serverIconChanged = false
+            hideServerUnsaved()
+        })
+
+        fullServerSettingsOverviewIconFile.addEventListener("mouseenter", () => {
+            fullServerSettingsOverviewIconOverlay.style.visibility = "visible"
+        })
+
+        fullServerSettingsOverviewIconFile.addEventListener("mouseleave", () => {
+            fullServerSettingsOverviewIconOverlay.style.visibility = "hidden"
+        })
+
+        fullServerSettingsOverviewIconFile.addEventListener("change", (e) => {
+            const files = e.target.files
+
+            if (files && files.length == 1) {
+                const file = files[0]
+                if (file.size > 10*1024*1024) {
+                    openPopup("Woah there!", "That file exceeded the max size of 10MB!")
+                    return
+                }
+                convertFileToBase64(file).then((b64) => {
+                    fullServerSettingsOverviewIconImg.src = b64
+                    unsaved = true
+                    serverIconChanged = true
+                    showServerUnsaved()
+                })
+            }
+        })
+
+        function clearFullServerSettingsScreen() {
+            fullServerSettingsOverviewBtn.disabled = false
+            fullServerSettingsBansBtn.disabled = false
+
+            fullServerSettingsOverview.style.display = "none"
+            fullServerSettingsBans.style.display = "none"
+        }
+
+        fullServerSettingsOverviewBtn.addEventListener("click", () => {
+            if (fullServerSettingsOverviewBtn.disabled) { return }
+            if (serverUnsaved) {
+                THEUNSAVEDISANGRY()
+                return
+            }
+
+            clearFullServerSettingsScreen()
+            fullServerSettingsOverviewBtn.disabled = true
+            fullServerSettingsOverview.style.display = "block"
+        })
+
+        fullServerSettingsBansBtn.addEventListener("click", () => {
+            if (fullServerSettingsBansBtn.disabled) { return }
+            if (serverUnsaved) {
+                THEUNSAVEDISANGRY()
+                return
+            }
+
+            clearFullServerSettingsScreen()
+            fullServerSettingsBansBtn.disabled = true
+            fullServerSettingsBans.style.display = "block"
+        })
+
+        fullServerSettingsBanListFilter.addEventListener("input", () => {
+            banListFilter = fullServerSettingsBanListFilter.value
+            popBanList()
         })
     </script>
 </html>

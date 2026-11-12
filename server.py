@@ -210,6 +210,9 @@ def loadServers():
                 if not "AnnouncementChat" in serverData:
                     serverData["AnnouncementChat"] = -1
 
+                if not "BanList" in serverData:
+                    serverData["BanList"] = []
+
                 servers.append(serverData)
                 f.close()
 

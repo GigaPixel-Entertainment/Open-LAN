@@ -75,6 +75,7 @@ class WS():
             "updateGcInfo": self.updateGcInfo,
             "addUsrToChat": self.addUsrToChat,
             "addUsrToServer": self.addUsrToServer,
+            "unbanUsrFromServer": self.unbanUsrFromServer,
             "leaveGc": self.leaveGc,
             "rmUsrFromChat": self.rmUsrFromChat,
             "setRead": self.setRead,
@@ -85,6 +86,7 @@ class WS():
             "newCategory": self.newCategory,
             "acceptInvite": self.acceptInvite,
             "kickUsrFromServer": self.kickUsrFromServer,
+            "banUsrFromServer": self.banUsrFromServer,
             "leaveServer": self.leaveServer,
             "checkInviteValid": self.checkInviteValid,
             "transferOwnershipGc": self.transferOwnershipGc,
@@ -392,6 +394,10 @@ class WS():
 
     async def wsBroadcastEncrypted(self, clients: Iterable[ServerConnection], data: bytes):
         tasks = [self.wsSendEncrypted(client, data) for client in clients]
+
+        if len(tasks) == 0:
+            return
+
         await asyncio.gather(*tasks)
 
     async def checkAuthTokenEncrypted(self, ws: ServerConnection, authToken: str | None):
@@ -589,7 +595,7 @@ class WS():
             await self.wsSendEncrypted(ws, orjson.dumps({"type": "chatUpdateFailed"}), trackerId)
             return
 
-        if not self.tokenInChat(authToken, decryptedBody["CID"]) or len(decryptedBody["msg"]) > 4000 or len(decryptedBody["embed"]) > 10:
+        if not self.tokenInChat(authToken, decryptedBody["CID"]) or len(decryptedBody["msg"]) > config.MAX_MSG_SIZE or len(decryptedBody["embed"]) > config.MAX_EMBED_COUNT:
             await self.wsSendEncrypted(ws, orjson.dumps({"type": "chatUpdateFailed"}), trackerId)
             return
 
@@ -598,7 +604,7 @@ class WS():
             embedC = embed["contents"]
             embedName: str = embed["filename"].strip()
 
-            if len(embedName) <= 0 or len(embedName) > 128:
+            if len(embedName) == 0 or len(embedName) > 128:
                 embedName = secrets.token_urlsafe(32)
 
             if "," in embed["contents"]:
@@ -1369,7 +1375,6 @@ class WS():
             usrInfo["Chats"].append(decryptedBody["CID"])
             chat["Recipients"].append(usr)
 
-
         chat["messages"].append({
             "SYSMSG": True,
             "MSGID": len(chat["messages"]),
@@ -1457,12 +1462,47 @@ class WS():
                     for ws2 in self.WS_CLIENTS:
                         wsUID = getattr(ws2, "UID", None)
 
-                        if wsUID is not None and wsUID == usr:
+                        if (wsUID is not None and wsUID == usr) or ws2 == ws:
                             await self.wsSendEncrypted(ws2, orjson.dumps({"type": "newMsg", "CID": cht, "message": msgObj}))
                             break
                     break
 
         await self.wsSendEncrypted(ws, orjson.dumps({"type": "addUsrServerSuccess"}), trackerId)
+
+    async def unbanUsrFromServer(self, ws, decryptedBody, authToken, trackerId):
+        if not self.checkFields(decryptedBody, ["SID", "UID"]):
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "unbanUsrFromServerFailed"}), trackerId)
+            return
+
+        if not self.tokenInServer(authToken, decryptedBody["SID"]):
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "unbanUsrFromServerFailed"}), trackerId)
+            return
+
+        selfInfo = self.getUserInfoFromToken(authToken)
+        uid = self.getUserIdFromUserInfo(selfInfo)
+        server = self.getServerFromSID(decryptedBody["SID"])
+
+        if server is None or uid is None or selfInfo is None:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "unbanUsrFromServerFailed"}), trackerId)
+            return
+
+        if uid != server["Owner"]:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "unbanUsrFromServerFailed"}), trackerId)
+            return
+
+        if decryptedBody["UID"] in server["BanList"]:
+            server["BanList"].remove(decryptedBody["UID"])
+
+        await self.wsSendEncrypted(ws, orjson.dumps({"type": "unbanUsrFromServerSuccess"}), trackerId)
+
+        banMods = []
+        for ws2 in self.WS_CLIENTS:
+            wsUID = getattr(ws2, "UID", None)
+
+            if wsUID is not None:
+                if wsUID == uid: # TODO: Add mods that have ban perms
+                    banMods.append(ws2)
+        await self.wsBroadcastEncrypted(banMods, orjson.dumps({"type": "banlistUpdate", "SID": server["SID"], "list": server["BanList"]}))
 
     async def leaveGc(self, ws, decryptedBody, authToken, trackerId):
         if not self.checkFields(decryptedBody, ["CID"]):
@@ -1631,6 +1671,7 @@ class WS():
             "Owner": selfUID,
             "Users": [selfUID],
             "Categories": [textCategory],
+            "BanList": [],
             "AnnouncementChat": cid,
             "Icon": iconB64
         }
@@ -1687,7 +1728,14 @@ class WS():
             await self.wsSendEncrypted(ws, orjson.dumps({"type": "reqServerFailed"}), trackerId)
             return
 
+
         if not self.tokenInServer(authToken, decryptedBody["SID"]):
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "reqServerFailed"}), trackerId)
+            return
+
+        uid = self.getUserIdFromAuthToken(authToken)
+
+        if uid is None:
             await self.wsSendEncrypted(ws, orjson.dumps({"type": "reqServerFailed"}), trackerId)
             return
 
@@ -1697,9 +1745,15 @@ class WS():
             await self.wsSendEncrypted(ws, orjson.dumps({"type": "reqServerFailed"}), trackerId)
             return
 
+        serverCache = server
+        if server["Owner"] != uid: # TODO: again, special cases for mods
+            serverCache = copy.deepcopy(server)
+            serverCache["AnnouncementChat"] = -1
+            serverCache["BanList"] = []
+
         await self.wsSendEncrypted(ws, orjson.dumps({
             "type": "reqServerSuccess",
-            "server": server
+            "server": serverCache
         }), trackerId)
 
     async def newChannel(self, ws, decryptedBody, authToken, trackerId):
@@ -1814,6 +1868,10 @@ class WS():
             await self.wsSendEncrypted(ws, orjson.dumps({"type": "acceptInviteFailed"}), trackerId)
             return
 
+        if uid in targetServer["BanList"]:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "acceptInviteFailed"}), trackerId)
+            return
+
         targetServer["Users"].append(uid)
         uInfo["Servers"].append(targetServer["SID"])
 
@@ -1854,44 +1912,54 @@ class WS():
         if chat is not None and newMemberMsg is not None:
             await self.wsBroadcastEncrypted(targetWS2, orjson.dumps({"type": "newMsg", "CID": chat["CID"], "message": newMemberMsg}))
 
+    def removeUsrFromServer(self, sid: int, uid: int, byUid: int) -> bool:
+        server = self.getServerFromSID(sid)
+
+        if server is None:
+            return False
+
+        if byUid != server["Owner"]:
+            return False
+
+        targetUsrInfo = self.getUserInfoFromUserId(uid)
+        if targetUsrInfo is None or byUid == targetUsrInfo["UID"] or sid not in targetUsrInfo["Servers"]:
+            return False
+
+        failed = False
+        try:
+            targetUsrInfo["Servers"].remove(sid)
+            server["Users"].remove(uid)
+        except:
+            failed = True
+            traceback.print_exc()
+            logging.warning("Failed to remove user from server! Owner UID: %i, Target UID: %i, SID: %i", byUid, uid, sid)
+
+        if failed:
+            return False
+
+        for inv in copy.copy(self.invites):
+            if inv["SID"] == server["SID"] and inv["TO"] == targetUsrInfo["UID"]:
+                self.invites.remove(inv)
+
+        return True
+
+
     async def kickUsrFromServer(self, ws, decryptedBody, authToken, trackerId):
         if not self.checkFields(decryptedBody, ["SID", "UID"]):
             await self.wsSendEncrypted(ws, orjson.dumps({"type": "kickUsrFailed"}), trackerId)
             return
 
-        server = self.getServerFromSID(decryptedBody["SID"])
-
-        if server is None:
-            await self.wsSendEncrypted(ws, orjson.dumps({"type": "kickUsrFailed"}), trackerId)
-            return
-
         uid = self.getUserIdFromAuthToken(authToken)
+        sid = decryptedBody["SID"]
+        server = self.getServerFromSID(sid)
 
-        if uid is None or not uid == server["Owner"]:
+        if uid is None or server is None:
             await self.wsSendEncrypted(ws, orjson.dumps({"type": "kickUsrFailed"}), trackerId)
             return
 
-        targetUsrInfo = self.getUserInfoFromUserId(decryptedBody["UID"])
-        if targetUsrInfo is None or uid == targetUsrInfo["UID"] or not server["SID"] in targetUsrInfo["Servers"]:
+        if not self.removeUsrFromServer(sid, decryptedBody["UID"], uid):
             await self.wsSendEncrypted(ws, orjson.dumps({"type": "kickUsrFailed"}), trackerId)
             return
-
-        failed = False
-        try:
-            targetUsrInfo["Servers"].remove(server["SID"])
-            server["Users"].remove(decryptedBody["UID"])
-        except:
-            failed = True
-            traceback.print_exc()
-            logging.warning("Failed to kick user from server! Owner UID: %i, Target UID: %i, SID: %i", uid, decryptedBody["UID"], server["SID"])
-
-        if failed:
-            await self.wsSendEncrypted(ws, orjson.dumps({"type": "kickUsrFailed"}), trackerId)
-            return
-
-        for inv in copy.copy(self.invites):
-            if inv["SID"] == server["SID"] and inv["TO"] == targetUsrInfo["UID"]:
-                self.invites.remove(inv)
 
         await self.wsSendEncrypted(ws, orjson.dumps({"type": "kickUsrSuccess"}), trackerId)
 
@@ -1901,11 +1969,48 @@ class WS():
             targetInfo = self.getUserInfoFromUserId(wsUID)
 
             if wsUID is not None and targetInfo is not None:
-                if server["SID"] in targetInfo["Servers"]:
+                if sid in targetInfo["Servers"]:
                     targetWS.append(ws2)
-                if wsUID == targetUsrInfo["UID"]:
-                    await self.wsSendEncrypted(ws2, orjson.dumps({"type": "serverGone", "servers": targetUsrInfo["Servers"]}))
-        await self.wsBroadcastEncrypted(targetWS, orjson.dumps({"type": "serverMembersUpdate", "SID": server["SID"], "members": server["Users"]}))
+                if wsUID == decryptedBody["UID"]:
+                    await self.wsSendEncrypted(ws2, orjson.dumps({"type": "serverGone", "servers": targetInfo["Servers"]}))
+        await self.wsBroadcastEncrypted(targetWS, orjson.dumps({"type": "serverMembersUpdate", "SID": sid, "members": server["Users"]}))
+
+    async def banUsrFromServer(self, ws, decryptedBody, authToken, trackerId):
+        if not self.checkFields(decryptedBody, ["SID", "UID"]):
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "banUsrFailed"}), trackerId)
+            return
+
+        uid = self.getUserIdFromAuthToken(authToken)
+        sid = decryptedBody["SID"]
+        server = self.getServerFromSID(sid)
+
+        if uid is None or server is None:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "banUsrFailed"}), trackerId)
+            return
+
+        if not self.removeUsrFromServer(sid, decryptedBody["UID"], uid):
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "banUsrFailed"}), trackerId)
+            return
+
+        server["BanList"].append(decryptedBody["UID"])
+
+        await self.wsSendEncrypted(ws, orjson.dumps({"type": "banUsrSuccess"}), trackerId)
+
+        targetWS = []
+        banMods = []
+        for ws2 in self.WS_CLIENTS:
+            wsUID = getattr(ws2, "UID", None)
+            targetInfo = self.getUserInfoFromUserId(wsUID)
+
+            if wsUID is not None and targetInfo is not None:
+                if sid in targetInfo["Servers"]:
+                    targetWS.append(ws2)
+                if wsUID == uid: # TODO: Add mods that have ban perms
+                    banMods.append(ws2)
+                if wsUID == decryptedBody["UID"]:
+                    await self.wsSendEncrypted(ws2, orjson.dumps({"type": "serverGone", "servers": targetInfo["Servers"]}))
+        await self.wsBroadcastEncrypted(targetWS, orjson.dumps({"type": "serverMembersUpdate", "SID": sid, "members": server["Users"]}))
+        await self.wsBroadcastEncrypted(banMods, orjson.dumps({"type": "banlistUpdate", "SID": sid, "list": server["BanList"]}))
 
     async def leaveServer(self, ws, decryptedBody, authToken, trackerId):
         if not self.checkFields(decryptedBody, ["SID"]):
@@ -1977,6 +2082,10 @@ class WS():
         valid, targetServer = self.isInviteValid(decryptedBody["inviteID"])
         if targetServer is None or not valid:
             await self.wsSendEncrypted(ws, orjson.dumps({"type": "checkInviteSuccess", "isValid": False}), trackerId)
+            return
+
+        if uid in targetServer["BanList"]:
+            await self.wsSendEncrypted(ws, orjson.dumps({"type": "checkInviteSuccess", "isValid": False, "banned": True}), trackerId)
             return
 
         await self.wsSendEncrypted(ws, orjson.dumps({"type": "checkInviteSuccess", "isValid": True}), trackerId)
@@ -2701,9 +2810,9 @@ class WS():
 
         for addr in ipAddrs:
             if context is not None:
-                servers.append(serve(self.wsHandler, addr, config.WSS_PORT, max_size=(25*1024*1024 * 11), ssl=context, process_request=self.getAuth))
+                servers.append(serve(self.wsHandler, addr, config.WSS_PORT, max_size=(config.MAX_EMBED_SIZE * config.MAX_EMBED_COUNT + config.MAX_MSG_SIZE + config.MAX_WS_MSG_SIZE_MARGIN), ssl=context, process_request=self.getAuth))
                 logging.debug("[WS] wss://%s:%i", addr, config.WSS_PORT)
-            servers.append(serve(self.wsHandler, addr, config.WS_PORT, max_size=(25*1024*1024 * 11), process_request=self.getAuth))
+            servers.append(serve(self.wsHandler, addr, config.WS_PORT, max_size=(config.MAX_EMBED_SIZE * config.MAX_EMBED_COUNT + config.MAX_MSG_SIZE + config.MAX_WS_MSG_SIZE_MARGIN), process_request=self.getAuth))
             logging.debug("[WS] ws://%s:%i", addr, config.WS_PORT)
 
         logging.info("[WS] Websockets running")
