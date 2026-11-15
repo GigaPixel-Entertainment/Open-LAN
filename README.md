@@ -1,4 +1,3 @@
-# 
 [![Website: GigaPixel](https://img.shields.io/badge/website-gigapixel.cc-3f7f24)](https://sites.google.com/view/gigapixel-/our-projects/websites/open-lan)
 
 # GPE-Open-LAN
@@ -8,7 +7,7 @@ Open-LAN is an open-source, LAN messaging system by GigaPixel Entertainment.
 We published the code here on GitHub so everyone can set up LAN messaging systems, at their organization or home.
 # Setup Instructions
 ____________________
-coming soon
+Instructions available **[here](https://docs.google.com/presentation/d/1_w-_CVvN0bBxDVL18yz9KAQpsrE4qComO1TxIg-ZQu8/edit?usp=sharing)**
 # Usage
 _______
 1. Open-LAN is somewhat similar to Discord both in features and UI, being that the server is self-hosted by your organization.
