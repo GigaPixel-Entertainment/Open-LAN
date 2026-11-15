@@ -1,3 +1,4 @@
+[![Website: GigaPixel Entertainment | Open-LAN ](https://img.shields.io/badge/website)](https://gigapixel.cc/our-projects/websites/open-lan)
 # GPE-Open-LAN
 ______________
 Open-LAN is an open-source, LAN messaging system by GigaPixel Entertainment.
@@ -18,4 +19,3 @@ To use Open-LAN, type in your network IP address, and log in to your account to 
 
 # More Stuff
 ____________
-More programs and projects at https://sites.google.com/view/gigapixel-/home | https://github.com/GigaPixel-Entertainment?tab=repositories | https://github.com/GigaPixel-Entertainment?tab=projects
