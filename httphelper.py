@@ -6,6 +6,7 @@
 from http.server import BaseHTTPRequestHandler
 from http.client import responses
 from io import BytesIO
+import minify_html
 import mimetypes
 import logging
 import pathlib
@@ -143,7 +144,7 @@ def formatHttpRange(fileContents: bytes, rangeStr: str) -> bytes | None:
         "Content-Range": f"bytes {contentRange}/{fullFileLen}"
     }).encode("utf-8") + b"\r\n" + fileContents
 
-def encodeFile(fileContents: bytes, encoding: str | None) -> bytes:
+def encodeFile(fileContents: bytes, encoding: str | None, fileType: str) -> bytes:
     if encoding is None:
         return fileContents
 
@@ -153,19 +154,22 @@ def encodeFile(fileContents: bytes, encoding: str | None) -> bytes:
         if cached is not None:
             return cached
 
+    minifiedFileContents: bytes = fileContents
+    if fileType == "text/html" or fileType == "text/css": # Dont do js cuz it breaks integrity checks (fix btw)
+        minifiedFileContents = minify_html.minify(fileContents.decode("utf-8"), allow_noncompliant_unquoted_attribute_values=True, allow_optimal_entities=True, allow_removing_spaces_between_attributes=True, minify_css=True, minify_js=True, minify_doctype=True, remove_bangs=True, remove_processing_instructions=True).encode("utf-8")
+
     encoded = None
     if encoding == "zstd":
-        encoded = zstandard.compress(fileContents, level=config.ZSTD_COMPRESSION_LEVEL)
+        encoded = zstandard.compress(minifiedFileContents, level=config.ZSTD_COMPRESSION_LEVEL)
     elif encoding == "br":
-        encoded = brotli.compress(fileContents, quality=config.BROTLI_COMPRESSION_LEVEL)
+        encoded = brotli.compress(minifiedFileContents, quality=config.BROTLI_COMPRESSION_LEVEL)
     elif encoding == "gzip":
-        encoded = gzip.compress(fileContents, compresslevel=config.GZIP_COMPRESSION_LEVEL)
+        encoded = gzip.compress(minifiedFileContents, compresslevel=config.GZIP_COMPRESSION_LEVEL)
     else:
         logging.warning("[MAIN] Unknown encoding %s!", encoding)
-        encoded = fileContents
+        encoded = minifiedFileContents
 
-    if encoded != fileContents:
-        ENCODED_CACHE[(fileContents, encoding)] = encoded
+    ENCODED_CACHE[(fileContents, encoding)] = encoded
 
     return encoded
 
@@ -252,7 +256,7 @@ def formatHttpResponse(parsed: HTTPRequestParser | None, filePath: pathlib.Path,
         elif "gzip" in acceptEncoding:
             encoding = "gzip"
 
-        fileContents = encodeFile(fileContents, encoding)
+        fileContents = encodeFile(fileContents, encoding, mime)
 
     header = {"Content-Type": mime, "Content-Length": len(fileContents), "Accept-Ranges": "bytes", "Connection": "close"}
 
@@ -268,7 +272,7 @@ def isSafePath(path: pathlib.Path) -> bool:
         if privDir.resolve() in reqPath.parents or privDir.resolve() == reqPath:
             return False
 
-    if config.CWD.resolve() in reqPath.parents:
+    if config.WEB_DIR.resolve() in reqPath.parents:
         return True
 
     return False

@@ -99,7 +99,6 @@
             </div>
         </div>
         <script src="JS/stop.js" integrity="sha256-a+ZB2GHuRp9853Ln46hr2XVR2gsPQuhLVyRUYwP74bs= sha384-X41PwsRzv3SM4XanAxzbbor/zr+crPiPZuyg0QipffwTNs9jfvhDWlVWn7Jxfe6C sha512-eqHiOJE49hL0TarKD7T3n3cFtozIav3JYzSpsivCk4BqrLkz/bZwDGQeS4z6Fw19b0r9vhUP/Ck6RyOV+kvnww=="></script>
-
         <script>
             const pwdEntry = document.getElementById("password")
             const showPwdImg = document.getElementById("showPwdImg")
@@ -219,7 +218,7 @@
             }
 
             async function serverKeyRecieved(serverKey) {
-                const serverPubBytes = hexToBytes(serverKey);
+                const serverPubBytes = Uint8Array.fromBase64(serverKey);
                 const serverPublicKey = await crypto.subtle.importKey(
                     "raw",
                     serverPubBytes,
@@ -257,14 +256,14 @@
                 );
 
                 return {
-                    iv: bytesToHex(iv),
-                    ciphertext: bytesToHex(new Uint8Array(ciphertext))
+                    iv: iv.toBase64(),
+                    ciphertext: (new Uint8Array(ciphertext)).toBase64()
                 };
             }
 
-            async function decryptAES(ivHex, ciphertextHex) {
-                const iv = hexToBytes(ivHex);
-                const ciphertext = hexToBytes(ciphertextHex);
+            async function decryptAES(ivB64, ciphertextB64) {
+                const iv = Uint8Array.fromBase64(ivB64);
+                const ciphertext = Uint8Array.fromBase64(ciphertextB64);
 
                 const decryptedBuffer = await window.crypto.subtle.decrypt(
                     { name: "AES-GCM", iv: iv }, sharedSecretKey, ciphertext
@@ -290,7 +289,7 @@
                         const ws = new WebSocket(wsURL);
 
                         ws.onopen = (ev) => {
-                            ws.send(JSON.stringify({"type":"encrypt-key-xch", "publicKey": bytesToHex(pubBytes)}))
+                            ws.send(JSON.stringify({"type":"encrypt-key-xch", "publicKey": pubBytes.toBase64()}))
                         }
 
                         ws.onmessage = (event) => {

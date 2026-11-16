@@ -471,6 +471,17 @@ How's your day?
             <button id="banListUnban" class="rClickMenuOption font white">unban</button>
         </div>
 
+        <div id="audioDropdown" class="rClickMenu">
+            <img src="Media/knob.png" id="audioDropdownKnob">
+            <input type="number" id="audioDropdownVolume" class="font white" min="0" max="100" step="5">
+        </div>
+
+        <div id="audioBoostDropdown" class="rClickMenu">
+            <button id="audioBoostDropdownNorm" class="rClickMenuOption font white">Regular</button>
+            <button id="audioBoostDropdownBoost" class="rClickMenuOption font white">Boosted</button>
+            <button id="audioBoostDropdownOhNo" class="rClickMenuOption font white">I paid for the whole speaker, I'm using the whole speaker</button>
+        </div>
+
         <div id="flashbang"></div>
     </body>
     <footer>
@@ -480,9 +491,16 @@ How's your day?
     <script src="JS/markdown-it.umd.min.js" integrity="sha256-OR8qpjjnXmx4WdClxWUO8JVnIqRZmPF+Bbg7xlV3jh4= sha384-ARStLecQmtLYjBgfD3+w+irhiSoLTnFk/ne6c0gRWQKQtC9791ZLMQ9D3OaBISt3 sha512-laLRpIWeZO46pTZ9+U5bg8LSdhEPFDU8oiv+3WfgLZH/3L4v4VHHyWLbg7XQ55B4xQnoSsLQ0iW/qiiLAti0IQ=="></script>
     <script src="JS/highlight.min.js" integrity="sha256-dj6XmVVH9EIMLj4NTgSztjtZjHNniE5WVg7d2v2UDuY= sha384-UczO6qs7rVEa0ARVDDiI6CrpCtZ6ac6SDe9kxmdgkfXqS3me5e5WhyA8Kvj4ESTJ sha512-WM+AnCK1srKMQjGgK2zWXQCifgdHpub0OhjSO1FGh6wtt1LvNzIH3C75fLGQlH0RrP2RubnMp7f2tT7e1XxKvA=="></script>
     <script src="JS/purify.js" integrity="sha256-zTeJj5eCrfVIIMQTGRtWkYA/DxN8eZ1u3P04UjtMLDE= sha384-P0JNneQf81HOl9VwNXK76cQ9VMD6Nfsnepxb0cCOg8+UzEdzgPHAPV4wVQrvYQSx sha512-2wT0W6vojz3cJuLoa/DxrPVQRinkfRjFWMWIDK4NghTqObEhpem1nEkeK0d9ZE+/hyvfMNuJZlfxM4LsRgeoSA=="></script>
+    <script src="JS/jsmediatags.min.js"></script>
     <script>
         // constants
         var userInfoCache = []
+
+        var maxEmbedCount = 10
+        var maxEmbedSize = 25*1024*1024
+        var maxIconSize = 10*1024*1024
+        var maxPfpSize = 10*1024*1024
+        var maxMsgSize = 4000
 
         const pageIcon = document.getElementById("pageIcon")
         const pageTitle = document.getElementById("pageTitle")
@@ -750,6 +768,15 @@ How's your day?
         const banListShowProfile = document.getElementById("banListShowProfile")
         const banListUnban = document.getElementById("banListUnban")
 
+        const audioDropdown = document.getElementById("audioDropdown")
+        const audioDropdownKnob = document.getElementById("audioDropdownKnob")
+        const audioDropdownVolume = document.getElementById("audioDropdownVolume")
+
+        const audioBoostDropdown = document.getElementById("audioBoostDropdown")
+        const audioBoostDropdownNorm = document.getElementById("audioBoostDropdownNorm")
+        const audioBoostDropdownBoost = document.getElementById("audioBoostDropdownBoost")
+        const audioBoostDropdownOhNo = document.getElementById("audioBoostDropdownOhNo")
+
         const mdit = markdownit({
             linkify: true,
             breaks: true
@@ -810,6 +837,8 @@ How's your day?
             "php": "application/x-httpd-php",
             "ppt": "application/vnd.ms-powerpoint",
             "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            "py": "text/x-python",
+            "pyw": "text/x-python",
             "rar": "application/vnd.rar",
             "rtf": "application/rtf",
             "sh": "application/x-sh",
@@ -1728,8 +1757,13 @@ How's your day?
             if (files && files.length > 0) {
                 const file = files[0]
 
-                if (file.size > 10*1024*1024) {
-                    openPopup("Woah there!", "That file exceeded the max size of 10MB!")
+                if (!getMimeType(file.name.split(".").pop()).includes("image")) {
+                    openPopup("Woah there!", "Please upload a valid image file!")
+                    return
+                }
+
+                if (file.size > maxPfpSize) {
+                    openPopup("Woah there!", "That file exceeded the max size of " + Math.round(maxPfpSize/1024/1024) + "MB!")
                     return
                 }
 
@@ -1970,62 +2004,31 @@ How's your day?
 
                 const uInfo = await reqUsrInfo(uid)
                 const reqDiv = document.createElement("div")
-                reqDiv.style.width = "100%"
-                reqDiv.style.height = "60px"
-                reqDiv.style.overflow = "hidden"
-                reqDiv.style.display = "flex"
-                reqDiv.style.flexDirection = "row"
-                reqDiv.style.marginBottom = "1em"
+                reqDiv.classList = "friendReqDiv"
 
                 const pfpDiv = document.createElement("div")
-                pfpDiv.style.width = "56px"
-                pfpDiv.style.height = "56px"
-                pfpDiv.style.flexShrink = "0"
+                pfpDiv.classList = "friendReqPfpDiv"
 
                 const pfpImg = document.createElement("img")
-                pfpImg.style.width = "100%"
-                pfpImg.style.height = "100%"
-                pfpImg.style.borderRadius = "99999px"
-                pfpImg.style.border = "2px solid var(--acc4)"
+                pfpImg.classList = "friendReqPfpImg"
                 pfpImg.src = uInfo["pfp"]
 
                 const infoDiv = document.createElement("div")
-                infoDiv.style.width = "70%"
-                infoDiv.style.height = "100%"
-                infoDiv.style.marginLeft = "1em"
+                infoDiv.classList = "friendReqInfoDiv"
 
                 const displayname = document.createElement("h1")
-                displayname.style.width = "100%"
-                displayname.style.height = "75%"
-                displayname.style.margin = "0"
-                displayname.style.background = "linear-gradient(to right, white 0%, white 80%, transparent 100%)"
-                displayname.style.backgroundClip = "text"
-                displayname.style.color = "transparent"
-                displayname.style.whiteSpace = "nowrap"
-                displayname.classList = "font"
+                displayname.classList = "friendReqDisplayName font"
                 displayname.textContent = uInfo["displayname"]
 
                 const extraInfo = document.createElement("p")
-                extraInfo.style.width = "100%"
-                extraInfo.style.height = "25%"
-                extraInfo.style.margin = "0"
-                extraInfo.style.whiteSpace = "nowrap"
-                extraInfo.classList = "font white"
+                extraInfo.classList = "font white friendReqExtraInfo"
                 extraInfo.textContent = uInfo["username"] + " | ID: " + uInfo["UID"]
 
                 const sep = document.createElement("div")
-                sep.style.width = "4px"
-                sep.style.height = "100%"
-                sep.style.background = "var(--acc4)"
-                sep.style.borderRadius = "9999px"
+                sep.classList = "friendReqSep"
 
                 const actionDiv = document.createElement("div")
-                actionDiv.style.width = "30%"
-                actionDiv.style.height = "100%"
-                actionDiv.style.display = "flex"
-                actionDiv.style.flexDirection = "row"
-                actionDiv.style.alignItems = "center"
-                actionDiv.style.flexShrink = "0"
+                actionDiv.classList = "friendReqActionDiv"
 
                 pfpDiv.appendChild(pfpImg)
 
@@ -2039,14 +2042,8 @@ How's your day?
 
                 if (req["type"] == "incoming") {
                     const checkBtn = document.createElement("button")
-                    checkBtn.style.width = "50%"
-                    checkBtn.style.height = "100%"
-                    checkBtn.style.background = "none"
-                    checkBtn.style.fontSize = "2em"
                     checkBtn.style.color = "lime"
-                    checkBtn.style.cursor = "pointer"
-                    checkBtn.style.border = "none"
-                    checkBtn.classList = "font"
+                    checkBtn.classList = "font friendReqSmallBtn"
                     checkBtn.textContent = "✓"
 
                     const sep = document.createElement("div")
@@ -2056,14 +2053,8 @@ How's your day?
                     sep.style.borderRadius = "9999px"
 
                     const xBtn = document.createElement("button")
-                    xBtn.style.width = "50%"
-                    xBtn.style.height = "100%"
-                    xBtn.style.background = "none"
-                    xBtn.style.fontSize = "2em"
                     xBtn.style.color = "red"
-                    xBtn.style.cursor = "pointer"
-                    xBtn.style.border = "none"
-                    xBtn.classList = "font"
+                    xBtn.classList = "font friendReqSmallBtn"
                     xBtn.textContent = "X"
 
                     checkBtn.onclick = () => {
@@ -2082,13 +2073,8 @@ How's your day?
                 } else {
                     const xBtn = document.createElement("button")
                     xBtn.style.width = "100%"
-                    xBtn.style.height = "100%"
-                    xBtn.style.background = "none"
-                    xBtn.style.fontSize = "2em"
                     xBtn.style.color = "red"
-                    xBtn.style.cursor = "pointer"
-                    xBtn.style.border = "none"
-                    xBtn.classList = "font"
+                    xBtn.classList = "font friendReqBigBtn"
                     xBtn.textContent = "X"
 
                     xBtn.onclick = () => {
@@ -2129,6 +2115,7 @@ How's your day?
             }
 
             messageQueue = []
+            msgCache = {}
 
             currChat = newCID
             changedChat = true
@@ -2336,13 +2323,7 @@ How's your day?
                     const categoryHidden = hiddenCategories.includes(currServer + "_" + category["categoryID"])
 
                     const categoryName = document.createElement("h2")
-                    categoryName.style.width = "90%"
-                    categoryName.style.margin = "0"
-                    categoryName.style.background = "linear-gradient(to right, lightgray 0%, lightgray 80%, transparent 100%)"
-                    categoryName.style.backgroundClip = "text"
-                    categoryName.style.color = "transparent"
-                    categoryName.style.whiteSpace = "pre"
-                    categoryName.classList = "font"
+                    categoryName.classList = "font slistCategoryName"
                     categoryName.textContent = (categoryHidden ? " ↓ " : " ↑ ") + category["name"]
                     categoryName.title = category["name"]
 
@@ -2492,13 +2473,7 @@ How's your day?
                         readIndicator.style.visibility = isRead ? "hidden" : "visible"
 
                         const channelName = document.createElement("h2")
-                        channelName.style.width = "calc(100% - 60px)"
-                        channelName.style.margin = "0"
-                        channelName.style.background = "linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%)"
-                        channelName.style.backgroundClip = "text"
-                        channelName.style.color = "transparent"
-                        channelName.style.whiteSpace = "nowrap"
-                        channelName.classList = "font"
+                        channelName.classList = "font slistChannelName"
                         channelName.textContent = chat["name"]
                         channelName.title = chat["name"]
 
@@ -2601,9 +2576,6 @@ How's your day?
 
                 const chatName = document.createElement("h2")
                 chatName.textContent = chat["name"]
-                chatName.style.width = "90%"
-                chatName.style.height = "60%"
-                chatName.style.margin = "0"
 
                 let textBgCol = "userInactive"
                 if (chat["type"] == "dm") {
@@ -2622,21 +2594,11 @@ How's your day?
                     }
                 }
 
-                chatName.style.background = "linear-gradient(to right, var(--" + textBgCol + ") 0%, var(--" + textBgCol + ") 80%, transparent 100%)"
-                chatName.style.backgroundClip = "text"
-                chatName.style.color = "transparent"
-                chatName.style.whiteSpace = "nowrap"
-                chatName.classList = "font"
+                chatName.style.color = "var(--" + textBgCol + ")"
+                chatName.classList = "font slistChatName"
 
                 const chatExtInfo = document.createElement("p")
-                chatExtInfo.style.width = "90%"
-                chatExtInfo.style.height = "40%"
-                chatExtInfo.style.margin = "0"
-                chatExtInfo.style.background = "linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%)"
-                chatExtInfo.style.backgroundClip = "text"
-                chatExtInfo.style.color = "transparent"
-                chatExtInfo.style.whiteSpace = "nowrap"
-                chatExtInfo.classList = "font"
+                chatExtInfo.classList = "font slistChatExtInfo"
 
                 const numUnreadMsgs = chat["lastMsg"]["MSGID"] - readMsgs[chatID.toString()]
                 const isRead = numUnreadMsgs <= 0 || isNaN(numUnreadMsgs) || (currChat == chatID && currPage == 0 && chatDiv.scrollTop + chatDiv.offsetHeight >= chatDiv.scrollHeight - 8)
@@ -3152,6 +3114,8 @@ How's your day?
             return highlightedText
         }
 
+        const audioCache = {}
+        let selectedAudio = null
         async function evalEmbeds(message, msgP) {
             const embeds = document.createElement("div")
             embeds.style.width = "100%"
@@ -3204,16 +3168,210 @@ How's your day?
                     embeds.appendChild(img)
                 } else if (embedType.startsWith("audio/")) {
                     const audio = document.createElement("audio")
-                    audio.style.height = "4em"
-                    audio.style.width = "25vw"
-                    audio.style.border = "none"
-                    audio.style.borderRadius = "8px"
-                    audio.style.marginRight = "1em"
-                    audio.controls = "true"
-                    audio.title = filename
+                    audio.style.display = "none"
                     audio.src = embed
 
-                    embeds.appendChild(audio)
+                    const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+                    const audioSource = audioCtx.createMediaElementSource(audio)
+                    const gainNode = audioCtx.createGain()
+                    audioSource.connect(gainNode)
+                    gainNode.connect(audioCtx.destination)
+                    gainNode.gain.value = 1
+
+                    const audioWrapper = document.createElement("div")
+                    audioWrapper.classList = "audioEmbed"
+
+                    const audioPlayer = document.createElement("div")
+                    audioPlayer.classList = "audioEmbedPlayer"
+
+                    const audioIcon = document.createElement("img")
+                    audioIcon.classList = "audioEmbedIcon"
+                    audioIcon.src = "Media/audioCover.png"
+
+                    const audioControls = document.createElement("div")
+                    audioControls.classList = "audioEmbedControls"
+
+                    const audioToBegin = document.createElement("div")
+                    audioToBegin.textContent = "◀"
+
+                    audioToBegin.addEventListener("click", () => {
+                        audio.currentTime = 0
+                    })
+
+                    const audioRewind = document.createElement("div")
+                    audioRewind.textContent = "⏪︎"
+
+                    audioRewind.addEventListener("click", () => {
+                        audio.currentTime = Math.max(audio.currentTime - 10, 0)
+                    })
+
+                    const audioPlayPause = document.createElement("div")
+                    audioPlayPause.classList = "audioEmbedPlayPause"
+                    audioPlayPause.textContent = "▶"
+
+                    let playing = false
+
+                    audioPlayPause.addEventListener("click", () => {
+                        if (playing) {
+                            audio.pause()
+                            audioPlayPause.textContent = "▶"
+                        } else {
+                            audio.play()
+                            audioPlayPause.textContent = "⏸"
+                        }
+
+                        playing = !playing
+                    })
+
+                    const audioFastForward = document.createElement("div")
+                    audioFastForward.textContent = "⏩︎"
+
+                    audioFastForward.addEventListener("click", () => {
+                        audio.currentTime = Math.min(audio.currentTime + 10, audio.duration)
+                    })
+
+                    const audioVolume = document.createElement("div")
+                    audioVolume.classList = "audioEmbedVolume"
+                    audioVolume.textContent = "🕪"
+
+                    audioVolume.addEventListener("click", (e) => {
+                        selectedAudio = audio
+                        audioDropdownVolume.value = audio.volume * 100
+                        audioDropdownKnob.style.rotate = audioDropdownVolume.value/100*180 + "deg"
+                        moveRClickMenuToCursorPos(audioDropdown, e)
+                        audioDropdown.style.visibility = "visible"
+                        audioBoostDropdown.style.visibility = ""
+                        e.stopPropagation()
+                    })
+
+                    const audioControlsBtns = document.createElement("div")
+                    audioControlsBtns.classList = "audioEmbedControlsBtns"
+
+                    const audioControlTimeline = document.createElement("input")
+                    audioControlTimeline.classList = "audioEmbedControlTimeline"
+                    audioControlTimeline.type = "range"
+                    audioControlTimeline.value = 0
+                    audioControlTimeline.step = "any"
+
+                    audio.addEventListener("durationchange", () => {
+                        audioControlTimeline.max = audio.duration
+                    })
+                    audioControlTimeline.max = audio.duration
+
+                    audio.addEventListener("timeupdate", () => {
+                        audioControlTimeline.value = audio.currentTime
+                    })
+
+                    audio.addEventListener("ended", () => {
+                        playing = false
+                        audioPlayPause.textContent = "▶"
+                    })
+
+                    audioControlTimeline.addEventListener("input", () => {
+                        audio.currentTime = audioControlTimeline.value
+                    })
+
+                    const audioTitle = document.createElement("a")
+                    audioTitle.classList = "font audioEmbedTitle"
+                    audioTitle.textContent = filename
+                    audioTitle.download = filename
+                    audioTitle.href = embed
+
+                    const audioArtistSize = document.createElement("i")
+                    audioArtistSize.classList = "font audioEmbedArtistSize"
+
+                    const audioBoost = document.createElement("div")
+                    audioBoost.classList = "audioEmbedBoost"
+
+                    audioBoost.addEventListener("click", (e) => {
+                        selectedAudio = audio
+                        moveRClickMenuToCursorPos(audioBoostDropdown, e)
+                        audioBoostDropdown.style.visibility = "visible"
+                        audioDropdown.style.visibility = ""
+                        e.stopPropagation()
+                    })
+
+                    audioBoostDropdownNorm.addEventListener("click", () => {
+                        if (selectedAudio == audio) {
+                            gainNode.gain.value = 1
+                            audioBoost.style.backgroundColor = "var(--userActive)"
+                            audioBoostDropdown.style.visibility = ""
+                            selectedAudio = null
+                        }
+                    })
+
+                    audioBoostDropdownBoost.addEventListener("click", () => {
+                        if (selectedAudio == audio) {
+                            gainNode.gain.value = 2
+                            audioBoost.style.backgroundColor = "var(--userIdle)"
+                            audioBoostDropdown.style.visibility = ""
+                            selectedAudio = null
+                        }
+                    })
+
+                    audioBoostDropdownOhNo.addEventListener("click", () => {
+                        if (selectedAudio == audio) {
+                            audioBoostDropdown.style.visibility = ""
+                            selectedAudio = null
+
+                            openConfirmPopup("Are you sure?", "Are you sure you want to use your ENTIRE speaker?").then(r => {
+                                if (r) {
+                                    gainNode.value = 100
+                                    audioBoost.style.backgroundColor = "var(--userDND)"
+                                }
+                            })
+                        }
+                    })
+
+                    function onAudioInfo(info) {
+                        const sizeKB = info.size / 1024
+                        if (sizeKB < 1024) {
+                            audioArtistSize.textContent = Math.round(sizeKB * 100) / 100 + "KB"
+                        } else {
+                            audioArtistSize.textContent = Math.round(sizeKB / 1024 * 100) / 100 + "MB"
+                        }
+
+                        if (info.cover) {
+                            audioIcon.src = info.cover
+                        }
+
+                        if (info.artist) {
+                            audioArtistSize.textContent = info.artist + " - " + audioArtistSize.textContent
+                        }
+                    }
+
+                    if (Object.hasOwn(audioCache, embed)) {
+                        onAudioInfo(audioCache[embed])
+                    } else {
+                        request(JSON.stringify({"type": "reqAudioInfo", "embed": embed})).then(r => {
+                            if (r["type"] == "reqAudioInfoSuccess") {
+                                formatted = {
+                                    "size": r["size"],
+                                    "artist": r["artist"],
+                                    "cover": r["cover"]
+                                }
+
+                                audioCache[embed] = formatted
+                                onAudioInfo(formatted)
+                            }
+                        })
+                    }
+
+                    audioControlsBtns.appendChild(audioToBegin)
+                    audioControlsBtns.appendChild(audioRewind)
+                    audioControlsBtns.appendChild(audioPlayPause)
+                    audioControlsBtns.appendChild(audioFastForward)
+                    audioControlsBtns.appendChild(audioVolume)
+                    audioControls.appendChild(audioControlsBtns)
+                    audioControls.appendChild(audioControlTimeline)
+                    audioPlayer.appendChild(audioIcon)
+                    audioPlayer.appendChild(audioControls)
+                    audioWrapper.appendChild(audioPlayer)
+                    audioWrapper.appendChild(audioTitle)
+                    audioWrapper.appendChild(audioArtistSize)
+                    audioWrapper.appendChild(audio)
+                    audioWrapper.appendChild(audioBoost)
+                    embeds.appendChild(audioWrapper)
                 } else if (embedType.startsWith("video/")) {
                     const video = document.createElement("video")
                     video.style.height = "9em"
@@ -3364,17 +3522,9 @@ How's your day?
                     }
 
                     const title = document.createElement("a")
-                    title.style.width = "calc(100% - 5em - 1em)"
-                    title.style.padding = "0.5em"
-                    title.style.margin = "0"
-                    title.style.fontSize = "1.25em"
-                    title.style.whiteSpace = "pre"
-                    title.style.background = "linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%)"
-                    title.style.backgroundClip = "text"
-                    title.style.color = "transparent"
                     title.href = embed
                     title.download = filename
-                    title.classList = "font"
+                    title.classList = "font embedGenericTitle"
                     title.textContent = filename
 
                     generic.appendChild(icon)
@@ -3385,6 +3535,28 @@ How's your day?
 
             msgP.appendChild(embeds)
         }
+
+        audioDropdownVolume.addEventListener("input", () => {
+            audioDropdownKnob.style.rotate = audioDropdownVolume.value / 100 * 180 + "deg"
+
+            if (selectedAudio) {
+                selectedAudio.volume = audioDropdownVolume.value / 100
+            }
+        })
+
+        audioDropdown.addEventListener("click", (e) => {
+            e.stopPropagation()
+        })
+
+        audioBoostDropdown.addEventListener("click", (e) => {
+            e.stopPropagation()
+        })
+
+        document.addEventListener("click", () => {
+            audioDropdown.style.visibility = ""
+            audioBoostDropdown.style.visibility = ""
+            selectedAudio = null
+        })
 
         async function genMsg(message, isInTransit) {
             if (message["MSGID"] == editingMsgId) {
@@ -3619,44 +3791,18 @@ How's your day?
                 messageDiv.style.paddingTop = "2em"
 
                 const replyToHead = document.createElement("div")
-                replyToHead.style.position = "absolute"
-                replyToHead.style.width = "calc(100%-6em)"
-                replyToHead.style.paddingLeft = "3em"
-                replyToHead.style.paddingRight = "1em"
-                replyToHead.style.height = "1em"
-                replyToHead.style.transform = "translateY(-125%)"
-                replyToHead.style.display = "flex"
-                replyToHead.style.flexDirection = "row"
+                replyToHead.classList = "replyToHead"
 
                 const replyPfp = document.createElement("img")
-                replyPfp.style.aspectRatio = 1
-                replyPfp.style.height = "100%"
-                replyPfp.style.borderRadius = "9999px"
+                replyPfp.classList = "replyToPfp"
                 replyPfp.src = replyUsr["pfp"]
 
                 const replyDn = document.createElement("h1")
-                replyDn.classList = "font"
-                replyDn.style.color = "lightgray"
-                replyDn.style.fontSize = "1em"
-                replyDn.style.padding = "0"
-                replyDn.style.paddingLeft = ".5em"
-                replyDn.style.margin = "0"
-                replyDn.style.whiteSpace = "pre"
-                replyDn.style.cursor = "pointer"
+                replyDn.classList = "font replyToDn"
                 replyDn.textContent = replyUsr["displayname"]
 
                 const replyCont = document.createElement("p")
-                replyCont.classList = "font"
-                replyCont.style.color = "transparent"
-                replyCont.style.width = "50vw"
-                replyCont.style.fontSize = "1em"
-                replyCont.style.padding = "0"
-                replyCont.style.paddingLeft = "1em"
-                replyCont.style.margin = "0"
-                replyCont.style.whiteSpace = "nowrap"
-                replyCont.style.background = "linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%)"
-                replyCont.style.backgroundClip = "text"
-                replyCont.style.cursor = "pointer"
+                replyCont.classList = "font replyToContent"
                 replyCont.textContent = replyTarget["content"]
 
                 replyToHead.appendChild(replyPfp)
@@ -3973,60 +4119,25 @@ How's your day?
                     }
 
                     const inviteFrame = document.createElement("div")
-                    inviteFrame.style.width = "25vw"
-                    inviteFrame.style.height = "9vh"
-                    inviteFrame.style.borderRadius = "8px"
-                    inviteFrame.style.background = "var(--acc5)"
-                    inviteFrame.style.display = "flex"
-                    inviteFrame.style.flexDirection = "row"
-                    inviteFrame.style.alignItems = "center"
-                    inviteFrame.style.overflow = "hidden"
+                    inviteFrame.classList = "inviteFrame"
 
                     const serverIcon = document.createElement("img")
-                    serverIcon.style.height = "calc(100% - 16px)"
-                    serverIcon.style.margin = "6px"
-                    serverIcon.style.border = "2px solid var(--acc4)"
-                    serverIcon.style.aspectRatio = "1"
-                    serverIcon.style.borderRadius = "8px"
+                    serverIcon.classList = "inviteFrameServerIcon"
                     serverIcon.src = serverMeta["icon"]
 
                     const serverInfo = document.createElement("div")
-                    serverInfo.style.width = "calc(100% - 9vh - 16px)"
-                    serverInfo.style.height = "calc(100% - 12px)"
-                    serverInfo.style.margin = "6px"
-                    serverInfo.style.display = "flex"
-                    serverInfo.style.containerType = "size"
-                    serverInfo.style.flexDirection = "column"
+                    serverInfo.classList = "inviteFrameServerInfo"
 
                     const inviteTitle = document.createElement("h2")
-                    inviteTitle.style.width = "100%"
-                    inviteTitle.style.height = "45%"
-                    inviteTitle.style.margin = "0"
-                    inviteTitle.style.whiteSpace = "pre"
-                    inviteTitle.style.fontSize = "35cqh"
-                    inviteTitle.style.background = "linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%)"
-                    inviteTitle.style.backgroundClip = "text"
-                    inviteTitle.style.color = "transparent"
-                    inviteTitle.style.lineHeight = "1"
-                    inviteTitle.classList = "font"
+                    inviteTitle.classList = "font inviteFrameInviteTitle"
                     inviteTitle.textContent = "You've been invited!"
                     inviteTitle.title = "You've been invited!"
 
                     const inviteSubtext = document.createElement("div")
-                    inviteSubtext.style.width = "100%"
-                    inviteSubtext.style.height = "55%"
-                    inviteSubtext.style.margin = "0"
-                    inviteSubtext.style.display = "flex"
-                    inviteSubtext.style.flexDirection = "row"
-                    inviteSubtext.style.alignItems = "center"
+                    inviteSubtext.classList = "inviteFrameInviteSubtext"
 
                     const subtext = document.createElement("p")
-                    subtext.style.width = "75%"
-                    subtext.style.height = "100%"
-                    subtext.style.color = "var(--placeholder)"
-                    subtext.style.margin = "0"
-                    subtext.style.fontSize = ".8em"
-                    subtext.classList = "font"
+                    subtext.classList = "font inviteFrameSubtext"
                     subtext.textContent = "You've been invited to join " + serverMeta["name"]
                     subtext.title = "You've been invited to join " + serverMeta["name"]
 
@@ -4358,20 +4469,12 @@ How's your day?
                 userDiv.classList = "userDiv"
 
                 const pfp = document.createElement("img")
-                pfp.style.height = "calc(100% - 4px)"
-                pfp.style.aspectRatio = "1"
-                pfp.style.borderRadius = "9999px"
-                pfp.style.border = "2px solid var(--acc4)"
-                pfp.style.marginRight = ".5em"
+                pfp.classList = "userDivPfp"
                 pfp.src = usrInfo["pfp"]
 
                 if (currOwner == uid) {
                     const crown = document.createElement("img")
-                    crown.style.position = "absolute"
-                    crown.style.left = "10%"
-                    crown.style.top = "60%"
-                    crown.style.height = "50%"
-                    crown.style.transform = "translateX(-50%)"
+                    crown.classList = "userDivCrown"
                     crown.src = Math.random() < 0.01 ? "Media/ribbon2.png" : "Media/ribbon.png"
 
                     userDiv.style.background = "var(--highlighted-transparent)"
@@ -4381,18 +4484,11 @@ How's your day?
                 }
 
                 const displayname = document.createElement("p")
-                displayname.style.width = "calc(100% - 36px - .5em)"
-                displayname.style.padding = "0"
-                displayname.style.margin = "0"
-                displayname.style.fontSize = "1.25em"
-                displayname.style.whiteSpace = "pre"
 
                 let bgColVar = getUsrStatusVar(usrInfo["status"])
 
-                displayname.style.background = "linear-gradient(to right, var(--" + bgColVar + ") 0%, var(--" + bgColVar + ") 80%, transparent 100%)"
-                displayname.style.backgroundClip = "text"
-                displayname.style.color = "transparent"
-                displayname.classList = "font"
+                displayname.style.color = "var(--" + bgColVar + ")"
+                displayname.classList = "font userDivDisplayname"
                 displayname.textContent = usrInfo["displayname"]
 
                 userDiv.appendChild(pfp)
@@ -4488,31 +4584,19 @@ How's your day?
             if (currChatType == "gc") {
                 const userList2 = await createUserList(chat["Recipients"], currOwner)
                 const addUsr = document.createElement("button")
-                addUsr.style.width = "90%"
-                addUsr.style.marginLeft = "5%"
-                addUsr.style.fontSize = "1.5em"
                 addUsr.style.background = "var(--acc3)"
                 addUsr.style.border = "none"
-                addUsr.style.borderRadius = "0"
-                addUsr.style.marginTop = "1em"
-                addUsr.classList = "font white"
+                addUsr.classList = "font white memberListBtn"
                 addUsr.textContent = "add user"
-                addUsr.style.cursor = "pointer"
 
                 addUsr.addEventListener("click", openAddUser)
 
                 const leaveGc = document.createElement("button")
-                leaveGc.style.width = "90%"
-                leaveGc.style.marginLeft = "5%"
-                leaveGc.style.fontSize = "1.5em"
                 leaveGc.style.background = "none"
                 leaveGc.style.border = "2px solid var(--rose)"
-                leaveGc.style.borderRadius = "0"
-                leaveGc.style.marginTop = "1em"
                 leaveGc.style.color = "var(--rose)"
-                leaveGc.classList = "font"
+                leaveGc.classList = "font memberListBtn"
                 leaveGc.textContent = "leave gc"
-                leaveGc.style.cursor = "pointer"
 
                 leaveGc.addEventListener("click", () => {
                     openConfirmPopup("Leave GC?", "Are you sure you want to leave " + chatCache["Name"] + "?").then((r) => {
@@ -4565,6 +4649,11 @@ How's your day?
                 pro.classList = "font usrProfilePopupPro"
                 pro.textContent = usrInfo["pronouns"]
                 userListContent.appendChild(pro)
+
+                if (usrInfo["birthday"] != null || usrInfo["UID"] == currUID) {
+                    birthday = usrInfo["birthday"] * 1000
+                    pro.textContent += " 🞄 " + new Date(birthday).toLocaleDateString("en-US", {"timeZone": "UTC", "month": "2-digit", "day": "2-digit", "year": "numeric"})
+                }
 
                 const bio = document.createElement("textarea")
                 bio.placeholder = "[no bio]"
@@ -4859,40 +4948,18 @@ How's your day?
                 const usrInfo = searchRes[i]
 
                 const fDiv = document.createElement("div")
-                fDiv.style.width = "100%"
-                fDiv.style.height = "40px"
-                fDiv.style.margin = "0"
-                fDiv.style.marginTop = ".25em"
-                fDiv.style.marginBottom = ".25em"
-                fDiv.style.overflow = "hidden"
-                fDiv.style.display = "flex"
-                fDiv.style.flexDirection = "row"
-                fDiv.style.alignItems = "center"
+                fDiv.classList = "createGCFDiv"
 
                 const pfp = document.createElement("img")
-                pfp.style.height = "calc(100% - 4px)"
-                pfp.style.aspectRatio = "1"
-                pfp.style.borderRadius = "9999px"
-                pfp.style.border = "2px solid var(--acc4)"
-                pfp.style.marginRight = ".5em"
+                pfp.classList = "createGCPfp"
                 pfp.src = usrInfo["pfp"]
 
                 const dn = document.createElement("p")
-                dn.style.width = "calc(100% - 36px - 20px)"
-                dn.style.margin = "0"
-                dn.style.padding = "0"
-                dn.style.whiteSpace = "pre"
-                dn.style.textAlign = "left"
-                dn.style.overflow = "hidden"
-                dn.style.background = "linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%)"
-                dn.style.backgroundClip = "text"
-                dn.style.color = "transparent"
-                dn.classList = "font"
+                dn.classList = "font createGCdn"
                 dn.textContent = usrInfo["displayname"]
 
                 const check = document.createElement("input")
-                check.style.height = "50%"
-                check.style.aspectRatio = "1"
+                check.classList = "createGCCheck"
                 check.type = "checkbox"
                 check.checked = GCFriendsIncluded.includes(usrInfo["UID"])
 
@@ -5022,8 +5089,8 @@ How's your day?
             if (files && files.length == 1) {
                 const file = files[0]
 
-                if (file.size > 10*1024*1024) {
-                    openPopup("Woah there!", "That file exceeded the max size of 10MB!")
+                if (file.size > maxIconSize) {
+                    openPopup("Woah there!", "That file exceeded the max size of " + Math.round(maxIconSize/1024/1024) + "MB!")
                     return
                 }
 
@@ -5064,8 +5131,8 @@ How's your day?
             if (files && files.length == 1) {
                 const file = files[0]
 
-                if (file.size > 10*1024*1024) {
-                    openPopup("Woah there!", "That file exceeded the max size of 10MB!")
+                if (file.size > maxIconSize) {
+                    openPopup("Woah there!", "That file exceeded the max size of " + Math.round(maxIconSize/1024/1024) + "MB!")
                     return
                 }
 
@@ -5108,41 +5175,18 @@ How's your day?
                 const usrInfo = searchRes[i]
 
                 const fDiv = document.createElement("div")
-                fDiv.style.width = "100%"
-                fDiv.style.height = "60px"
-                fDiv.style.margin = "0"
-                fDiv.style.marginTop = ".25em"
-                fDiv.style.marginBottom = ".25em"
-                fDiv.style.overflow = "hidden"
-                fDiv.style.display = "flex"
-                fDiv.style.flexDirection = "row"
-                fDiv.style.alignItems = "center"
+                fDiv.classList = "addUsrFDiv"
 
                 const pfp = document.createElement("img")
-                pfp.style.height = "calc(100% - 4px)"
-                pfp.style.aspectRatio = "1"
-                pfp.style.borderRadius = "9999px"
-                pfp.style.border = "2px solid var(--acc4)"
-                pfp.style.marginRight = ".5em"
+                pfp.classList = "addUsrPfp"
                 pfp.src = usrInfo["pfp"]
 
                 const dn = document.createElement("p")
-                dn.style.width = "calc(100% - 56px - 30px)"
-                dn.style.margin = "0"
-                dn.style.padding = "0"
-                dn.style.whiteSpace = "pre"
-                dn.style.textAlign = "left"
-                dn.style.overflow = "hidden"
-                dn.style.background = "linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%)"
-                dn.style.backgroundClip = "text"
-                dn.style.color = "transparent"
-                dn.style.fontSize = "1.5em"
-                dn.classList = "font"
+                dn.classList = "font addUsrdn"
                 dn.textContent = usrInfo["displayname"]
 
                 const check = document.createElement("input")
-                check.style.height = "50%"
-                check.style.aspectRatio = "1"
+                check.classList = "addUsrCheck"
                 check.type = "checkbox"
                 check.checked = usersToAdd.includes(usrInfo["UID"]) || currChatRecipients.includes(usrInfo["UID"])
                 check.disabled = currChatRecipients.includes(usrInfo["UID"])
@@ -5180,6 +5224,12 @@ How's your day?
         }
 
         function openAddUser() {
+            if (currServer == -1) {
+                addUserAdd.value = "Add"
+            } else {
+                addUserAdd.value = "Invite"
+            }
+
             addUserSearch.value = ""
             usersToAdd.splice(0, usersToAdd.length)
             setAddUsrSearchResults()
@@ -5439,7 +5489,7 @@ How's your day?
             }
 
             async function serverKeyRecieved(serverKey) {
-                const serverPubBytes = hexToBytes(serverKey);
+                const serverPubBytes = Uint8Array.fromBase64(serverKey);
                 const serverPublicKey = await crypto.subtle.importKey(
                     "raw",
                     serverPubBytes,
@@ -5477,14 +5527,14 @@ How's your day?
                 );
 
                 return {
-                    iv: bytesToHex(iv),
-                    ciphertext: bytesToHex(new Uint8Array(ciphertext))
+                    iv: iv.toBase64(),
+                    ciphertext: (new Uint8Array(ciphertext)).toBase64()
                 };
             }
 
-            async function decryptAES(ivHex, ciphertextHex) {
-                const iv = hexToBytes(ivHex);
-                const ciphertext = hexToBytes(ciphertextHex);
+            async function decryptAES(ivB64, ciphertextB64) {
+                const iv = Uint8Array.fromBase64(ivB64);
+                const ciphertext = Uint8Array.fromBase64(ciphertextB64);
 
                 const decryptedBuffer = await window.crypto.subtle.decrypt(
                     { name: "AES-GCM", iv: iv }, sharedSecretKey, ciphertext
@@ -5502,6 +5552,10 @@ How's your day?
                 })
 
                 return await (new Response(stream.pipeThrough(new DecompressionStream("gzip")))).text()
+            }
+
+            async function fetchServerData() {
+                ws.send(JSON.stringify({"type": "reqServerInfo"}))
             }
 
             async function fetchSelfData() {
@@ -5549,6 +5603,7 @@ How's your day?
 
             async function load() {
                 loadingText.textContent = "Fetching data..."
+                await fetchServerData()
                 await fetchSelfData()
                 await fetchChatData()
                 await waitUntilLoadingDone()
@@ -5602,7 +5657,7 @@ How's your day?
                         ws = new WebSocket(wsURL);
 
                         ws.onopen = (ev) => {
-                            ws.send(JSON.stringify({"type":"encrypt-key-xch", "publicKey": bytesToHex(pubBytes)}))
+                            ws.send(JSON.stringify({"type":"encrypt-key-xch", "publicKey": pubBytes.toBase64()}))
                             loadingText.textContent = "Encrypting..."
                         }
 
@@ -5636,15 +5691,24 @@ How's your day?
                                             window.location.assign(protocol + "//" + domainURL + "/login.html?errT=Login%20Expired&errC=Your%20session%20has%20expired.%20Please%20try%20logging%20in%20again.")
                                         }
 
+                                        if (respBody["type"] == "reqServerInfoSuccess") {
+                                            maxEmbedCount = respBody["maxEmbedCount"]
+                                            maxEmbedSize = respBody["maxEmbedSize"]
+                                            maxIconSize = respBody["maxIconSize"]
+                                            maxPfpSize = respBody["maxPfpSize"]
+                                            maxMsgSize = respBody["maxMsgSize"]
+
+                                            textEntry.maxLength = maxMsgSize
+
+                                            console.log("Server Ver. " + respBody["stage"] + " " + respBody["ver"])
+                                        }
+
                                         if (respBody["type"] == "reqUserSuccess") {
                                             if (loading) {
                                                 loadingStatus += 1
                                             }
 
                                             popUserInfo(respBody)
-                                            if (trackerId && trackerIds.includes(trackerId)) {
-                                                trackerHit(trackerId, respBody)
-                                            }
                                         }
 
                                         if (respBody["type"] == "reqChatSuccess") {
@@ -5654,6 +5718,7 @@ How's your day?
                                         }
 
                                         if (respBody["type"] == "updateCachedPfp") {
+                                            currPFP.src = respBody["PFP"]
                                             updateCachedProp(respBody, "pfp", "PFP", refreshCachedChat)
                                         }
 
@@ -5686,6 +5751,7 @@ How's your day?
                                                 delete chatMetaCache[respBody["chat"]["CID"].toString()]
                                                 setChatList()
                                             })
+                                            setMemberList()
                                         }
 
                                         if (respBody["type"] == "chatNameUpdate") {
@@ -6334,6 +6400,11 @@ How's your day?
                 return
             }
 
+            if (message.length > maxMsgSize) {
+                textEntry.value = message
+                return
+            }
+
             encodedFiles = []
 
             for (let index = 0; index < embeddedFiles.length; index++) {
@@ -6435,13 +6506,13 @@ How's your day?
                 for (let index = 0; index < files.length; index++) {
                     const file = files[index];
 
-                    if (file.size > (25*1024*1024)) {
-                        openPopup("Woah there!", "That file exceeded the max size of 25MB!")
+                    if (file.size > maxEmbedSize) {
+                        openPopup("Woah there!", "That file exceeded the max size of " + Math.round(maxEmbedSize / 1024 / 1024) + "MB!")
                         continue
                     }
 
-                    if (embeddedFiles.length > 10) {
-                        openPopup("Woah there!", "Please upload up to 10 files at a time!")
+                    if (embeddedFiles.length > maxEmbedCount) {
+                        openPopup("Woah there!", "Please upload up to " + maxEmbedCount + " files at a time!")
                         break
                     }
 
@@ -7016,8 +7087,8 @@ How's your day?
 
             if (files && files.length == 1) {
                 const file = files[0]
-                if (file.size > 10*1024*1024) {
-                    openPopup("Woah there!", "That file exceeded the max size of 10MB!")
+                if (file.size > maxIconSize) {
+                    openPopup("Woah there!", "That file exceeded the max size of " + Math.round(maxIconSize/1024/1024) + "MB!")
                     return
                 }
                 convertFileToBase64(file).then((b64) => {

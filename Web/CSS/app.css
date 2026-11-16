@@ -195,9 +195,8 @@ footer > a {
     cursor: pointer;
 
     white-space: nowrap;
-    background: linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%);
-    background-clip: text;
-    color: transparent;
+    mask-image: linear-gradient(to right, black 80%, transparent 100%);
+    color: var(--text);
 }
 
 #msgBoxHeader > button {
@@ -253,6 +252,101 @@ footer > a {
     overflow-x: hidden;
 }
 
+.replyToHead {
+    position: absolute;
+    width: calc(100% - 6em);
+    padding-left: 3em;
+    padding-right: 1em;
+    height: 1em;
+    transform: translateY(-125%);
+    display: flex;
+    flex-direction: row;
+}
+
+.replyToPfp {
+    aspect-ratio: 1;
+    height: 100%;
+    border-radius: 9999px;
+}
+
+.replyToDn {
+    color: lightgray;
+    font-size: 1em;
+    padding: 0;
+    padding-left: .5em;
+    margin: 0;
+    white-space: pre;
+    cursor: pointer;
+}
+
+.replyToContent {
+    width: 50vw;
+    font-size: 1em;
+    padding: 0;
+    padding-left: 1em;
+    margin: 0;
+    white-space: nowrap;
+    mask-image: linear-gradient(to right, black 80%, transparent 100%);
+    color: var(--text);
+    cursor: pointer;
+}
+
+.inviteFrame {
+    width: 25vw;
+    height: 9vh;
+    border-radius: 8px;
+    background: var(--acc5);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    overflow: hidden;
+}
+
+.inviteFrameServerIcon {
+    height: calc(100% - 16px);
+    margin: 6px;
+    border: 2px solid var(--acc4);
+    aspect-ratio: 1;
+    border-radius: 8px;
+}
+
+.inviteFrameServerInfo {
+    width: calc(100% - 9vh - 16px);
+    height: calc(100% - 12px);
+    margin: 6px;
+    display: flex;
+    container-type: size;
+    flex-direction: column;
+}
+
+.inviteFrameInviteTitle {
+    width: 100%;
+    height: 45%;
+    margin: 0;
+    white-space: pre;
+    font-size: 35cqh;
+    mask-image: linear-gradient(to right, black 80%, transparent 100%);
+    color: var(--text);
+    line-height: 1;
+}
+
+.inviteFrameInviteSubtext {
+    width: 100%;
+    height: 55%;
+    margin: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.inviteFrameSubtext {
+    width: 75%;
+    height: 100%;
+    color: var(--placeholder);
+    margin: 0;
+    font-size: .8em;
+}
+
 #userList {
     position: absolute;
     width: calc(15em * 1.25);
@@ -296,6 +390,42 @@ footer > a {
 
 .userDiv:hover {
     background: var(--acc2);
+}
+
+.userDivPfp {
+    height: calc(100% - 4px);
+    aspect-ratio: 1;
+    border-radius: 9999px;
+    border: 2px solid var(--acc4);
+    margin-right: .5em;
+}
+
+.userDivCrown {
+    position: absolute;
+    left: 10%;
+    top: 60%;
+    height: 50%;
+    transform: translateX(-50%);
+}
+
+.userDivDisplayname {
+    width: calc(100% - 36px - .5em);
+    padding: 0;
+    margin: 0;
+    font-size: 1.25em;
+    white-space: pre;
+    mask-image: linear-gradient(to right, black 80%, transparent 100%);
+    color: var(--text);
+}
+
+.memberListBtn {
+    width: 90%;
+    margin-left: 5%;
+    font-size: 1.5em;
+    background: var(--acc3);
+    border-radius: 0;
+    margin-top: 1em;
+    cursor: pointer;
 }
 
 #friendsHeader {
@@ -354,7 +484,7 @@ footer > a {
     background: var(--button-press);
 }
 
-#newGCFriendsList {
+#newGCFriendsList, #serverSettingsFriendsList {
     position: absolute;
     width: 90%;
     left: 5%;
@@ -366,6 +496,7 @@ footer > a {
     justify-content: space-evenly;
     align-items: center;
     cursor: auto;
+    z-index: 2;
 }
 
 #newGCSearch {
@@ -404,6 +535,51 @@ footer > a {
     background: var(--button-press);
 }
 
+.createGCFDiv, .addUsrFDiv {
+    width: 100%;
+    height: 40px;
+    margin: 0;
+    margin-top: .25em;
+    margin-bottom: .25em;
+    overflow: hidden;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.addUsrFDiv {
+    height: 60px;
+}
+
+.createGCPfp, .addUsrPfp {
+    height: calc(100% - 4px);
+    aspect-ratio: 1;
+    border-radius: 9999px;
+    border: 2px solid var(--acc4);
+    margin-right: .5em;
+}
+
+.createGCdn, .addUsrdn {
+    width: calc(100% - 36px - 20px);
+    margin: 0;
+    padding: 0;
+    white-space: pre;
+    text-align: left;
+    overflow: hidden;
+    mask-image: linear-gradient(to right, black 80%, transparent 100%);
+    color: var(--text);
+}
+
+.addUsrdn {
+    width: calc(100% - 56px - 30px);
+    font-size: 1.5em;
+}
+
+.createGCCheck, .addUsrCheck {
+    height: 50%;
+    aspect-ratio: 1;
+}
+
 #friendsListServerSettings {
     width: 90%;
     font-size: 1.5em;
@@ -421,21 +597,9 @@ footer > a {
     background: var(--button-press);
 }
 
-#serverSettingsFriendsList {
-    position: absolute;
-    width: 90%;
-    left: 5%;
-    background: var(--acc4);
-    visibility: hidden;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-evenly;
-    align-items: center;
-    cursor: auto;
-}
 #serverSettingsFriendsList > input {
     width: calc(100% - 1em);
-    height: 2em;
+    height: 3em;
     margin: .5em;
     background: var(--button);
     border: none;
@@ -543,6 +707,156 @@ footer > a {
     flex-wrap: nowrap;
 }
 
+.audioEmbed {
+    position: relative;
+    width: 20vw;
+    height: 9em;
+
+    background-color: var(--acc4);
+
+    display: flex;
+    flex-direction: column;
+}
+
+.audioEmbedPlayer {
+    width: 100%;
+    height: calc(60% - .5em);
+    margin: .25em 0;
+    display: flex;
+    flex-direction: row;
+}
+
+.audioEmbedIcon {
+    margin: 0 .25em;
+    height: calc(100% - 4px);
+    aspect-ratio: 1;
+    border: 2px solid var(--acc3);
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.audioEmbedControls {
+    width: 100%;
+    margin: .25em;
+    height: calc(100% - .5em);
+
+    display: flex;
+    flex-direction: column;
+}
+
+.audioEmbedControlsBtns {
+    width: 100%;
+    height: 100%;
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+}
+
+.audioEmbedControlsBtns > div {
+    display: block;
+    margin: 0 2.5%;
+    text-align: center;
+    font-size: 1.5em;
+    cursor: pointer;
+    color: var(--acc2);
+    user-select: none;
+    text-box-trim: trim-both;
+}
+
+div .audioEmbedPlayPause {
+    margin: 0 5%;
+    font-size: 2.5em;
+    color: var(--acc3);
+}
+
+div .audioEmbedVolume {
+    transform: scaleX(-1);
+}
+
+.audioEmbedControlTimeline {
+    width: 100%;
+    height: fit-content;
+    flex-shrink: 0;
+    accent-color: var(--acc3);
+    margin: 0;
+}
+
+.audioEmbedTitle, .audioEmbedArtistSize {
+    width: calc(100% - .5em);
+    height: 22.5%;
+    margin: 0.25em;
+    margin-bottom: 0;
+    white-space: nowrap;
+    mask-image: linear-gradient(to right, black 80%, transparent 100%);
+    color: var(--text);
+}
+
+.audioEmbedTitle {
+    font-size: 1.25em;
+    text-decoration: none;
+}
+
+.audioEmbedTitle:hover {
+    text-decoration: underline;
+}
+
+.audioEmbedArtistSize {
+    color: var(--placeholder);
+    margin-top: 0;
+}
+
+.audioEmbedBoost {
+    position: absolute;
+    top: .5em;
+    right: .5em;
+    width: .5em;
+    height: .5em;
+    background-color: var(--userActive);
+    cursor: pointer;
+}
+
+#audioDropdown {
+    width: 100px;
+}
+
+#audioDropdownKnob {
+    pointer-events: none;
+    user-select: none;
+}
+
+#audioDropdownVolume {
+    border: none;
+    background-color: var(--acc2);
+    outline: none;
+    z-index: 2;
+}
+
+#audioBoostDropdownNorm {
+    background-color: var(--userActive);
+    color: black;
+}
+
+#audioBoostDropdownBoost {
+    background-color: var(--userIdle);
+    color: black;
+}
+
+#audioBoostDropdownOhNo {
+    background-color: var(--userDND);
+}
+
+.embedGenericTitle {
+    width: calc(100% - 5em - 1em);
+    padding: 0.5em;
+    margin: 0;
+    font-size: 1.25em;
+    white-space: pre;
+    mask-image: linear-gradient(to right, black 80%, transparent 100%);
+    color: var(--text);
+}
+
 #replying {
     position: absolute;
     width: 100%;
@@ -566,15 +880,15 @@ footer > a {
     margin: 0;
     padding: 0;
     white-space: nowrap;
+    flex-shrink: 0;
 }
 
 #replying > p {
     margin-left: 1em;
     margin-right: 1em;
-    background: linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%);
-    background-clip: text;
-    color: transparent;
-    width: 100%;
+    mask-image: linear-gradient(to right, black 80%, transparent 100%);
+    color: var(--text);
+    width: 80%;
 }
 
 #replying > button {
@@ -658,6 +972,75 @@ footer > a {
     text-align: center;
     cursor: pointer;
     outline: none;
+}
+
+.friendReqDiv {
+    width: 100%;
+    height: 60px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: row;
+    margin-bottom: 1em;
+}
+
+.friendReqPfpDiv {
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
+}
+
+.friendReqPfpImg {
+    width: 100%;
+    height: 100%;
+    border-radius: 9999px;
+    border: 2px solid var(--acc4);
+}
+
+.friendReqInfoDiv {
+    width: 70%;
+    height: 100%;
+    margin-left: 1em;
+}
+
+.friendReqDisplayName {
+    width: 100%;
+    height: 75%;
+    margin: 0;
+    mask-image: linear-gradient(to right, black 80%, transparent 100%);
+    color: var(--text);
+    white-space: nowrap;
+}
+
+.friendReqExtraInfo {
+    width: 100%;
+    height: 25%;
+    margin: 0;
+    white-space: nowrap;
+}
+
+.friendReqSep {
+    width: 4px;
+    height: 100%;
+    background-color: var(--acc4);
+    border-radius: 9999px;
+}
+
+.friendReqActionDiv {
+    width: 30%;
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.friendReqSmallBtn, .friendReqBigBtn {
+    width: 50%;
+    height: 100%;
+    background: none;
+    font-size: 2em;
+    cursor: pointer;
+    border: none;
 }
 
 #myProfileScreen {
@@ -950,6 +1333,7 @@ div #bdayVis {
     border-radius: 99999px;
     border: 6px solid var(--acc4);
     margin-top: 1%;
+    object-fit: cover;
 }
 
 #pfpPreviewActions {
@@ -1489,6 +1873,39 @@ div #bdayVis {
     border: 2px solid var(--button-press);
 }
 
+.slistCategoryName {
+    width: 90%;
+    margin: 0;
+    mask-image: linear-gradient(to right, black 80%, transparent 100%);
+    color: lightgray;
+    white-space: pre;
+}
+
+.slistChannelName {
+    width: calc(100% - 60px);
+    margin: 0;
+    mask-image: linear-gradient(to right, black 80%, transparent 100%);
+    color: var(--text);
+    white-space: nowrap;
+}
+
+.slistChatName {
+    width: 90%;
+    height: 60%;
+    margin: 0;
+    mask-image: linear-gradient(to right, black 80%, transparent 100%);
+    color: var(--text);
+    white-space: nowrap;
+}
+
+.slistChatExtInfo {
+    width: 90%;
+    height: 40%;
+    margin: 0;
+    mask-image: linear-gradient(to right, black 80%, transparent 100%);
+    color: var(--text);
+    white-space: nowrap;
+}
 
 .genericSettings {
     position: absolute;
@@ -1631,6 +2048,7 @@ div #bdayVis {
     outline: none;
     resize: none;
     overflow-y: scroll;
+    word-wrap: break-word;
 }
 
 #leavingCancel {
@@ -2034,9 +2452,8 @@ div #bdayVis {
     margin: 0;
     margin-left: .5em;
     white-space: nowrap;
-    background: linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%);
-    background-clip: text;
-    color: transparent;
+    mask-image: linear-gradient(to right, black 80%, transparent 100%);
+    color: var(--text);
     overflow: hidden;
 }
 
@@ -2198,9 +2615,8 @@ div #bdayVis {
     margin: 0;
     margin-left: 5%;
     white-space: pre;
-    background: linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%);
-    background-clip: text;
-    color: transparent;
+    mask-image: linear-gradient(to right, black 80%, transparent 100%);
+    color: var(--text);
 }
 
 .usrProfilePopupUn {
@@ -2208,9 +2624,8 @@ div #bdayVis {
     margin: 0;
     margin-left: 5%;
     white-space: pre;
-    background: linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%);
-    background-clip: text;
-    color: transparent;
+    mask-image: linear-gradient(to right, black 80%, transparent 100%);
+    color: var(--text);
 }
 
 .usrProfilePopupPro {
@@ -2218,9 +2633,8 @@ div #bdayVis {
     margin: 0;
     margin-left: 5%;
     white-space: pre;
-    background: linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%);
-    background-clip: text;
-    color: transparent;
+    mask-image: linear-gradient(to right, black 80%, transparent 100%);
+    color: var(--text);
 }
 
 .usrProfilePopupBio {
@@ -2290,9 +2704,8 @@ div #bdayVis {
     font-size: 1.75em;
     margin-left: 5%;
     white-space: pre;
-    background: linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%);
-    background-clip: text;
-    color: transparent;
+    mask-image: linear-gradient(to right, black 80%, transparent 100%);
+    color: var(--text);
     margin-top: .25em;
     margin-bottom: 0;
 }
@@ -2301,9 +2714,8 @@ div #bdayVis {
     font-size: 1em;
     margin-left: 5%;
     white-space: pre;
-    background: linear-gradient(to right, var(--text) 0%, var(--text) 80%, transparent 100%);
-    background-clip: text;
-    color: transparent;
+    mask-image: linear-gradient(to right, black 80%, transparent 100%);
+    color: var(--text);
     margin-top: 0;
     margin-bottom: 0;
 }

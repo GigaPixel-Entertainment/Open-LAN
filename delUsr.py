@@ -35,10 +35,12 @@ with open(config.USERS_DIR / f"{username}.usr", "rb+") as f:
     UID = userData["UID"]
 
     userData["Displayname"] = f"DELETED USER {UID}"
+    userData["PWD"] = ""
     userData["Birthday"] = None
     userData["BirthdayV"] = "PRIVATE"
     userData["Pronouns"] = ""
     userData["Bio"] = ""
+    userData["PFP"] = config.EMPTY_IMG
 
     f.seek(0)
     f.write(fernet.encrypt(msgpack.packb(userData)))

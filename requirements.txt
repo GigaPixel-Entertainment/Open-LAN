@@ -1,7 +1,9 @@
 cryptography
+minify-html
 websockets
 zstandard
 pathlib
+mutagen
 msgpack
 asyncio
 pillow

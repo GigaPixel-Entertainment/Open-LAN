@@ -36,7 +36,7 @@ import ssl
 
 from cryptography.fernet import Fernet
 
-from PIL import Image, ImageSequence
+from PIL import Image, ImageOps, ImageSequence
 import msgpack
 
 import config
@@ -437,7 +437,7 @@ def resizeGif(img: Image.Image, outputStream: BytesIO):
 
     frames = []
     for frame in ImageSequence.Iterator(img):
-        resizedFrame = frame.convert('RGBA').resize((256, 256), Image.Resampling.LANCZOS)
+        resizedFrame = ImageOps.fit(frame.convert('RGBA'), (256, 256), Image.Resampling.LANCZOS, centering=(0.5, 0.5))
         frames.append(resizedFrame)
 
     if frames:
@@ -465,7 +465,7 @@ def resizePfpBytes(pfpBytes: bytes):
     if imgFormat == "GIF":
         resizeGif(img, outputStream)
     else:
-        resized = img.resize((256, 256), Image.Resampling.LANCZOS)
+        resized = ImageOps.fit(img, (256, 256), Image.Resampling.LANCZOS, centering=(0.5, 0.5))
         resized.save(outputStream, format=imgFormat)
 
     resizedBytes = outputStream.getvalue()
