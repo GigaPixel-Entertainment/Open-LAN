@@ -709,7 +709,7 @@ footer > a {
 
 .audioEmbed {
     position: relative;
-    width: 20vw;
+    width: 25vw;
     height: 9em;
 
     background-color: var(--acc4);
@@ -769,6 +769,7 @@ div .audioEmbedPlayPause {
     margin: 0 5%;
     font-size: 2.5em;
     color: var(--acc3);
+    width: 15%;
 }
 
 div .audioEmbedVolume {

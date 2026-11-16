@@ -491,7 +491,6 @@ How's your day?
     <script src="JS/markdown-it.umd.min.js" integrity="sha256-OR8qpjjnXmx4WdClxWUO8JVnIqRZmPF+Bbg7xlV3jh4= sha384-ARStLecQmtLYjBgfD3+w+irhiSoLTnFk/ne6c0gRWQKQtC9791ZLMQ9D3OaBISt3 sha512-laLRpIWeZO46pTZ9+U5bg8LSdhEPFDU8oiv+3WfgLZH/3L4v4VHHyWLbg7XQ55B4xQnoSsLQ0iW/qiiLAti0IQ=="></script>
     <script src="JS/highlight.min.js" integrity="sha256-dj6XmVVH9EIMLj4NTgSztjtZjHNniE5WVg7d2v2UDuY= sha384-UczO6qs7rVEa0ARVDDiI6CrpCtZ6ac6SDe9kxmdgkfXqS3me5e5WhyA8Kvj4ESTJ sha512-WM+AnCK1srKMQjGgK2zWXQCifgdHpub0OhjSO1FGh6wtt1LvNzIH3C75fLGQlH0RrP2RubnMp7f2tT7e1XxKvA=="></script>
     <script src="JS/purify.js" integrity="sha256-zTeJj5eCrfVIIMQTGRtWkYA/DxN8eZ1u3P04UjtMLDE= sha384-P0JNneQf81HOl9VwNXK76cQ9VMD6Nfsnepxb0cCOg8+UzEdzgPHAPV4wVQrvYQSx sha512-2wT0W6vojz3cJuLoa/DxrPVQRinkfRjFWMWIDK4NghTqObEhpem1nEkeK0d9ZE+/hyvfMNuJZlfxM4LsRgeoSA=="></script>
-    <script src="JS/jsmediatags.min.js"></script>
     <script>
         // constants
         var userInfoCache = []
@@ -3114,6 +3113,16 @@ How's your day?
             return highlightedText
         }
 
+        function formatSeconds(sec) {
+            const hours = Math.floor(sec / 3600)
+            const mins = Math.floor((sec % 3600) / 60)
+            const secs = Math.floor(sec % 60)
+
+            const pad = (n) => String(n).padStart(2, "0")
+
+            return hours > 0 ? hours + ":" + pad(mins) + ":" + pad(secs) : mins + ":" + pad(secs)
+        }
+
         const audioCache = {}
         let selectedAudio = null
         async function evalEmbeds(message, msgP) {
@@ -3255,6 +3264,11 @@ How's your day?
 
                     audio.addEventListener("durationchange", () => {
                         audioControlTimeline.max = audio.duration
+                        audioArtistSize.textContent = formatSeconds(audio.duration)
+
+                        if (Object.hasOwn(audio.dataset, "size") && Object.hasOwn(audio.dataset, "artist")) {
+                            audioArtistSize.textContent += " - " + audio.dataset["artist"] + " - " + audio.dataset["size"]
+                        }
                     })
                     audioControlTimeline.max = audio.duration
 
@@ -3279,6 +3293,7 @@ How's your day?
 
                     const audioArtistSize = document.createElement("i")
                     audioArtistSize.classList = "font audioEmbedArtistSize"
+                    audioArtistSize.textContent = formatSeconds(audio.duration)
 
                     const audioBoost = document.createElement("div")
                     audioBoost.classList = "audioEmbedBoost"
@@ -3326,9 +3341,9 @@ How's your day?
                     function onAudioInfo(info) {
                         const sizeKB = info.size / 1024
                         if (sizeKB < 1024) {
-                            audioArtistSize.textContent = Math.round(sizeKB * 100) / 100 + "KB"
+                            audio.dataset["size"] = Math.round(sizeKB * 100) / 100 + "KB"
                         } else {
-                            audioArtistSize.textContent = Math.round(sizeKB / 1024 * 100) / 100 + "MB"
+                            audio.dataset["size"] = Math.round(sizeKB / 1024 * 100) / 100 + "MB"
                         }
 
                         if (info.cover) {
@@ -3336,8 +3351,12 @@ How's your day?
                         }
 
                         if (info.artist) {
-                            audioArtistSize.textContent = info.artist + " - " + audioArtistSize.textContent
+                            audio.dataset["artist"] = info.artist
+                        } else {
+                            audio.dataset["artist"] = "Unknown"
                         }
+
+                        audioArtistSize.textContent = formatSeconds(audio.duration) + " - " + audio.dataset["artist"] + " - " + audio.dataset["size"]
                     }
 
                     if (Object.hasOwn(audioCache, embed)) {

@@ -2654,22 +2654,31 @@ class WS():
             await self.wsSendEncrypted(ws, {"type": "reqAudioInfoFailed"}, trackerId)
             return
 
-        decrypted = self.fernet.decrypt(fileCont)
-        decryptedIO = io.BytesIO(decrypted)
-        tags = ID3(decryptedIO)
+        try:
+            decrypted = self.fernet.decrypt(fileCont)
+            artist = None
+            cover = None
 
-        artist = tags.get("TPE1", None)
-        cover = None
+            try:
+                decryptedIO = io.BytesIO(decrypted)
+                tags = ID3(decryptedIO)
 
-        for tag in tags.values():
-            if tag.FrameID == "APIC":
-                cover = self.resizePfpBytes(tag.data)
-                break
+                artist = tags.get("TPE1", None)
+                cover = None
 
-        if artist is not None:
-            artist = artist.text[0]
+                for tag in tags.values():
+                    if tag.FrameID == "APIC":
+                        cover = self.resizePfpBytes(tag.data)
+                        break
 
-        await self.wsSendEncrypted(ws, {"type": "reqAudioInfoSuccess", "size": len(decrypted), "artist": artist, "cover": cover}, trackerId)
+                if artist is not None:
+                    artist = artist.text[0]
+            except:
+                pass
+
+            await self.wsSendEncrypted(ws, {"type": "reqAudioInfoSuccess", "size": len(decrypted), "artist": artist, "cover": cover}, trackerId)
+        except:
+            await self.wsSendEncrypted(ws, {"type": "reqAudioInfoFailed"}, trackerId)
 
     async def wsHandler(self, ws: ServerConnection):
         self.WS_CLIENTS.add(ws)
