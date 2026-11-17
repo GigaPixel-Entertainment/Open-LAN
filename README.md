@@ -1,4 +1,4 @@
-[![Website: GigaPixel](https://img.shields.io/badge/website-gigapixel.cc-3f7f24)](https://sites.google.com/view/gigapixel-/our-projects/websites/open-lan)
+[![Website: GigaPixel](https://img.shields.io/badge/website-gigapixel.cc-3f7f24)](https://www.gigapixel.cc/our-projects/websites/open-lan)
 
 # GPE-Open-LAN
 ______________
