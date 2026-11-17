@@ -288,18 +288,6 @@ if __name__ == "__main__":
 
     logging.info("Dashboard available on port %i", config.DASHBOARD_PORT)
 
-    logging.info("Checking files")
-
-    canContinue = True
-    for file in config.IMPORTANT_FILES:
-        if not file.exists():
-            canContinue = False
-            logging.error("%s does not exist!", file)
-
-    if not canContinue:
-        logging.fatal("Some files are missing!")
-        sys.exit(1)
-
     while True:
         logging.info("Starting server")
         mp.stopSocket()

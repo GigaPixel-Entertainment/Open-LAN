@@ -137,10 +137,7 @@
             var sharedSecretKey = null
             var encrypted = false
 
-            const hexToBytes = hex => Uint8Array.fromHex(hex);
-            const bytesToHex = bytes => bytes.toHex();
             const textEncode = (text) => new TextEncoder().encode(text);
-            const textDecode = (text) => new TextDecoder().decode(text);
             var keyPair = null
 
             async function generatePubKey() {

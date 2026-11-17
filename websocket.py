@@ -1479,9 +1479,11 @@ class WS():
                     for ws2 in self.WS_CLIENTS:
                         wsUID = getattr(ws2, "UID", None)
 
-                        if (wsUID is not None and wsUID == usr) or ws2 == ws:
+                        if wsUID is not None and wsUID == usr:
                             await self.wsSendEncrypted(ws2, {"type": "newMsg", "CID": cht, "message": msgObj})
                             break
+
+                    await self.wsSendEncrypted(ws, {"type": "newMsg", "CID": cht, "message": msgObj})
                     break
 
         await self.wsSendEncrypted(ws, {"type": "addUsrServerSuccess"}, trackerId)
@@ -1595,6 +1597,10 @@ class WS():
             return
 
         if chat["Owner"] != selfUID or chat["Owner"] == targetUID:
+            await self.wsSendEncrypted(ws, {"type": "rmUsrFailed"}, trackerId)
+            return
+
+        if chat["Type"] != "gc":
             await self.wsSendEncrypted(ws, {"type": "rmUsrFailed"}, trackerId)
             return
 

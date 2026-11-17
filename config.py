@@ -49,11 +49,6 @@ PRIVATE_DIRS = [
     INVITE_FILE
 ]
 
-IMPORTANT_FILES = [
-    CWD / "server.py",
-    CWD / "httphelper.py"
-]
-
 if ENV_FILE.exists():
     load_dotenv(ENV_FILE)
 

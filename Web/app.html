@@ -1879,7 +1879,15 @@ How's your day?
 
         usrListRemove.addEventListener("mousedown", () => {
             if (usrListRClickMenu && usrListRClickMenuUsr != null && usrListRClickMenuUsr != currUID && currUID == chatCache["Owner"]) {
-                request(JSON.stringify({"type": "rmUsrFromChat", "CID": currChat, "UID": usrListRClickMenuUsr}))
+                const targetUID = usrListRClickMenuUsr
+                const targetInfo = getUsrInfo(targetUID)
+                const confirmText = targetInfo ? "Remove " + targetInfo["displayname"] + " (@" + targetInfo["username"] + ") from the chat?" : "Remove this user from the chat?"
+
+                openConfirmPopup("Remove User?", confirmText).then((r) => {
+                    if (r) {
+                        request(JSON.stringify({"type": "rmUsrFromChat", "CID": currChat, "UID": usrListRClickMenuUsr}))
+                    }
+                })
             }
         })
 
@@ -1969,9 +1977,7 @@ How's your day?
                     "type": "updatePfp",
                     "pfp": selected
                 })).then((res) => {
-                    if (res["type"] == "updatePfpSuccess") {
-                        currPFP.src = selected
-                    } else {
+                    if (res["type"] != "updatePfpSuccess") {
                         openPopup("Error", "Failed to update Pfp!")
                     }
                     selected = null
@@ -3130,7 +3136,7 @@ How's your day?
             embeds.style.width = "100%"
             embeds.style.maxHeight = "10em"
             embeds.style.overflowY = "hidden"
-            embeds.style.overflowX = "scroll"
+            embeds.style.overflowX = "auto"
             embeds.style.display = "flex"
             embeds.style.flexDirection = "row"
 
@@ -3144,7 +3150,7 @@ How's your day?
                     splits = filename.split(".")
 
                     if (splits.length == 3) {
-                        filename = atob(splits[splits.length - 2])
+                        filename = atob(splits[1].replace(/-/g, "+").replace(/_/g, "/"))
                     }
                 } catch {}
 
@@ -3331,7 +3337,7 @@ How's your day?
 
                             openConfirmPopup("Are you sure?", "Are you sure you want to use your ENTIRE speaker?").then(r => {
                                 if (r) {
-                                    gainNode.value = 100
+                                    gainNode.gain.value = 100
                                     audioBoost.style.backgroundColor = "var(--userDND)"
                                 }
                             })
@@ -5488,10 +5494,7 @@ How's your day?
             var loading = true
             var loadingStatus = 0
 
-            const hexToBytes = hex => Uint8Array.fromHex(hex);
-            const bytesToHex = bytes => bytes.toHex();
             const textEncode = (text) => new TextEncoder().encode(text);
-            const textDecode = (text) => new TextDecoder().decode(text);
             var keyPair = null
             var ws = null
 
@@ -5737,7 +5740,10 @@ How's your day?
                                         }
 
                                         if (respBody["type"] == "updateCachedPfp") {
-                                            currPFP.src = respBody["PFP"]
+                                            if (respBody["UID"] == currUID) {
+                                                currPFP.src = respBody["PFP"]
+                                            }
+
                                             updateCachedProp(respBody, "pfp", "PFP", refreshCachedChat)
                                         }
 
