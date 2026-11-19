@@ -148,6 +148,10 @@ footer > a {
     text-decoration-color: white;
 }
 
+#noDisplay {
+    display: none;
+}
+
 #serverList {
     width: 5%;
     height: 100%;
@@ -1738,7 +1742,7 @@ div #bdayVis {
 #newChannel {
     position: absolute;
     width: 50%;
-    height: 30%;
+    height: 50%;
     top: 50%;
     left: 50%;
     background: var(--bg);
@@ -1758,7 +1762,7 @@ div #bdayVis {
 
 #newChannelName {
     width: 95%;
-    height: 15%;
+    height: 2em;
     font-size: 1.5em;
     color: var(--text);
     background: var(--acc3);
@@ -1770,9 +1774,34 @@ div #bdayVis {
     color: var(--placeholder);
 }
 
+#newChannelTypeList {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    align-items: center;
+}
+
+.newChannelType {
+    background-color: var(--acc);
+    border-radius: 4px;
+    margin: .25em;
+    width: 90%;
+}
+
+.newChannelTypeHeading {
+    font-size: 1.5em;
+    font-weight: bold;
+}
+
+.newChannelTypeSubtext {
+    pointer-events: none;
+    margin-left: 1em;
+    margin-top: 0;
+}
+
 #newChannelCreate {
     width: 95%;
-    height: 15%;
+    height: 2em;
     background: var(--button);
     border: none;
     border-radius: 0;
@@ -1790,7 +1819,7 @@ div #bdayVis {
 
 #newChannelCancel {
     width: 95%;
-    height: 15%;
+    height: 2em;
     background: none;
     border: 2px solid var(--button);
     border-radius: 0;
@@ -2979,6 +3008,37 @@ div #bdayVis {
     font-size: 2em;
     border: none;
     border-radius: 0;
+}
+
+.vcMemberList {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-evenly;
+
+    margin-top: 1em;
+    margin-bottom: 1em;
+
+    width: 100%;
+    height: 25vh;
+}
+
+.vcMemberBox {
+    position: relative;
+    width: 30%;
+    height: 100%;
+    background-color: var(--acc3);
+    border-radius: 8px;
+}
+
+.vcMemberPfp {
+    position: absolute;
+    height: 50%;
+    aspect-ratio: 1;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 9999px;
+    pointer-events: none;
 }
 
 .chatSeparatorWrapper {

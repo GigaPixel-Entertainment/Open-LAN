@@ -17,6 +17,7 @@ How's your day?
         <title id="pageTitle">Open-LAN Loading...</title>
     </head>
     <body>
+        <div id="noDisplay"></div>
         <div id="serverList" class="noScrollbar"></div>
         <div id="msgBoxHeader">
             <img id="ChatIcon" src="Media/LogoSquare.png">
@@ -262,6 +263,18 @@ How's your day?
             <div id="newChannel">
                 <h1 class="font white" id="newChannelHeading">New Channel</h1>
                 <input type="text" maxlength="100" id="newChannelName" placeholder="channel name..." class="font white">
+                <div id="newChannelTypeList">
+                    <div class="newChannelType">
+                        <input type="radio" id="channelTypeText" name="channelType" checked>
+                        <label for="channelTypeText" class="font white newChannelTypeHeading">Text Channel</label>
+                        <p class="font white newChannelTypeSubtext">Just a normal text chat</p>
+                    </div>
+                    <div class="newChannelType">
+                        <input type="radio" id="channelTypeVoice" name="channelType">
+                        <label for="channelTypeVoice" class="font white newChannelTypeHeading">Voice Channel</label>
+                        <p class="font white newChannelTypeSubtext">A voice chat??? IN THIS ECONOMY?????</p>
+                    </div>
+                </div>
                 <input type="submit" id="newChannelCreate" value="Create" class="font" disabled>
                 <input type="submit" id="newChannelCancel" value="Cancel" class="font">
             </div>
@@ -500,6 +513,12 @@ How's your day?
         var maxIconSize = 10*1024*1024
         var maxPfpSize = 10*1024*1024
         var maxMsgSize = 4000
+        var devBuild = false
+
+        var currVC = -1
+        var vcFocusedUID = -1
+
+        const noDisplay = document.getElementById("noDisplay")
 
         const pageIcon = document.getElementById("pageIcon")
         const pageTitle = document.getElementById("pageTitle")
@@ -604,6 +623,8 @@ How's your day?
         const newChannelWrapper = document.getElementById("newChannelWrapper")
         const newChannel = document.getElementById("newChannel")
         const newChannelName = document.getElementById("newChannelName")
+        const channelTypeText = document.getElementById("channelTypeText")
+        const channelTypeVoice = document.getElementById("channelTypeVoice")
         const newChannelCreate = document.getElementById("newChannelCreate")
         const newChannelCancel = document.getElementById("newChannelCancel")
 
@@ -1045,6 +1066,18 @@ How's your day?
             }
 
             return finalUserinfoList
+        }
+
+        function getChatMeta(CID) {
+            for (let index = 0; index < chatMetaCache.length; index++) {
+                const chatInfo = chatMetaCache[index];
+
+                if (chatInfo && chatInfo["CID"] == CID) {
+                    return chatInfo
+                }
+            }
+
+            return null
         }
 
         async function reqChatMeta(CID) {
@@ -2092,7 +2125,6 @@ How's your day?
                 }
             }
 
-
             friendReqNum.textContent = Math.min(incomingBuffer.length, 9)
             if (incomingBuffer.length > 9) {
                 friendReqNum.textContent += "+"
@@ -2471,7 +2503,11 @@ How's your day?
                         chatIcon.style.height = "100%"
                         chatIcon.style.aspectRatio = "1"
 
-                        await waitForImg(chatIcon, "Media/textChannel.png")
+                        if (chat["type"] == "channel") {
+                            await waitForImg(chatIcon, "Media/textChannel.png")
+                        } else if (chat["type"] == "vc") {
+                            await waitForImg(chatIcon, "Media/voiceChannel.png")
+                        }
 
                         const numUnreadMsgs = chat["lastMsg"]["MSGID"] - readMsgs[chatID.toString()]
                         const isRead = numUnreadMsgs <= 0 || isNaN(numUnreadMsgs) || (currChat == chatID && currPage == 0 && chatDiv.scrollTop + chatDiv.offsetHeight >= chatDiv.scrollHeight - 8)
@@ -3092,6 +3128,11 @@ How's your day?
                 let serverReadString = ""
                 for (let i = 0; i < serverChats.length; i++) {
                     const sChat = serverChats[i];
+
+                    if (getChatMeta(sChat.toString())["type"] != "channel") {
+                        continue
+                    }
+
                     serverReadString += sChat + ":" + (readMsgs[sChat.toString()] || -1) + ":"
                 }
 
@@ -4705,11 +4746,29 @@ How's your day?
                 userListCounter.textContent = "Members-" + serverCache["Users"].length
 
                 replaceChildren(userListContent, userList2)
+            } else {
+                userListCounter.textContent = ""
+                userListContent.replaceChildren()
             }
         }
 
         async function setChat(chat) {
             if (chat["CID"] != currChat) {
+                return
+            }
+
+            chatFetchInProgress = true
+            chatCache = chat
+
+            if (chat["Type"] == "vc") {
+                chatDiv.replaceChildren()
+                textEntryOverlay.style.visibility = "hidden"
+                embedList.style.visibility = "hidden"
+                replying.style.visibility = "hidden"
+
+                await setMemberList()
+                await showVC(chat["vcMembers"])
+                chatFetchInProgress = false
                 return
             }
 
@@ -4729,9 +4788,6 @@ How's your day?
                 chat["messages"].splice(0, len - 100 * (currPage + 1))
                 chat["messages"].splice(100, len)
             }
-
-            chatFetchInProgress = true
-            chatCache = chat
 
             if (editingMsgId != -1) {
                 const editingMsgE = document.getElementById("currEditing")
@@ -4873,6 +4929,53 @@ How's your day?
                 heading.textContent = serverMeta["name"]
                 content.textContent = "View channels on the sidebar to the right."
             }
+        }
+
+        async function showVC(vcMembers) {
+            const newChatDiv = []
+            console.log(vcMembers)
+
+            if (vcFocusedUID != -1) {
+                return
+            }
+
+            if (vcMembers == null || vcMembers.length == 0) {
+                chatDiv.replaceChildren()
+                return
+            }
+
+            const numRows = Math.ceil(vcMembers.length / 3)
+            const numPerRow = 3
+
+            await reqMultiUsrInfo(vcMembers)
+            for (let i = 0; i < numRows; i++) {
+                const memberRow = document.createElement("div")
+                memberRow.classList = "vcMemberList"
+
+                for (let j = 0; j < numPerRow; j++) {
+                    if (i * numPerRow + j >= vcMembers.length) {
+                        break
+                    }
+
+                    const memberUID = vcMembers[i * numPerRow + j]
+                    const memberInfo = await reqUsrInfo(memberUID)
+
+                    const memberBox = document.createElement("div")
+                    memberBox.classList = "vcMemberBox"
+                    memberBox.id = "vcMemberBox" + memberUID
+
+                    const memberPfp = document.createElement("img")
+                    memberPfp.classList = "vcMemberPfp"
+                    memberPfp.src = memberInfo["pfp"]
+
+                    memberBox.appendChild(memberPfp)
+                    memberRow.appendChild(memberBox)
+                }
+
+                newChatDiv.push(memberRow)
+            }
+
+            replaceChildren(chatDiv, newChatDiv)
         }
 
         function jumpToBottom() {
@@ -5304,6 +5407,8 @@ How's your day?
         function openNewChannel() {
             newChannelName.value = ""
             newChannelCreate.disabled = true
+            channelTypeText.checked = true
+            channelTypeVoice.checked = false
 
             newChannelWrapper.style.visibility = "visible"
             newChannelWrapper.style.opacity = "1"
@@ -5319,7 +5424,9 @@ How's your day?
 
         newChannelName.addEventListener("input", () => {
             const currLen = newChannelName.value.length
-            if (currLen == 0 || currLen > 100) {
+            const validType = channelTypeText.checked || channelTypeVoice.checked
+
+            if (currLen == 0 || currLen > 100 || !validType) {
                 newChannelCreate.disabled = true
             } else {
                 newChannelCreate.disabled = false
@@ -5332,10 +5439,17 @@ How's your day?
                 return
             }
 
+            const channelType = channelTypeText.checked ? "channel" : channelTypeVoice.checked ? "vc" : ""
+
+            if (channelType == "") {
+                return
+            }
+
             request(JSON.stringify({
                 "type": "newChannel",
                 "SID": currServer,
                 "categoryID": currCategory,
+                "channelType": channelType,
                 "name": newChannelName.value.trim()
             }))
             closeNewChannel()
@@ -5584,10 +5698,109 @@ How's your day?
                 ws.send(JSON.stringify({"type": "reqUser"}))
             }
 
+            var RTCPeerCon
+            var activeMediaSinks = {}
+            async function joinVC(CID) {
+                vcFocusedUID = -1
+                const isFirst = (await request(JSON.stringify({"type": "joinVC", "CID": CID})))["isFirst"]
+                currVC = CID
+
+                const stream = await navigator.mediaDevices.getUserMedia(
+                    { audio: {
+                        "echoCancellation": true,
+                        "noiseSuppression": true
+                    }, video: false
+                })
+
+                RTCPeerCon = new RTCPeerConnection({
+                    "iceServers": [{"urls":"stun:stun.l.google.com:19302"}]
+                })
+                const offer = RTCPeerCon.createOffer()
+                await RTCPeerCon.setLocalDescription(offer)
+
+                ws.send(JSON.stringify({
+                    "action": "offer",
+                    "sdp": RTCPeerCon.localDescription.sdp
+                }))
+
+                stream.getTracks().forEach(track => RTCPeerCon.addTrack(track, stream))
+
+                RTCPeerCon.ontrack = (e) => {
+                    if (devBuild) {
+                        console.log(e)
+                    }
+
+                    for (let i = 0; i < e.streams.length; i++) {
+                        const stream = e.streams[i];
+
+                        if (e.track.kind == "audio") {
+                            const audio = document.createElement("audio")
+                            audio.autoplay = true
+                            audio.srcObject = stream
+                            noDisplay.appendChild(audio)
+                            activeMediaSinks[stream.id] = audio
+
+                            console.log("Audio made successfully!")
+
+                            audio.play()
+                        } else {
+                            console.log("TODO: Make video stream")
+                        }
+                    }
+                }
+
+                RTCPeerCon.onicecandidate = (e) => {
+                    if (e.candidate) {
+                        ws.send(JSON.stringify({ "action": "candidate", "candidate": e.candidate }))
+                    }
+                }
+            }
+
+            async function leaveVC() {
+                ws.send(JSON.stringify({
+                    "action": "leave"
+                }))
+                currVC = -1
+
+                for (let i = 0; i < activeMediaSinks.length; i++) {
+                    activeMediaSinks[i].stop()
+                    activeMediaSinks[i].remove()
+                }
+            }
+
+            async function handleWebRTC(resp) {
+                if (resp["action"] == "answer") {
+                    await RTCPeerCon.setRemoteDescription(new RTCSessionDescription(resp))
+                } else if (resp["action"] == "offer") {
+                    await RTCPeerCon.setRemoteDescription(new RTCSessionDescription(resp))
+                    const answer = await RTCPeerCon.createAnswer()
+                    await RTCPeerCon.setLocalDescription(answer)
+
+                    ws.send(JSON.stringify({
+                        "action": "answer",
+                        "sdp": RTCPeerCon.localDescription.sdp
+                    }))
+                } else if (resp["action"] == "candidate" && resp.candidate) {
+                    await RTCPeerCon.addIceCandidate(new RTCIceCandidate(resp["candidate"]))
+                }
+            }
+
             async function fetchChatData() {
                 if (currChat == -1) {
                     await setEmptyChat()
                     return
+                }
+
+                chatInfo = await reqChatMeta(currChat)
+
+                if (chatInfo["type"] == "vc" && currVC != currChat) {
+                    if (currVC == -1 || await openConfirmPopup("Leave Current VC?", "Leave the Current VC to join this one?")) {
+                        if (currVC != -1) {
+                            leaveVC()
+                        }
+
+                        joinVC(currChat)
+                    }
                 }
 
                 ws.send(JSON.stringify({"type": "reqChat", "CID": currChat, "page": currPage}))
@@ -5686,6 +5899,15 @@ How's your day?
                         ws.onmessage = (event) => {
                             const resp = JSON.parse(event.data)
 
+                            if (Object.hasOwn(resp, "action")) {
+                                console.log(resp)
+                                if (devBuild) {
+                                    console.log(resp)
+                                }
+
+                                handleWebRTC(resp)
+                            }
+
                             if (resp["type"] == "encrypt-key-xch") {
                                 serverKeyRecieved(resp["publicKey"]).then(() => {
                                     encrypted = true
@@ -5707,7 +5929,9 @@ How's your day?
                                         respBody = JSON.parse(data)
                                         trackerId = respBody["trackerID"]
 
-                                        console.log(respBody)
+                                        if (devBuild) {
+                                            console.log(respBody)
+                                        }
 
                                         if (respBody["type"] == "auth_expired") {
                                             window.location.assign(protocol + "//" + domainURL + "/login.html?errT=Login%20Expired&errC=Your%20session%20has%20expired.%20Please%20try%20logging%20in%20again.")
@@ -5719,10 +5943,16 @@ How's your day?
                                             maxIconSize = respBody["maxIconSize"]
                                             maxPfpSize = respBody["maxPfpSize"]
                                             maxMsgSize = respBody["maxMsgSize"]
+                                            devBuild = respBody["dev"]
 
                                             textEntry.maxLength = maxMsgSize
 
-                                            console.log("Server Ver. " + respBody["stage"] + " " + respBody["ver"])
+                                            console.log("Ver. " + respBody["stage"] + " " + respBody["ver"])
+
+                                            if (devBuild) {
+                                                console.warn("DEV BUILD OF OPEN-LAN! EXPECT MANY BUGS!!!")
+                                                console.log("Verbose logging has been enabled")
+                                            }
                                         }
 
                                         if (respBody["type"] == "reqUserSuccess") {
@@ -5737,6 +5967,12 @@ How's your day?
                                             maxPage = respBody["numPages"]
                                             setChat(respBody["chat"])
                                             setMemberList()
+                                        }
+
+                                        if (respBody["type"] == "vcUpdate") {
+                                            if (currChat == respBody["CID"]) {
+                                                showVC(respBody["vcMembers"])
+                                            }
                                         }
 
                                         if (respBody["type"] == "updateCachedPfp") {
@@ -5858,16 +6094,6 @@ How's your day?
                                         }
 
                                         if (respBody["type"] == "newMsg") {
-                                            const msgPreviewId = respBody["msgPreviewId"]
-                                            if (trackerIds.includes(msgPreviewId)) {
-                                                const msgQueueMsg = messageQueue.filter((v) => v["msgPreviewId"] == msgPreviewId)[0]
-
-                                                if (msgQueueMsg && msgQueueMsg["UID"] == currUID) {
-                                                    messageQueue = messageQueue.filter((v) => v["msgPreviewId"] != msgPreviewId)
-                                                    trackerIds.splice(trackerIds.indexOf(msgPreviewId), 1)
-                                                }
-                                            }
-
                                             stringCID = respBody["CID"].toString()
                                             if (stringCID in chatMetaCache) {
                                                 chatMetaCache[stringCID]["lastMsg"]["MSGID"] = respBody["message"]["MSGID"]
@@ -6447,10 +6673,10 @@ How's your day?
             replyingMsgId = -1
 
             msgPreviewId = genTrackerId()
-            trackerIds.push(msgPreviewId)
             messageQueue.push({"content": message, "replyTo": toBeRepliedTo, "time": Math.floor(Date.now() / 1000), "UID": currUID, "MSGID": lastMsgId + 1000 + messageQueue.length, "embed": [], "msgPreviewId": msgPreviewId})
             refreshCachedChat()
-            msgSendResults = await request(JSON.stringify({"type":"sendMsg","CID":currChat,"msg":message,"embed": encodedFiles, "replyTo": toBeRepliedTo, "msgPreviewId": msgPreviewId}))
+            msgSendResults = await request(JSON.stringify({"type":"sendMsg","CID":currChat,"msg":message,"embed": encodedFiles, "replyTo": toBeRepliedTo}))
+            messageQueue = messageQueue.filter((v) => v["msgPreviewId"] != msgPreviewId)
         }
 
         async function updateEmbeds() {
@@ -6519,6 +6745,10 @@ How's your day?
         }
         async function uploadFiles(files) {
             if (currChat == -1) {
+                return
+            }
+
+            if (chatCache["Type"] == "vc") {
                 return
             }
 

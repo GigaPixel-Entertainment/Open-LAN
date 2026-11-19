@@ -40,6 +40,8 @@ class WS():
         self.invites: list[dict] = invites
         self.fernet: Fernet = fernet
 
+        self.activeVCs = {}
+
         self.resizePfpBytes: Callable = resizePfpBytes
 
         self.WS_CLIENTS: set[ServerConnection] = set()
@@ -107,7 +109,8 @@ class WS():
             "resetPwd": self.resetPwd,
             "idleStatusChange": self.idleStatusChange,
             "statusOverride": self.statusOverride,
-            "reqAudioInfo": self.reqAudioInfo
+            "reqAudioInfo": self.reqAudioInfo,
+            "joinVC": self.joinVC
         }
 
     def isValidToken(self, authToken: str | None, username=None):
@@ -328,6 +331,9 @@ class WS():
             if chatInfo is None:
                 continue
 
+            if chatInfo["Type"] != "channel":
+                continue
+
             sstring += str(chat) + ":" + str(len(chatInfo["messages"])-1) + ":"
 
         return sstring
@@ -461,6 +467,7 @@ class WS():
     async def reqServerInfo(self, ws, decryptedBody, authToken, trackerId):
         await self.wsSendEncrypted(ws, {
             "type":"reqServerInfoSuccess",
+            "dev": config.DEV,
             "stage": config.STAGE,
             "ver": config.VER,
             "maxPfpSize": config.MAX_PFP_SIZE,
@@ -550,6 +557,12 @@ class WS():
         else:
             pagedChat["messages"] = pagedChat["messages"][-100 * (decryptedBody["page"] + 1):-100 * decryptedBody["page"]]
 
+        vcMembers = []
+        if chat["Type"] == "vc" and decryptedBody["CID"] in self.activeVCs:
+            vcMembers = [self.getUserIdFromAuthToken(getattr(ws2, "authToken", None)) for ws2 in self.activeVCs[decryptedBody["CID"]]]
+
+        pagedChat["vcMembers"] = [x for x in vcMembers if x is not None]
+
         await self.wsSendEncrypted(ws, {"type":"reqChatSuccess", "chat": pagedChat, "numPages": math.ceil(len(chat["messages"]) / 100 + 0.005) - 1}, trackerId)
 
     async def reqMsg(self, ws, decryptedBody, authToken, trackerId):
@@ -612,7 +625,7 @@ class WS():
         await self.wsSendEncrypted(ws, {"type":"reqUsersListSuccess", "users":userInfoList}, trackerId)
 
     async def sendMsg(self, ws, decryptedBody, authToken, trackerId):
-        if not self.checkFields(decryptedBody, ["CID", "msg", "embed", "replyTo", "msgPreviewId"]):
+        if not self.checkFields(decryptedBody, ["CID", "msg", "embed", "replyTo"]):
             await self.wsSendEncrypted(ws, {"type": "chatUpdateFailed"}, trackerId)
             return
 
@@ -659,6 +672,10 @@ class WS():
             await self.wsSendEncrypted(ws, {"type": "chatUpdateFailed"}, trackerId)
             return
 
+        if chat["Type"] == "vc":
+            await self.wsSendEncrypted(ws, {"type": "chatUpdateFailed"}, trackerId)
+            return
+
         msgObj = {"time": int(time.time()), "content": decryptedBody["msg"], "embed": embedFilePaths, "replyTo": decryptedBody["replyTo"], "UID": self.getUserIdFromAuthToken(authToken), "MSGID": len(chat["messages"])}
         chat["messages"].append(msgObj)
 
@@ -681,7 +698,7 @@ class WS():
             if serverInfo is not None:
                 sstring = self.getServerSString(serverInfo)
 
-        await self.wsBroadcastEncrypted(broadcastClients, {"type":"newMsg", "CID": chat["CID"], "message": msgObj, "msgPreviewId": decryptedBody["msgPreviewId"], "SString": sstring})
+        await self.wsBroadcastEncrypted(broadcastClients, {"type":"newMsg", "CID": chat["CID"], "message": msgObj, "SString": sstring})
 
 
     async def delMsg(self, ws, decryptedBody, authToken, trackerId):
@@ -1806,12 +1823,17 @@ class WS():
             return
 
         channelName = decryptedBody["name"].strip()
+        channelType = decryptedBody["channelType"]
 
         if len(channelName) == 0 or len(channelName) > 100:
             channelName = "New Channel"
 
+        if channelType != "channel" and channelType != "vc":
+            await self.wsSendEncrypted(ws, {"type": "newChannelFailed"}, trackerId)
+            return
+
         cid = len(self.chats)
-        channel = {"CID": cid, "Type": "channel", "Server": decryptedBody["SID"], "Name": channelName, "Recipients": [], "Owner": server["Owner"], "Icon": config.EMPTY_IMG, "Time": int(time.time()), "messages": []}
+        channel = {"CID": cid, "Type": channelType, "Server": decryptedBody["SID"], "Name": channelName, "Recipients": [], "Owner": server["Owner"], "Icon": config.EMPTY_IMG, "Time": int(time.time()), "messages": []}
         self.chats.append(channel)
         category["Chats"].append(cid)
 
@@ -2686,6 +2708,20 @@ class WS():
         except:
             await self.wsSendEncrypted(ws, {"type": "reqAudioInfoFailed"}, trackerId)
 
+    async def joinVC(self, ws, decryptedBody, authToken, trackerId):
+        if not self.checkFields(decryptedBody, ["CID"]):
+            await self.wsSendEncrypted(ws, {"type": "joinVCFailed"}, trackerId)
+            return
+
+        cid = decryptedBody["CID"]
+
+        if not self.tokenInChat(authToken, cid):
+            await self.wsSendEncrypted(ws, {"type": "joinVCFailed"}, trackerId)
+            return
+
+        setattr(ws, "currVC", cid)
+        await self.wsSendEncrypted(ws, {"type": "joinVCSuccess"}, trackerId)
+
     async def wsHandler(self, ws: ServerConnection):
         self.WS_CLIENTS.add(ws)
 
@@ -2709,9 +2745,24 @@ class WS():
                 if "encryption" in msgDecoded and msgDecoded["encryption"] == "AES":
                     decryptedBody, trackerId = self.decrypt(ws, msgDecoded)
 
-                    if decryptedBody is None or not self.checkFields(decryptedBody, ["type"]):
+                    if decryptedBody is None:
                         await self.wsSendEncrypted(ws, {"type": "unknownRequest"}, trackerId)
                         continue
+
+                    if self.checkFields(decryptedBody, ["action"]):
+                        # WebRTC babyyyyyy
+                        currVC = getattr(ws, "currVC", None)
+
+                        if currVC is not None and currVC in self.activeVCs:
+                            for ws2 in self.activeVCs[currVC]:
+                                await ws2.send(orjson.dumps(decryptedBody), text=True)
+
+                        continue
+
+                    if not self.checkFields(decryptedBody, ["type"]):
+                        await self.wsSendEncrypted(ws, {"type": "unknownRequest"}, trackerId)
+                        continue
+
 
                     if decryptedBody["type"] == "login":
                         if not self.checkFields(decryptedBody, ["username", "password"]):
@@ -2836,8 +2887,16 @@ class WS():
             self.WS_CLIENTS.remove(ws)
 
             usrID = getattr(ws, "UID", None)
-            if usrID is not None and self.ONLINE_USR_STATUSES.get(usrID, None) is not None:
-                await self.setUsrStatus(usrID, 0)
+            if usrID is not None:
+                if self.ONLINE_USR_STATUSES.get(usrID, None) is not None:
+                    await self.setUsrStatus(usrID, 0)
+
+                currVC = getattr(ws, "currVC", None)
+                if currVC is not None and currVC in self.activeVCs and usrID in self.activeVCs[currVC]:
+                    del self.activeVCs[currVC][usrID]
+
+                    if len(self.activeVCs[currVC]) == 0:
+                        del self.activeVCs[currVC]
 
     async def shutdownWs(self, shutdownEvent: asyncio.Event, shutdownEventDone: asyncio.Event):
         shutdownEvent.set()
