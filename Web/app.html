@@ -1768,10 +1768,10 @@ How's your day?
 
         function convertFileToBase64(file) {
             return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = (error) => reject(error);
-                reader.readAsDataURL(file);
+                const reader = new FileReader()
+                reader.onloadend = () => resolve(reader.result)
+                reader.onerror = (error) => reject(error)
+                reader.readAsDataURL(file)
             });
         }
 
@@ -5699,10 +5699,11 @@ How's your day?
             }
 
             var RTCPeerCon
-            var activeMediaSinks = {}
+            var audioSinks = {}
+            var audioRecorder = null
             async function joinVC(CID) {
                 vcFocusedUID = -1
-                const isFirst = (await request(JSON.stringify({"type": "joinVC", "CID": CID})))["isFirst"]
+                await request(JSON.stringify({"type": "joinVC", "CID": CID}))
                 currVC = CID
 
                 const stream = await navigator.mediaDevices.getUserMedia(
@@ -5712,76 +5713,97 @@ How's your day?
                     }, video: false
                 })
 
-                RTCPeerCon = new RTCPeerConnection({
-                    "iceServers": [{"urls":"stun:stun.l.google.com:19302"}]
-                })
-                const offer = RTCPeerCon.createOffer()
-                await RTCPeerCon.setLocalDescription(offer)
+                const mediaRecorder = new MediaRecorder(stream)
+                let audioChunks = []
 
-                ws.send(JSON.stringify({
-                    "action": "offer",
-                    "sdp": RTCPeerCon.localDescription.sdp
-                }))
-
-                stream.getTracks().forEach(track => RTCPeerCon.addTrack(track, stream))
-
-                RTCPeerCon.ontrack = (e) => {
-                    if (devBuild) {
-                        console.log(e)
-                    }
-
-                    for (let i = 0; i < e.streams.length; i++) {
-                        const stream = e.streams[i];
-
-                        if (e.track.kind == "audio") {
-                            const audio = document.createElement("audio")
-                            audio.autoplay = true
-                            audio.srcObject = stream
-                            noDisplay.appendChild(audio)
-                            activeMediaSinks[stream.id] = audio
-
-                            console.log("Audio made successfully!")
-
-                            audio.play()
-                        } else {
-                            console.log("TODO: Make video stream")
-                        }
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) {
+                        audioChunks.push(e.data)
                     }
                 }
 
-                RTCPeerCon.onicecandidate = (e) => {
-                    if (e.candidate) {
-                        ws.send(JSON.stringify({ "action": "candidate", "candidate": e.candidate }))
+                audioRecorder = setInterval(() => {
+                    console.log(audioChunks)
+
+                    if (audioChunks.length > 0) {
+                        const fromLatest = Math.min(5, audioChunks.length)
+                        audioChunks.splice(0, audioChunks.length - fromLatest)
+
+                        const toBeTransmitted = audioChunks[0]
+                        convertFileToBase64(toBeTransmitted).then(b64 => {
+                            const strSegment = b64.split(":")[1]
+                            const index = strSegment.lastIndexOf(";")
+                            const result = index !== -1 ? strSegment.slice(0, index) : strSegment
+
+                            ws.send(JSON.stringify({"action": "audioBlob", "uid": currUID, "blob": b64.split(",")[1], "contentType": result}))
+                        })
+                        audioChunks.splice(0, 1)
                     }
-                }
+
+                    mediaRecorder.requestData()
+                }, 100);
+
+                mediaRecorder.start()
             }
 
             async function leaveVC() {
-                ws.send(JSON.stringify({
-                    "action": "leave"
-                }))
+                await request(JSON.stringify({"type": "leaveVC"}))
                 currVC = -1
 
-                for (let i = 0; i < activeMediaSinks.length; i++) {
-                    activeMediaSinks[i].stop()
-                    activeMediaSinks[i].remove()
+                if (audioRecorder != null) {
+                    clearInterval(audioRecorder)
+                    audioRecorder = null
                 }
+
+                audioSinks = {}
             }
 
-            async function handleWebRTC(resp) {
-                if (resp["action"] == "answer") {
-                    await RTCPeerCon.setRemoteDescription(new RTCSessionDescription(resp))
-                } else if (resp["action"] == "offer") {
-                    await RTCPeerCon.setRemoteDescription(new RTCSessionDescription(resp))
-                    const answer = await RTCPeerCon.createAnswer()
-                    await RTCPeerCon.setLocalDescription(answer)
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
 
-                    ws.send(JSON.stringify({
-                        "action": "answer",
-                        "sdp": RTCPeerCon.localDescription.sdp
-                    }))
-                } else if (resp["action"] == "candidate" && resp.candidate) {
-                    await RTCPeerCon.addIceCandidate(new RTCIceCandidate(resp["candidate"]))
+            async function handleDataPacket(resp) {
+                if (resp["action"] == "audioBlob") {
+                    const uid = resp["uid"]
+                    const arrayBuffer = Uint8Array.from(atob(resp["blob"]), c => c.charCodeAt(0)).buffer
+
+                    if (!Object.hasOwn(audioSinks, uid)) {
+                        const audio = document.createElement("audio")
+                        noDisplay.appendChild(audio)
+
+                        const chunkQueue = []
+                        let sourceBuffer
+
+                        const source = new MediaSource()
+                        source.addEventListener("sourceopen", () => {
+                            sourceBuffer = source.addSourceBuffer(resp["contentType"])
+
+                            sourceBuffer.addEventListener("updateend", () => {
+                                if (chunkQueue.length > 0 && !sourceBuffer.updating) {
+                                    sourceBuffer.appendBuffer(chunkQueue.shift())
+                                }
+                            })
+                        })
+
+                        audioSinks[uid] = {
+                            "audio": audio,
+                            "source": sourceBuffer,
+                            "queue": chunkQueue
+                        }
+                        return
+                    }
+
+                    const audio = audioSinks[uid]["audio"]
+                    const source = audioSinks[uid]["source"]
+                    const queue = audioSinks[uid]["queue"]
+
+                    if (!source || source.updating || queue.length > 0) {
+                        queue.push(arrayBuffer)
+                    } else {
+                        source.appendBuffer(arrayBuffer)
+                    }
+
+                    if (audio.paused) {
+                        audio.play()
+                    }
                 }
             }
 
@@ -5796,10 +5818,10 @@ How's your day?
                 if (chatInfo["type"] == "vc" && currVC != currChat) {
                     if (currVC == -1 || await openConfirmPopup("Leave Current VC?", "Leave the Current VC to join this one?")) {
                         if (currVC != -1) {
-                            leaveVC()
+                            await leaveVC()
                         }
 
-                        joinVC(currChat)
+                        await joinVC(currChat)
                     }
                 }
 
@@ -5900,12 +5922,12 @@ How's your day?
                             const resp = JSON.parse(event.data)
 
                             if (Object.hasOwn(resp, "action")) {
-                                console.log(resp)
                                 if (devBuild) {
                                     console.log(resp)
                                 }
 
-                                handleWebRTC(resp)
+                                handleDataPacket(resp)
+                                return
                             }
 
                             if (resp["type"] == "encrypt-key-xch") {

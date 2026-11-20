@@ -110,7 +110,8 @@ class WS():
             "idleStatusChange": self.idleStatusChange,
             "statusOverride": self.statusOverride,
             "reqAudioInfo": self.reqAudioInfo,
-            "joinVC": self.joinVC
+            "joinVC": self.joinVC,
+            "leaveVC": self.leaveVC
         }
 
     def isValidToken(self, authToken: str | None, username=None):
@@ -2708,7 +2709,25 @@ class WS():
         except:
             await self.wsSendEncrypted(ws, {"type": "reqAudioInfoFailed"}, trackerId)
 
-    async def joinVC(self, ws, decryptedBody, authToken, trackerId):
+    async def vcUpdate(self, cid):
+        members = []
+
+        for ws2 in self.activeVCs[cid]:
+            authToken2: str | None = getattr(ws2, "authToken", None)
+            usrId = self.getUserIdFromAuthToken(authToken2)
+
+            if usrId is not None:
+                members.append(usrId)
+
+        clients = []
+
+        for ws2 in self.WS_CLIENTS:
+            if self.tokenInChat(getattr(ws2, "authToken", None), cid):
+                clients.append(ws2)
+
+        await self.wsBroadcastEncrypted(clients, {"type": "vcUpdate", "CID": cid, "vcMembers": members})
+
+    async def joinVC(self, ws, decryptedBody, authToken, trackerId) -> None:
         if not self.checkFields(decryptedBody, ["CID"]):
             await self.wsSendEncrypted(ws, {"type": "joinVCFailed"}, trackerId)
             return
@@ -2719,8 +2738,35 @@ class WS():
             await self.wsSendEncrypted(ws, {"type": "joinVCFailed"}, trackerId)
             return
 
+        if cid in self.activeVCs:
+            self.activeVCs[cid].append(ws)
+        else:
+            self.activeVCs[cid] = [ws]
+
         setattr(ws, "currVC", cid)
         await self.wsSendEncrypted(ws, {"type": "joinVCSuccess"}, trackerId)
+        await self.vcUpdate(cid)
+
+    async def leaveVC(self, ws, decryptedBody, authToken, trackerId) -> None:
+        currVC = getattr(ws, "currVC", None)
+
+        if currVC is None:
+            await self.wsSendEncrypted(ws, {"type": "leaveVCFailed"}, trackerId)
+            return
+
+        try:
+            self.activeVCs[currVC].remove(ws)
+        except:
+            await self.wsSendEncrypted(ws, {"type": "leaveVCFailed"}, trackerId)
+            return
+
+        setattr(ws, "currVC", None)
+
+        await self.wsSendEncrypted(ws, {"type": "leaveVCSuccess"}, trackerId)
+        await self.vcUpdate(currVC)
+
+        if len(self.activeVCs[currVC]) == 0:
+            del self.activeVCs[currVC]
 
     async def wsHandler(self, ws: ServerConnection):
         self.WS_CLIENTS.add(ws)
@@ -2891,12 +2937,7 @@ class WS():
                 if self.ONLINE_USR_STATUSES.get(usrID, None) is not None:
                     await self.setUsrStatus(usrID, 0)
 
-                currVC = getattr(ws, "currVC", None)
-                if currVC is not None and currVC in self.activeVCs and usrID in self.activeVCs[currVC]:
-                    del self.activeVCs[currVC][usrID]
-
-                    if len(self.activeVCs[currVC]) == 0:
-                        del self.activeVCs[currVC]
+            await self.leaveVC(ws, None, None, None)
 
     async def shutdownWs(self, shutdownEvent: asyncio.Event, shutdownEventDone: asyncio.Event):
         shutdownEvent.set()
