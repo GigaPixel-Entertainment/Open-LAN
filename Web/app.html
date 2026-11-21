@@ -46,6 +46,11 @@ How's your day?
             <textarea placeholder="type a message..." id="textEntry" class="font" maxlength="4000"></textarea>
             <button id="sendMsg" class="font">-></button>
         </div>
+        <div id="vcOverlay">
+            <button class="vcControlBtn" id="vcControlMute">
+                <img src="Media/voiceChannel.png" class="vcControlImg">
+            </button>
+        </div>
         <div id="dropIndicator" class="overlay">
             <img id="dropImage" src="Media/fileUpload.png">
             <h1 id="dropText" class="font">Upload Files</h1>
@@ -755,6 +760,8 @@ How's your day?
         const textEntry = document.getElementById("textEntry")
         const sendMsgBtn = document.getElementById("sendMsg")
         const addFileBtn = document.getElementById("addFileInput")
+
+        const vcOverlay = document.getElementById("vcOverlay")
 
         const dropIndicator = document.getElementById("dropIndicator")
 
@@ -4763,6 +4770,7 @@ How's your day?
             if (chat["Type"] == "vc") {
                 chatDiv.replaceChildren()
                 textEntryOverlay.style.visibility = "hidden"
+                vcOverlay.style.visibility = "visible"
                 embedList.style.visibility = "hidden"
                 replying.style.visibility = "hidden"
 
@@ -4773,6 +4781,7 @@ How's your day?
             }
 
             textEntryOverlay.style.visibility = "visible"
+            vcOverlay.style.visibility = "hidden"
 
             if (embeddedFiles.length > 0) {
                 embedList.style.visibility = "visible"
@@ -4890,6 +4899,7 @@ How's your day?
             userListCounter.textContent = ""
             userListContent.replaceChildren()
             textEntryOverlay.style.visibility = "hidden"
+            vcOverlay.style.visibility = "hidden"
             embedList.style.visibility = "hidden"
             replying.style.visibility = "hidden"
 
@@ -4933,11 +4943,68 @@ How's your day?
 
         async function showVC(vcMembers) {
             const newChatDiv = []
-            console.log(vcMembers)
 
-            if (vcFocusedUID != -1) {
+            await reqMultiUsrInfo(vcMembers)
+
+            if (vcFocusedUID != -1 && vcMembers.includes(vcFocusedUID)) {
+                const memberInfo = await reqUsrInfo(vcFocusedUID)
+
+                const beegBoxContainer = document.createElement("div")
+                beegBoxContainer.classList = "vcBigBoxContainer"
+
+                const beegBox = document.createElement("div")
+                beegBox.classList = "vcBigMemberBox vcMemberBox" + vcFocusedUID
+
+                beegBox.addEventListener("click", () => {
+                    vcFocusedUID = -1
+                    showVC(vcMembers)
+                })
+
+                const memberPfp = document.createElement("img")
+                memberPfp.classList = "vcMemberPfp"
+                memberPfp.src = memberInfo["pfp"]
+
+                beegBox.appendChild(memberPfp)
+                beegBoxContainer.appendChild(beegBox)
+                newChatDiv.push(beegBoxContainer)
+
+                const memberList = document.createElement("div")
+                memberList.classList = "vcMemberList2"
+
+                for (let i = 0; i < vcMembers.length; i++) {
+                    const memberUID = vcMembers[i];
+                    const memberInfo = await reqUsrInfo(memberUID)
+
+                    const memberBox = document.createElement("div")
+                    memberBox.classList = "vcMemberBox vcMemberBox" + memberUID
+
+                    const memberPfp = document.createElement("img")
+                    memberPfp.classList = "vcMemberPfp"
+                    memberPfp.src = memberInfo["pfp"]
+
+                    if (memberUID == vcFocusedUID) {
+                        const overlay = document.createElement("div")
+                        overlay.classList = "vcMemberBoxOverlay"
+                        memberBox.appendChild(overlay)
+
+                        memberBox.style.cursor = "auto"
+                    } else {
+                        memberBox.addEventListener("click", () => {
+                            vcFocusedUID = memberUID
+                            showVC(vcMembers)
+                        })
+                    }
+
+                    memberBox.appendChild(memberPfp)
+                    memberList.appendChild(memberBox)
+                }
+
+                newChatDiv.push(memberList)
+
+                replaceChildren(chatDiv, newChatDiv)
                 return
             }
+            vcFocusedUID = -1
 
             if (vcMembers == null || vcMembers.length == 0) {
                 chatDiv.replaceChildren()
@@ -4947,7 +5014,6 @@ How's your day?
             const numRows = Math.ceil(vcMembers.length / 3)
             const numPerRow = 3
 
-            await reqMultiUsrInfo(vcMembers)
             for (let i = 0; i < numRows; i++) {
                 const memberRow = document.createElement("div")
                 memberRow.classList = "vcMemberList"
@@ -4961,8 +5027,12 @@ How's your day?
                     const memberInfo = await reqUsrInfo(memberUID)
 
                     const memberBox = document.createElement("div")
-                    memberBox.classList = "vcMemberBox"
-                    memberBox.id = "vcMemberBox" + memberUID
+                    memberBox.classList = "vcMemberBox vcMemberBox" + memberUID
+
+                    memberBox.addEventListener("click", () => {
+                        vcFocusedUID = memberUID
+                        showVC(vcMembers)
+                    })
 
                     const memberPfp = document.createElement("img")
                     memberPfp.classList = "vcMemberPfp"
@@ -5713,37 +5783,46 @@ How's your day?
                     }, video: false
                 })
 
-                const mediaRecorder = new MediaRecorder(stream)
-                let audioChunks = []
+                const preferredMimeTypes = [
+                    "audio/webm;codecs=opus",
+                    "audio/mp4;codecs=opus",
+                    "audio/webm;codecs=vorbis",
+                    "audio/webm;codecs=pcm"
+                ]
+                const mimeType = preferredMimeTypes.find((type) => MediaRecorder.isTypeSupported(type))
+                const options = mimeType ? { mimeType } : {};
+
+                const mediaRecorder = new MediaRecorder(stream, options)
+                let headerBlob = null
+
+                console.log("Using MimeType " + mediaRecorder.mimeType)
 
                 mediaRecorder.ondataavailable = (e) => {
-                    if (e.data.size > 0) {
-                        audioChunks.push(e.data)
+                    if (!e.data || e.data.size == 0) {
+                        return
                     }
+
+                    let toBeTransmitted = null
+                    if (headerBlob == null) {
+                        headerBlob = e.data
+                        toBeTransmitted = new Blob([e.data], { "type": mediaRecorder.mimeType })
+                    } else {
+                        toBeTransmitted = new Blob([headerBlob, e.data], { "type": mediaRecorder.mimeType })
+                    }
+
+                    if (toBeTransmitted == null) {
+                        return
+                    }
+
+                    convertFileToBase64(toBeTransmitted).then(b64 => {
+                        const result = {"action": "audioBlob", "uid": currUID, "blob": b64.split(",")[1], "contentType": mediaRecorder.mimeType}
+                        ws.send(JSON.stringify(result))
+                        handleDataPacket(result)
+                    })
                 }
 
-                audioRecorder = setInterval(() => {
-                    console.log(audioChunks)
-
-                    if (audioChunks.length > 0) {
-                        const fromLatest = Math.min(5, audioChunks.length)
-                        audioChunks.splice(0, audioChunks.length - fromLatest)
-
-                        const toBeTransmitted = audioChunks[0]
-                        convertFileToBase64(toBeTransmitted).then(b64 => {
-                            const strSegment = b64.split(":")[1]
-                            const index = strSegment.lastIndexOf(";")
-                            const result = index !== -1 ? strSegment.slice(0, index) : strSegment
-
-                            ws.send(JSON.stringify({"action": "audioBlob", "uid": currUID, "blob": b64.split(",")[1], "contentType": result}))
-                        })
-                        audioChunks.splice(0, 1)
-                    }
-
-                    mediaRecorder.requestData()
-                }, 100);
-
-                mediaRecorder.start()
+                mediaRecorder.start(250)
+                mediaRecorder.requestData()
             }
 
             async function leaveVC() {
@@ -5766,44 +5845,68 @@ How's your day?
                     const arrayBuffer = Uint8Array.from(atob(resp["blob"]), c => c.charCodeAt(0)).buffer
 
                     if (!Object.hasOwn(audioSinks, uid)) {
-                        const audio = document.createElement("audio")
-                        noDisplay.appendChild(audio)
-
-                        const chunkQueue = []
-                        let sourceBuffer
-
-                        const source = new MediaSource()
-                        source.addEventListener("sourceopen", () => {
-                            sourceBuffer = source.addSourceBuffer(resp["contentType"])
-
-                            sourceBuffer.addEventListener("updateend", () => {
-                                if (chunkQueue.length > 0 && !sourceBuffer.updating) {
-                                    sourceBuffer.appendBuffer(chunkQueue.shift())
-                                }
-                            })
-                        })
-
+                        const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
                         audioSinks[uid] = {
-                            "audio": audio,
-                            "source": sourceBuffer,
-                            "queue": chunkQueue
+                            "ctx": audioCtx,
+                            "time": 0
                         }
+                    }
+
+                    const sink = audioSinks[uid]
+
+                    if (sink["ctx"].state == "suspended") {
+                        await sink["ctx"].resume()
+                    }
+
+                    if (arrayBuffer.length == 0) {
+                        console.warn("Array Buffer Empty!")
                         return
                     }
 
-                    const audio = audioSinks[uid]["audio"]
-                    const source = audioSinks[uid]["source"]
-                    const queue = audioSinks[uid]["queue"]
+                    const buffer = await sink["ctx"].decodeAudioData(arrayBuffer)
+                    let silent = true
 
-                    if (!source || source.updating || queue.length > 0) {
-                        queue.push(arrayBuffer)
-                    } else {
-                        source.appendBuffer(arrayBuffer)
+                    for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+                        const samples = buffer.getChannelData(ch);
+                        for (let i = 0; i < samples.length; i++) {
+                            if (Math.abs(samples[i]) > 0.05) {
+                                silent = false
+                                break
+                            }
+                        }
+
+                        if (!silent) {
+                            break
+                        }
                     }
 
-                    if (audio.paused) {
-                        audio.play()
+                    Array.from(document.getElementsByClassName("vcMemberBox" + uid)).forEach((e) => {
+                        if (silent) {
+                            e.style.border = ""
+                        } else {
+                            e.style.border = "2px solid var(--userActive)"
+                        }
+                    })
+
+                    if (silent) {
+                        return
                     }
+
+                    if (resp["uid"] == currUID) {
+                        return
+                    }
+
+                    const source = sink["ctx"].createBufferSource()
+                    source.buffer = buffer
+                    source.connect(sink["ctx"].destination)
+
+                    const currTime = sink["ctx"].currentTime
+                    if (sink["time"] < currTime) {
+                        sink["time"] = currTime - 0.05
+                    }
+
+                    source.start(Math.max(sink["time"] - currTime, 0))
+                    sink["time"] += buffer.duration
                 }
             }
 
@@ -5921,15 +6024,6 @@ How's your day?
                         ws.onmessage = (event) => {
                             const resp = JSON.parse(event.data)
 
-                            if (Object.hasOwn(resp, "action")) {
-                                if (devBuild) {
-                                    console.log(resp)
-                                }
-
-                                handleDataPacket(resp)
-                                return
-                            }
-
                             if (resp["type"] == "encrypt-key-xch") {
                                 serverKeyRecieved(resp["publicKey"]).then(() => {
                                     encrypted = true
@@ -5953,6 +6047,15 @@ How's your day?
 
                                         if (devBuild) {
                                             console.log(respBody)
+                                        }
+
+                                        if (Object.hasOwn(respBody, "action")) {
+                                            if (Object.hasOwn(respBody, "sTimestamp") && devBuild) {
+                                                console.log("PING: " + (Date.now() - respBody["sTimestamp"]) + "ms")
+                                            }
+
+                                            handleDataPacket(respBody)
+                                            return
                                         }
 
                                         if (respBody["type"] == "auth_expired") {

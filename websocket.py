@@ -405,7 +405,11 @@ class WS():
         iv = secrets.token_bytes(12)
         encryptor = Cipher(algorithms.AES256(getattr(ws, "secretKey")), modes.GCM(iv)).encryptor()
         ciphertext = encryptor.update(dataCompressed) + encryptor.finalize() + encryptor.tag
-        await ws.send(orjson.dumps({"encryption":"AES","iv": base64.b64encode(iv).decode("utf-8"),"body":base64.b64encode(ciphertext).decode("utf-8")}), text=True)
+
+        try:
+            await ws.send(orjson.dumps({"encryption":"AES","iv": base64.b64encode(iv).decode("utf-8"),"body":base64.b64encode(ciphertext).decode("utf-8")}), text=True)
+        except:
+            logging.warning("Message send failed! (Probably disconnected)")
 
     async def wsBroadcastEncrypted(self, clients: Iterable[ServerConnection], data: dict):
         tasks = [self.wsSendEncrypted(client, data) for client in clients]
@@ -2754,13 +2758,13 @@ class WS():
             await self.wsSendEncrypted(ws, {"type": "leaveVCFailed"}, trackerId)
             return
 
+        setattr(ws, "currVC", None)
+
         try:
             self.activeVCs[currVC].remove(ws)
         except:
             await self.wsSendEncrypted(ws, {"type": "leaveVCFailed"}, trackerId)
             return
-
-        setattr(ws, "currVC", None)
 
         await self.wsSendEncrypted(ws, {"type": "leaveVCSuccess"}, trackerId)
         await self.vcUpdate(currVC)
@@ -2796,19 +2800,18 @@ class WS():
                         continue
 
                     if self.checkFields(decryptedBody, ["action"]):
-                        # WebRTC babyyyyyy
                         currVC = getattr(ws, "currVC", None)
 
                         if currVC is not None and currVC in self.activeVCs:
-                            for ws2 in self.activeVCs[currVC]:
-                                await ws2.send(orjson.dumps(decryptedBody), text=True)
-
+                            clients = self.activeVCs[currVC].copy()
+                            clients.remove(ws)
+                            decryptedBody["sTimestamp"] = round(time.time() * 1000)
+                            await self.wsBroadcastEncrypted(clients, decryptedBody)
                         continue
 
                     if not self.checkFields(decryptedBody, ["type"]):
                         await self.wsSendEncrypted(ws, {"type": "unknownRequest"}, trackerId)
                         continue
-
 
                     if decryptedBody["type"] == "login":
                         if not self.checkFields(decryptedBody, ["username", "password"]):
